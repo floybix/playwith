@@ -1,0 +1,56 @@
+
+# no point in doing this because cairoDevice::asCairoDevice calls 'require(RGtk2)'
+#import(RGtk2)
+#import(cairoDevice)
+
+import(lattice)
+import(grid)
+import(grDevices)
+import(graphics)
+
+# the main function
+export(
+	playwith,
+	autoplay
+)
+
+# built-in tool set
+export(
+	toolConstructors,
+	playApplicationTools,
+	playInteractionTools,
+	play3DTools,
+	playSplomTools
+)
+
+# API
+export(
+	quickTool,
+	playDevCur,
+	playDevSet,
+	playDevOff,
+	callArg,
+	"callArg<-",
+	playReplot,
+	playInitPlot,
+	playFreezeGUI,
+	playThawGUI,
+	blockRedraws,
+	playFocus,
+	"playPrompt<-",
+	rawXLim,
+	rawYLim,
+	"rawXLim<-",
+	"rawYLim<-",
+	unlogX,
+	unlogY
+)
+
+# other GTK GUI stuff
+export(
+	errorDialog,
+	infoDialog,
+	questionDialog,
+	guiTextInput
+)
+

@@ -362,7 +362,7 @@ playwith <- function(
 	invisible(playNewPlot(playState))
 }
 
-playNewPlot <- function(playState = playDevCur()) {
+playNewPlot <- function(playState) {
 	playDevSet(playState)
 	plot.call <- playState$call
 	env <- playState$env
@@ -449,7 +449,7 @@ playNewPlot <- function(playState = playDevCur()) {
 	playReplot(playState)
 }
 
-playReplot <- function(playState = playDevCur()) {
+playReplot <- function(playState) {
 	if (isTRUE(playState$skip.redraws)) return()
 	#str(sys.calls())
 	playDevSet(playState)

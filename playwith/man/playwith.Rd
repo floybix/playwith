@@ -2,6 +2,10 @@
 \alias{playwith}
 \alias{plotAndPlay}
 \alias{toolConstructors}
+\alias{playApplicationTools}
+\alias{playInteractionTools}
+\alias{play3DTools}
+\alias{playSplomTools}
 \title{An interactive plot GUI}
 \description{
   Open a GTK+ window to view and interact with a plot.

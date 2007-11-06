@@ -4,24 +4,57 @@
 \alias{playDevCur}
 \alias{playDevSet}
 \alias{playDevOff}
-\alias{callArg}
+\alias{playNewPlot}
 \alias{playReplot}
-\alias{playInitPlot}
+\alias{callArg}
+\alias{rawXLim}
+\alias{rawYLim}
+\alias{playFocus}
+\alias{playPrompt}
 \alias{playFreezeGUI}
 \alias{playThawGUI}
 \alias{blockRedraws}
-\alias{playFocus}
-\alias{playPrompt}
-\alias{rawXLim}
-\alias{rawYLim}
 \alias{unlogX}
 \alias{unlogY}
+\alias{gmessage.error}
 \title{The playwith API}
 \description{
-  Make new buttons for a \code{\link{playwith}} plot window.
+  Make new tools for a \code{\link{playwith}} plot window.
 }
 \usage{
 
+quickTool(
+	playState,
+	label = "", 
+	icon.name = NULL, 
+	tooltip = NULL, 
+	f, 
+	data = NULL, 
+	post.plot.action = NULL,
+	isToggle = F, 
+	show = TRUE)
+
+playDevCur()
+playDevSet(playState)
+playDevOff(playState = playDevCur())
+
+playNewPlot(playState)
+playReplot(playState)
+
+callArg(playState, arg, name=NULL)
+callArg(playState, arg, name=NULL) <- value
+
+rawXLim(playState)
+rawXLim(playState) <- value
+rawYLim(playState)
+rawYLim(playState) <- value
+
+playFocus(playState, highlight=TRUE, ...)
+
+playPrompt(playState) <- value
+playFreezeGUI(playState)
+playThawGUI(playState)
+blockRedraws(expr, playState = playDevCur())
 
 unlogX(x, the.call, is.lattice = T)
 unlogY(x, the.call, is.lattice = T)

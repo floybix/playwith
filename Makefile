@@ -7,7 +7,7 @@
 # build:	Generate package tar.gz archive
 # zip:		Generate package zip archive
 
-PACKAGE=plotAndPlayGTK
+PACKAGE=playwith
 SRC=$(PACKAGE)/R
 NAMESPACE=$(PACKAGE)/NAMESPACE
 DESCRIPTION=$(PACKAGE)/DESCRIPTION

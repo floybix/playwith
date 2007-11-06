@@ -18,38 +18,32 @@ playDevOff <- function(playState = playDevCur()) {
 	playState$win$destroy()
 }
 
-callArg <- function(playState, x, name=NULL) {
-	if (missing(x) && missing(name)) stop("give 'x' or 'name'")
-	x <- if (missing(x)) as.symbol(name) else substitute(x)
-	getx <- if (is.numeric(x)) paste("[[", x+1, "]]", sep="")
-		else if (is.symbol(x)) paste('[["', x, '", exact=TRUE]]', sep="")
-		else paste("$", deparse(x), sep="")
+callArg <- function(playState, arg, name=NULL) {
+	if (missing(arg) && missing(name)) stop("give 'arg' or 'name'")
+	arg <- if (missing(arg)) as.symbol(name) else substitute(arg)
+	getx <- if (is.numeric(arg)) paste("[[", arg+1, "]]", sep="")
+		else if (is.symbol(arg)) paste('[["', arg, '", exact=TRUE]]', sep="")
+		else paste("$", deparse(arg), sep="")
 	expr <- eval(parse(text=paste("playState$call", getx, sep="")))
 	if (mode(expr) == "expression") return(expr)
 	eval(expr, envir=playState$env, enclos=parent.frame())
 }
 
-"callArg<-" <- function(playState, x, name=NULL, value) {
-	if (missing(x) && missing(name)) stop("give 'x' or 'name'")
-	x <- if (missing(x)) as.symbol(name) else substitute(x)
-	getx <- if (is.numeric(x)) paste("[[", x+1, "]]", sep="")
+"callArg<-" <- function(playState, arg, name=NULL, value) {
+	if (missing(arg) && missing(name)) stop("give 'arg' or 'name'")
+	x <- if (missing(arg)) as.symbol(name) else substitute(arg)
+	getx <- if (is.numeric(arg)) paste("[[", arg+1, "]]", sep="")
 		else paste("$", deparse(x), sep="")
 	expr <- parse(text=paste("playState$call", getx, sep=""))[[1]]
 	expr <- call("<-", expr, value)
 	eval(expr, enclos=parent.frame())
-	#eval(x, envir=playState$env, enclos=parent.frame())
-	#name <- StateEnv$.current
-	#x <- substitute(x)
-	#x <- parse(text=paste("call", deparse(x), sep="$"))[[1]]
-	#expr <- call("<-", x, value)
-	#eval(expr, playState, parent.frame())
 	playState
 }
 
-playFreezeGUI <- function(playState = playDevCur())
+playFreezeGUI <- function(playState)
 	playSetFreezeGUI(playState, TRUE)
 
-playThawGUI <- function(playState = playDevCur())
+playThawGUI <- function(playState)
 	playSetFreezeGUI(playState, FALSE)
 
 playSetFreezeGUI <- function(playState, frozen) {
@@ -83,7 +77,8 @@ blockRedraws <- function(expr, playState = playDevCur()) {
 	playState$skip.redraws <- oval
 }
 
-playFocus <- function(playState = playDevCur(), highlight=TRUE, ...) {
+playFocus <- function(playState, highlight=TRUE, ...) {
+	playDevSet(playState)
 	if (sum(trellis.currentLayout() > 0) > 1) 
 		playPrompt(playState) <- "First, choose a panel"
 	else highlight <- FALSE
@@ -92,7 +87,7 @@ playFocus <- function(playState = playDevCur(), highlight=TRUE, ...) {
 	result
 }
 
-"playPrompt<-" <- function(playState = playDevCur(), value) {
+"playPrompt<-" <- function(playState, value) {
 	with(playState$widgets, {
 		if (is.null(value)) {
 			# remove the prompt widget
@@ -131,8 +126,7 @@ rawXYLim <- function(playState) {
 		# grid graphics plot
 		depth <- try(downViewport(playState$vp))
 		if (inherits(depth, "try-error")) {
-			gmessage.error(paste("Viewport", playState$vp, "not found"))
-			return()
+			stop(paste("Viewport", playState$vp, "not found"))
 		}
 		xlim <- convertX(unit(0:1, "npc"), "native", valueOnly=T)
 		ylim <- convertY(unit(0:1, "npc"), "native", valueOnly=T)

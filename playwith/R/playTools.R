@@ -34,9 +34,8 @@ playInteractionTools <- list(
 )
 
 play3DTools <- list(
-	"options",
-	"--",
 	"expand",
+	"--",
 	"annotate",
 	"arrow",
 	"edit.annotations",
@@ -49,9 +48,8 @@ play3DTools <- list(
 )
 
 playSplomTools <- list(
-	"options",
-	"--",
 	"expand",
+	"--",
 	"annotate",
 	"arrow",
 	"edit.annotations",
@@ -260,7 +258,6 @@ settings_handler <- function(widget, playState) {
 	fontList <- list(plain=1, bold=2, italic=3, bolditalic=4)
 	visible(lay) <- TRUE
 	
-	
 	# lattice
 	# panel.grid()
 	# panel.rug()
@@ -285,6 +282,8 @@ settings_handler <- function(widget, playState) {
 	# superpose
 	
 	# layers
+	
+	# TODO: make the dialog not modal
 	
 	gbasicdialog("Plot settings", widget=wingroup, action=playState, 
 	handler=function(h, ...) {

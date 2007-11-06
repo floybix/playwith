@@ -7,6 +7,8 @@
   Open a GTK+ window to view and interact with a plot.
 }
 \usage{
+
+	
 playwith(expr, name = "plot", nav.scales = c("x","y"), trans.scales = c("y"), 
 	 buttons = list("annotate", "identify", "zoom", "zoomfit"), 
 	 extra.buttons = list("zero"), basic.buttons=plotAndPlayBasicButtons, 

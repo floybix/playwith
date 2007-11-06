@@ -8,9 +8,6 @@
 playDevCur <- function() StateEnv$.current # may be NULL
 
 playDevSet <- function(playState) {
-	#if (!(name %in% ls(StateEnv)))
-	#	stop(dQuote(name), " is not the one of the current plots: ",
-	#		paste(dQuote(ls(StateEnv)), sep=", "))
 	StateEnv$.current <- playState
 	playState$old.dev <- dev.cur()
 	dev.set(playState$dev)
@@ -21,31 +18,32 @@ playDevOff <- function(playState = playDevCur()) {
 	playState$win$destroy()
 }
 
-callArg <- function(playState=playDevCur(), x) {
-	x <- substitute(x)
+callArg <- function(playState, x, name=NULL) {
+	if (missing(x) && missing(name)) stop("give 'x' or 'name'")
+	x <- if (missing(x)) as.symbol(name) else substitute(x)
+	getx <- if (is.numeric(x)) paste("[[", x+1, "]]", sep="")
+		else if (is.symbol(x)) paste('[["', x, '", exact=TRUE]]', sep="")
+		else paste("$", deparse(x), sep="")
+	expr <- eval(parse(text=paste("playState$call", getx, sep="")))
+	if (mode(expr) == "expression") return(expr)
+	eval(expr, envir=playState$env, enclos=parent.frame())
+}
+
+"callArg<-" <- function(playState, x, name=NULL, value) {
+	if (missing(x) && missing(name)) stop("give 'x' or 'name'")
+	x <- if (missing(x)) as.symbol(name) else substitute(x)
 	getx <- if (is.numeric(x)) paste("[[", x+1, "]]", sep="")
 		else paste("$", deparse(x), sep="")
 	expr <- parse(text=paste("playState$call", getx, sep=""))[[1]]
-	eval(expr, envir=playState$env, enclos=parent.frame())
-	#name <- StateEnv$.current
-	#x <- substitute(x)
-	#x <- parse(text=paste("call", deparse(x), sep="$"))[[1]]
-	# TODO: need parent.frame() too!
-	#eval(x, playState, playState$env)
-}
-
-"callArg<-" <- function(playState=playDevCur(), x, value) {
-	x <- substitute(x)
-	getx <- if (is.numeric(x)) paste("[[", x+1, "]]", sep="")
-		else paste("$", deparse(x), sep="")
-	expr <- parse(text=paste("call", getx, sep=""))[[1]]
 	expr <- call("<-", expr, value)
-	eval(x, envir=playState, enclos=parent.frame())
+	eval(expr, enclos=parent.frame())
+	#eval(x, envir=playState$env, enclos=parent.frame())
 	#name <- StateEnv$.current
 	#x <- substitute(x)
 	#x <- parse(text=paste("call", deparse(x), sep="$"))[[1]]
 	#expr <- call("<-", x, value)
 	#eval(expr, playState, parent.frame())
+	playState
 }
 
 playFreezeGUI <- function(playState = playDevCur())
@@ -54,15 +52,15 @@ playFreezeGUI <- function(playState = playDevCur())
 playThawGUI <- function(playState = playDevCur())
 	playSetFreezeGUI(playState, FALSE)
 
-playSetFreezeGUI <- function(playState = playDevCur(), frozen) {
+playSetFreezeGUI <- function(playState, frozen) {
 	with(playState$widgets, {
 		topToolbar["sensitive"] <- !frozen
 		leftToolbar["sensitive"] <- !frozen
 		bottomToolbar["sensitive"] <- !frozen
 		rightToolbar["sensitive"] <- !frozen
-		callToolbar["sensitive"] <- !frozen
 		pageScrollBox["sensitive"] <- !frozen
 		timeScrollBox["sensitive"] <- !frozen
+		#callToolbar["sensitive"] <- !frozen
 	})
 	playState$win$getWindow()$setCursor(
 		if (frozen) gdkCursorNew("watch") else NULL)
@@ -72,8 +70,15 @@ blockRedraws <- function(expr, playState = playDevCur()) {
 	oval <- playState$skip.redraws
 	playState$skip.redraws <- TRUE
 	da <- playState$widgets$drawingArea
-	da$setSizeRequest(da["allocation"]$width, da["allocation"]$height)
+	myW <- da$getAllocation()$width
+	myH <- da$getAllocation()$height
+	da$setSizeRequest(da$getAllocation()$width, da$getAllocation()$height)
+	#playState$win$setGeometryHints(da, list(max.width=myW, min.width=myW, 
+	#	max.height=myH, min.height=myH))
+	#da["window"]$freezeUpdates()
 	eval.parent(substitute(expr))
+	#da["window"]$thawUpdates()
+	#playState$win$setGeometryHints(da, list())
 	da$setSizeRequest(-1, -1)
 	playState$skip.redraws <- oval
 }
@@ -87,9 +92,9 @@ playFocus <- function(playState = playDevCur(), highlight=TRUE, ...) {
 	result
 }
 
-"playPrompt<-" <- function(playState = playDevCur(), prompt.text) {
+"playPrompt<-" <- function(playState = playDevCur(), value) {
 	with(playState$widgets, {
-		if (is.null(prompt.text)) {
+		if (is.null(value)) {
 			# remove the prompt widget
 			topToolbar$show()
 			promptBox$hide()
@@ -107,20 +112,32 @@ playFocus <- function(playState = playDevCur(), highlight=TRUE, ...) {
 		}
 		# set the prompt text
 		promptLabel$setMarkup(paste('<big><b>', 
-			toString(prompt.text), '</b></big>'))
+			toString(value), '</b></big>'))
 	})
+	playState
 }
 
-rawXLim <- function(playState = playDevCur()) {
+rawXLim <- function(playState) {
 	rawXYLim(playState)$x
 }
 
-rawYLim <- function(playState = playDevCur()) {
+rawYLim <- function(playState) {
 	rawXYLim(playState)$y
 }
 
-rawXYLim <- function(playState = playDevCur()) {
-	if (playState$is.lattice) {
+rawXYLim <- function(playState) {
+	playDevSet(playState)
+	if (!is.null(playState$vp)) {
+		# grid graphics plot
+		depth <- try(downViewport(playState$vp))
+		if (inherits(depth, "try-error")) {
+			gmessage.error(paste("Viewport", playState$vp, "not found"))
+			return()
+		}
+		xlim <- convertX(unit(0:1, "npc"), "native", valueOnly=T)
+		ylim <- convertY(unit(0:1, "npc"), "native", valueOnly=T)
+		upViewport(depth)
+	} else if (playState$is.lattice) {
 		# lattice plot
 		if (!any(panel.number())) {
 			okPnl <- which(trellis.currentLayout() > 0, arr=T)[1,]
@@ -137,19 +154,27 @@ rawXYLim <- function(playState = playDevCur()) {
 	list(x=xlim, y=ylim)
 }
 
-"rawXLim<-" <- function(playState = playDevCur(), x) {
-	setRawXYLim(playState, x, "x")
+"rawXLim<-" <- function(playState, value) {
+	setRawXYLim(playState, value, "x")
+	playState
 }
 
-"rawYLim<-" <- function(playState = playDevCur(), x) {
-	setRawXYLim(playState, x, "y")
+"rawYLim<-" <- function(playState, value) {
+	setRawXYLim(playState, value, "y")
+	playState
 }
 
-setRawXYLim <- function(playState = playDevCur(), x, x.or.y=c("x", "y")) {
+setRawXYLim <- function(playState, x, x.or.y=c("x", "y")) {
+	playDevSet(playState)
 	x.or.y <- match.arg(x.or.y)
 	# convert back from log scale if required
 	x <- unlogXY(x, playState$call, playState$is.lattice, x.or.y=x.or.y)
 	if (playState$is.lattice) {
+		if (!any(panel.number())) {
+			okPnl <- which(trellis.currentLayout() > 0, arr=T)[1,]
+			trellis.focus("panel", okPnl['col'], okPnl['row'], highlight=F)
+			on.exit(trellis.unfocus())
+		}
 		x.panel <- trellis.panelArgs()[[x.or.y]]
 		# convert new scale to appropriate date time class if required
 		if (inherits(x.panel, "Date") || inherits(x.panel, "POSIXt")) {
@@ -167,15 +192,15 @@ setRawXYLim <- function(playState = playDevCur(), x, x.or.y=c("x", "y")) {
 			#newlevels.i <- pmax(0, -offset + seq(ceiling(min(x)), max(x)))
 			#x <- levels(x.panel)[newlevels.i]
 			
-			if (is.null(playState$call$scales[[x.or.y]]$labels) {
-				playCallArg(scales[[x.or.y]]$labels) <- levels(x.panel)
-				playCallArg(scales[[x.or.y]]$at) <- 1:nlevels(x.panel)
+			if (is.null(callArg(playState, scales[[x.or.y]]$labels))) {
+				callArg(playState, scales[[x.or.y]]$labels) <- levels(x.panel)
+				callArg(playState, scales[[x.or.y]]$at) <- 1:nlevels(x.panel)
 			}
 		}
 	}
 	if ("numeric" %in% class(x)) x <- signif(x, 4)
-	if (x.or.y == "x") playCallArg(xlim) <- x
-	if (x.or.y == "y") playCallArg(ylim) <- x
+	if (x.or.y == "x") callArg(playState, xlim) <- x
+	if (x.or.y == "y") callArg(playState, ylim) <- x
 }
 
 untransformXlim <- function(x, the.call, is.lattice=T) {
@@ -220,77 +245,8 @@ latticeLogBase <- function(x) {
 	x
 }
 
-errorDialog <- function(..., isMarkup=F) {
-	guiMessageDialog(type="error", ..., isMarkup=isMarkup)
-}
-
-infoDialog <- function(..., isMarkup=F) {
-	guiMessageDialog(type="info", ..., isMarkup=isMarkup)
-}
-
-questionDialog <- function(..., isMarkup=F) {
-	guiMessageDialog(type="question", ..., isMarkup=isMarkup)
-}
-
-guiMessageDialog <- function(type="info", ..., isMarkup=F) {
-	myString <- paste(sep='', ...)
-	myButtons <- switch(type,
-		error="close",
-		info="ok",
-		question="yes-no"
-	)
-	dialog <- gtkMessageDialogNew(NULL, NULL, type, myButtons, myString)
-	if (isMarkup) {
-		dialog$setMarkup(myString)
-	}
-	result <- dialog$run() # make it modal
-	dialog$destroy()
-	if (result == GtkResponseType["yes"]) {
-		return("yes")
-	} else {
-		return(invisible(NULL))
-	}
-}
-
-guiTextInput <- function(text="", title="Text Input", prompt="", oneLiner=F, 
-	accepts.tab=T, wrap.mode=c("none", "char", "word", "word_char"), 
-	size=c(600, 320), width.chars=-1, focus.on.ok=!oneLiner) {
-	
-	wrap.mode <- match.arg(wrap.mode)
-	# construct dialog
-	editBox <- gtkDialog(title=title, NULL, NULL,
-		"OK", GtkResponseType["ok"], "Cancel", GtkResponseType["cancel"],
-		show = F)
-	editBox$setDefaultResponse(GtkResponseType["ok"])
-	if (nchar(prompt) > 0) {
-		editBox[["vbox"]]$packStart(gtkLabel(prompt), expand=F, pad=2)
-	}
-	if (oneLiner) {
-		editEntry <- gtkEntry()
-		editEntry['activates-default'] <- T
-		editEntry['text'] <- text
-		editEntry['width-chars'] <- width.chars
-		editBox[["vbox"]]$packStart(editEntry, pad=10)
-	} else {
-		editBox$setDefaultSize(size[1], size[2])
-		editTV <- gtkTextView()
-		setTextviewMonospace(editTV)
-		editTV$setWrapMode(GtkWrapMode[wrap.mode])
-		editTV$setAcceptsTab(accepts.tab)
-		setTextview(editTV, text)
-		scroller <- gtkScrolledWindow()
-		scroller$add(editTV)
-		scroller$setPolicy(GtkPolicyType["automatic"], GtkPolicyType["automatic"])
-		editBox[["vbox"]]$packStart(scroller)
-	}
-	# put focus on the OK button
-	if (focus.on.ok) editBox[["actionArea"]]$getChildren()[[2]]$grabFocus()
-	result <- editBox$run() # make it modal
-	newTxt <- if (oneLiner) editEntry['text'] else getTextviewText(editTV)
-	editBox$destroy()
-	if (result != GtkResponseType["ok"]) return(invisible(NULL))
-	newTxt
-}
+gmessage.error <- function(message, title="Error", icon="error", ...)
+	gmessage(message, title=title, icon=icon, ...)
 
 Filters <- matrix(c(
 	"R or S files (*.R,*.q,*.ssc,*.S)", "*.R;*.q;*.ssc;*.S",
@@ -308,43 +264,6 @@ Filters <- matrix(c(
 	"All files (*.*)",                  "*.*"), ncol=2, byrow=T,
 	dimnames=list(c('R','ps','eps','pdf','png','jpeg','txt',
 	'RData','zip','svg','wmf','fig','All'),NULL))
-
-# returns character string, or NA if cancelled
-choose.file.save <- function(default="", caption="Save File", filters=Filters[c("All"),], index=0) {
-	dialog <- gtkFileChooserDialog(caption, NULL, "save",
-		"gtk-cancel", GtkResponseType["cancel"],
-		"gtk-save", GtkResponseType["accept"])
-	dialog$setCurrentName(default)
-	
-	if (length(filters)==2) {
-		filters <- matrix(filters, nrow=1, ncol=2)
-	}
-	
-	for (i in seq(1, nrow(filters))) {
-		ff <- gtkFileFilterNew()
-		ff$setName(filters[i,1])
-		for (x in strsplit(filters[i,2], ';')[[1]]) {
-			ff$addPattern(x)
-		}
-		dialog$addFilter(ff)
-		if (i == index) dialog$setFilter(ff)
-	}
-	
-	#dialog$setDoOverwriteConfirmation(T) crap, appears behind filechooser
-	if (dialog$run() == GtkResponseType["accept"]) {
-		filename <- dialog$getFilename()
-		if (file.exists(filename)) {
-			if (is.null(questionDialog("Replace existing file?"))) {
-				filename <- NA
-			}
-		}
-		dialog$destroy()
-		return(filename)
-	} else {
-		dialog$destroy()
-		return(NA)
-	}
-}
 
 get.extension <- function(path)
 {

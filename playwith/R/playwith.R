@@ -8,7 +8,7 @@ MINOR <- "8"
 REVISION <- unlist(strsplit("$Revision: 0 $", split=" "))[2]
 VERSION <- paste(MAJOR, MINOR, REVISION, sep=".")
 COPYRIGHT <- "(c) 2007 Felix Andrews <felix@nfrac.org>"
-WEBSITE <- "http://plotandplay-gtk.googlecode.com/"
+WEBSITE <- "http://playwith.googlecode.com/"
 
 ## LICENSE
 ##
@@ -46,7 +46,7 @@ playwith <- function(
 	labels = NULL, 
 	label.style = list(cex=1),
 	is.lattice = NA, 
-	vp = NA, 
+	vp = NULL, 
 	eval.args = NA, 
 	invert.match = F, 
 	envir = parent.frame(), 
@@ -126,33 +126,36 @@ playwith <- function(
 	callToolbar <- gtkToolbar(show=show.call)
 	callToolbar["toolbar-style"] <- GtkToolbarStyle["icons"]
 	callToolbar["show-arrow"] <- FALSE
-	undoButton <- quickTool("Back", "gtk-undo-ltr", 
-		tooltip="Go back to previous plot call", 
-		f=function(widget, playState) {
+	undoButton <- quickTool(playState, "Back", 
+		icon = "gtk-undo-ltr", 
+		tooltip = "Go back to previous plot call", 
+		f = function(widget, playState) {
 			with(playState$widgets, {
-				callEntry['active'] <- callEntry['active'] + 1
-				callEntry$activate()
+				callEntry["active"] <- callEntry["active"] + 1
+				callEntry$getChild()$activate()
+				#playState$call <- parse(text=callEntry['text'])[[1]]
 				#TODO if callEntry['model']$iterNChildren()
 				redoButton['sensitive'] <- TRUE
 			})
 		})
-	redoButton <- quickTool("Forward", "gtk-redo-ltr", 
-		tooltip="Go forward to next plot call", 
-		f=function(widget, playState) {
+	redoButton <- quickTool(playState, "Forward", 
+		icon = "gtk-redo-ltr", 
+		tooltip = "Go forward to next plot call", 
+		f = function(widget, playState) {
 			with(playState$widgets, {
-				callEntry['active'] <- callEntry['active'] - 1
-				callEntry$activate()
+				callEntry["active"] <- callEntry["active"] - 1
+				callEntry$getChild()$activate()
 			})
 		})
-	redrawButton <- quickTool("Redraw", "gtk-refresh", 
-		tooltip="Re-draw the current plot", 
-		f=function(widget, playState) {
-			playInitPlot(playState)
-			playReplot(playState)
+	redrawButton <- quickTool(playState, "Redraw", 
+		icon = "gtk-refresh", 
+		tooltip = "Re-draw the current plot", 
+		f = function(widget, playState) {
+			playNewPlot(playState)
 		})
 	undoButton["sensitive"] <- FALSE
 	redoButton["sensitive"] <- FALSE
-	helpButton <- eval(toolConstructors$help)
+	helpButton <- toolConstructors$help(playState)
 	callToolbar$insert(undoButton, -1)
 	callToolbar$insert(redoButton, -1)
 	callToolbar$insert(redrawButton, -1)
@@ -197,7 +200,7 @@ playwith <- function(
 	# create the plot area
 	myDA <- gtkDrawingArea()
 	myHBox$packStart(myDA)
-	myHBox["resize-mode"] <- GtkResizeMode["queue"]
+	myHBox["resize-mode"] <- GtkResizeMode["queue"] # ?
 	asCairoDevice(myDA)
 	gSignalConnect(myHBox, "remove", devoff_handler, 
 		data=playState, after=TRUE)
@@ -210,7 +213,9 @@ playwith <- function(
 	pageEntry["width-chars"] <- 2
 	gSignalConnect(pageEntry, "activate", 
 		function(widget, playState) {
-			playState$page <- as.numeric(widget["value"])
+			newPage <- round(as.numeric(widget["text"]))
+			if (newPage == playState$page) return()
+			playState$page <- newPage
 			playReplot(playState)
 		},
 		data=playState)
@@ -221,48 +226,75 @@ playwith <- function(
 	pageScrollbar["update-policy"] <- GtkUpdateType["discontinuous"]
 	gSignalConnect(pageScrollbar, "value-changed", 
 		function(widget, playState) {
-			playState$page <- widget["value"]
+			newPage <- round(widget$getValue())
+			if (newPage == playState$page) return()
+			playState$page <- newPage
 			playReplot(playState)
-		})
+		},
+		data=playState)
 	pageScrollBox$packStart(pageScrollbar)
 	# create the right toolbar
 	rightToolbar <- gtkToolbar()
 	rightToolbar["orientation"] <- GtkOrientation["vertical"]
-	rightToolbar["toolbar-style"] <- GtkToolbarStyle['both']
+	rightToolbar["toolbar-style"] <- GtkToolbarStyle["both"]
 	myHBox$packStart(rightToolbar, expand=FALSE)
 	# create the time/index scrollbar
 	timeScrollBox <- gtkHBox()
 	myVBox$packStart(timeScrollBox, expand=FALSE)
-	timeScrollBox$packStart(gtkLabel("Index"), expand=FALSE)
+	timeScrollBox$packStart(gtkLabel("Time"), expand=FALSE)
 	timeEntry <- gtkEntry()
-	timeEntry["width-chars"] <- 24
+	timeEntry["width-chars"] <- 30
+	gSignalConnect(timeEntry, "activate", 
+		function(widget, playState) {
+			newLim <- strsplit(widget["text"], " to ")[[1]]
+			if ((length(newLim) != 2)) {
+				gmessage.error("Give bounds in form \"LOWER to UPPER\".")
+				return()
+			}
+			# TODO date / time
+			callArg(playState, xlim) <- as.numeric(newLim)
+			playReplot(playState)
+		},
+		data=playState)
 	timeScrollBox$packStart(timeEntry, expand=FALSE)
 	timeScrollbar <- gtkHScrollbar()
 	timeScrollbar["adjustment"] <- gtkAdjustment()
 	timeScrollbar["update-policy"] <- GtkUpdateType["discontinuous"]
+	gSignalConnect(timeScrollbar, "value-changed", 
+		function(widget, playState) {
+			newLim <- widget$getValue()
+			newLim[2] <- newLim + widget["adjustment"]["page-size"]
+			if (widget["adjustment"]["page-size"] == 0) stop()
+			#oldLim <- rawXLim(playState)
+			#if (min(oldLim) == min(newLim)) return()
+			rawXLim(playState) <- newLim
+			playReplot(playState)
+		},
+		data=playState)
 	timeScrollBox$packStart(timeScrollbar)
 	
-	makeIndexButton <- function() {
-		name <- StateEnv$.current
-		myStep <- 1
-		if ('gui.step' %in% names(playState$call))
-			myStep <- eval(playState$call$gui.step, playState$env)
-		spinner <- gtkSpinButton(min=1, max=999999, step=myStep)
-		spinner["value"] <- 1
-		playState$env$gui.index <- 1
-		gSignalConnect(spinner, "value-changed", .plotAndPlay_index_event)
-		vbox <- gtkVBox()
-		vbox$packStart(gtkLabel("Index:"))
-		vbox$packStart(spinner)
-		foo <- gtkToolItem()
-		foo$add(vbox)
-		foo
-	}
-	.plotAndPlay_index_event <- function(widget, user.data) {
-		name <- StateEnv$.current
-		playState$env$gui.index <- widget["value"]
-		plotAndPlayUpdate()
-	}
+			# TODO ... (old stuff)
+			makeIndexButton <- function() {
+				name <- StateEnv$.current
+				myStep <- 1
+				if ('gui.step' %in% names(playState$call))
+					myStep <- eval(playState$call$gui.step, playState$env)
+				spinner <- gtkSpinButton(min=1, max=999999, step=myStep)
+				spinner["value"] <- 1
+				playState$env$gui.index <- 1
+				gSignalConnect(spinner, "value-changed", .plotAndPlay_index_event)
+				vbox <- gtkVBox()
+				vbox$packStart(gtkLabel("Index:"))
+				vbox$packStart(spinner)
+				foo <- gtkToolItem()
+				foo$add(vbox)
+				foo
+			}
+			.plotAndPlay_index_event <- function(widget, user.data) {
+				name <- StateEnv$.current
+				playState$env$gui.index <- widget["value"]
+				plotAndPlayUpdate()
+			}
 	
 	# create the bottom toolbar
 	bottomToolbar <- gtkToolbar()
@@ -326,13 +358,11 @@ playwith <- function(
 		envir=playState,
 		enclos=environment()
 	)
-	# set up toolbars etc
-	playInitPlot(playState)
 	# do the plot
-	invisible(playReplot(playState))
+	invisible(playNewPlot(playState))
 }
 
-playInitPlot <- function(playState = playDevCur()) {
+playNewPlot <- function(playState = playDevCur()) {
 	playDevSet(playState)
 	plot.call <- playState$call
 	env <- playState$env
@@ -412,35 +442,42 @@ playInitPlot <- function(playState = playDevCur()) {
 		populateToolbar(leftToolbar, left.tools)
 		populateToolbar(bottomToolbar, bottom.tools)
 		populateToolbar(rightToolbar, right.tools)
-	}
+	})
 	for (tbar in tbars) {
-		if (length(tbar$getChildren() > 0)) tbar$show()
+		if (length(tbar$getChildren()) > 0) tbar$show()
 	}
+	playReplot(playState)
 }
 
 playReplot <- function(playState = playDevCur()) {
-	playDevSet(playState)
 	if (isTRUE(playState$skip.redraws)) return()
+	#str(sys.calls())
+	playDevSet(playState)
+	plot.new()
+	playPrompt(playState) <- NULL
 	# disable toolbars until this is over
-	plotAndPlayFreezeGUI()
-	on.exit(plotAndPlayThawGUI())
+	playFreezeGUI(playState)
+	on.exit(playThawGUI(playState))
 	widg <- playState$widgets
-	if (widg$promptBox["visible"]) 
-		plotAndPlayUnmakePrompt()
 	# add current call to text box
 	callTxt <- ""
 	if (object.size(playState$call) < 50000) {
-		callTxt <- deparseOneLine(playState$call, 
-			control="showAttributes")
+		callTxt <- deparseOneLine(playState$call) #control="showAttributes")
 		if (is.null(playState$title)) playState$win["title"] <- 
 			toString(callTxt, width=34)
+		oldCallTxt <- widg$callEntry$getActiveText()
+		if ((widg$callEntry["active"] == -1) || (callTxt != oldCallTxt)) {
+			# a new call: edited inline OR playState$call modified
+			widg$callEntry$prependText(callTxt)
+			widg$callEntry["active"] <- 0
+			widg$undoButton["sensitive"] <- TRUE
+		}
+		widg$redoButton["sensitive"] <- (widg$callEntry["active"] > 0)
 	}
-	widg$callEntry$prependText(callTxt)
-	widg$callEntry["active"] <- 0
-	widg$undoButton["sensitive"] <- TRUE
 	# do the plot
 	result <- eval(playState$call, playState$env)
 	if (inherits(result, "trellis")) {
+		playState$trellis <- result
 		# set back to this device, since user may have switched during plot
 		playDevSet(playState)
 		# work out panels and pages
@@ -478,11 +515,10 @@ playReplot <- function(playState = playDevCur()) {
 					warning("post.plot.action not a function")
 					next
 				}
-				xUpd(widget=x, playState=playState)
+				xUpd(x, playState=playState)
 			}
 		}
 	})
-	# TODO: update time widget with xlim
 	invisible(result)
 }
 
@@ -588,7 +624,7 @@ playwith.trellis <-
 playwith.plot.new <- function(...) {
 	sysCallNames <- sapply(sys.calls(), function(x)
 		ifelse(is.symbol(x[[1]]), toString(x[[1]]), ""))
-	playing <- any(c("playReplot", "playInitPlot") 
+	playing <- any(c("playReplot", "playNewPlot") 
 		%in% sysCallNames)
 	multifig <- !isTRUE(all.equal(par("mfrow"), c(1,1)))
 	first <- isTRUE(all.equal(par("mfg")[1:2], c(1,1)))
@@ -621,6 +657,11 @@ playwith.plot.new <- function(...) {
 }
 
 ## General utility functions
+
+plotadd <- function(name, ..., add.stuff=expression()) {
+	eval.parent(call(deparse(substitute(name)), ...))
+	for (x in add.stuff) eval.parent(x)
+}
 
 deparseOneLine <- function(expr, width.cutoff=500, ...) {
 	tmp <- deparse(expr, width.cutoff=width.cutoff, ...)

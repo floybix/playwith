@@ -25,14 +25,14 @@ export(
 
 # API
 export(
+	playNewPlot,
+	playReplot,
 	quickTool,
 	playDevCur,
 	playDevSet,
 	playDevOff,
 	callArg,
 	"callArg<-",
-	playReplot,
-	playInitPlot,
 	playFreezeGUI,
 	playThawGUI,
 	blockRedraws,
@@ -43,14 +43,12 @@ export(
 	"rawXLim<-",
 	"rawYLim<-",
 	unlogX,
-	unlogY
+	unlogY,
+	gmessage.error
 )
 
-# other GTK GUI stuff
+# misc
 export(
-	errorDialog,
-	infoDialog,
-	questionDialog,
-	guiTextInput
+	plotadd
 )
 

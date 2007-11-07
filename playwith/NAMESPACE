@@ -30,6 +30,7 @@ export(
 	quickTool,
 	playDevCur,
 	playDevSet,
+	playDevList,
 	playDevOff,
 	callArg,
 	"callArg<-",
@@ -42,6 +43,10 @@ export(
 	rawYLim,
 	"rawXLim<-",
 	"rawYLim<-",
+	xRange,
+	yRange,
+	xClass,
+	yClass,
 	unlogX,
 	unlogY,
 	gmessage.error

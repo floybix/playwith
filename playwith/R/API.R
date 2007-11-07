@@ -7,6 +7,12 @@
 
 playDevCur <- function() StateEnv$.current # may be NULL
 
+playDevList <- function() {
+	foo <- as.list(StateEnv)
+	names(foo) <- lapply(foo, function(x) toString(x$win["title"]))
+	foo
+}
+
 playDevSet <- function(playState) {
 	StateEnv$.current <- playState
 	playState$old.dev <- dev.cur()
@@ -15,15 +21,17 @@ playDevSet <- function(playState) {
 }
 
 playDevOff <- function(playState = playDevCur()) {
-	playState$win$destroy()
+	try(playState$win$destroy())
+	cleanupStateEnv()
 }
 
 callArg <- function(playState, arg, name=NULL) {
 	if (missing(arg) && missing(name)) stop("give 'arg' or 'name'")
-	arg <- if (missing(arg)) as.symbol(name) else substitute(arg)
+	arg <- if (missing(arg)) parse(text=name)[[1]]
+		else substitute(arg)
 	getx <- if (is.numeric(arg)) paste("[[", arg+1, "]]", sep="")
 		else if (is.symbol(arg)) paste('[["', arg, '", exact=TRUE]]', sep="")
-		else paste("$", deparse(arg), sep="")
+		else paste("$", deparseOneLine(arg), sep="")
 	expr <- eval(parse(text=paste("playState$call", getx, sep="")))
 	if (mode(expr) == "expression") return(expr)
 	eval(expr, envir=playState$env, enclos=parent.frame())
@@ -31,11 +39,21 @@ callArg <- function(playState, arg, name=NULL) {
 
 "callArg<-" <- function(playState, arg, name=NULL, value) {
 	if (missing(arg) && missing(name)) stop("give 'arg' or 'name'")
-	x <- if (missing(arg)) as.symbol(name) else substitute(arg)
+	arg <- if (missing(arg)) parse(text=name)[[1]]
+		else substitute(arg)
+	if (is.null(arg)) return()
+	# instantiate implicit lists as language objects (so deparse is pretty)
+	xbits <- strsplit(deparseOneLine(arg), "$", fixed=TRUE)[[1]]
+	for (i in seq_len(length(xbits) - 1)) {
+		implicitList <- paste(xbits[1:i], collapse="$")
+		if (is.null(callArg(playState, name=implicitList))) {
+			callArg(playState, name=implicitList) <- quote(list())
+		}
+	}
 	getx <- if (is.numeric(arg)) paste("[[", arg+1, "]]", sep="")
-		else paste("$", deparse(x), sep="")
+		else paste("$", deparseOneLine(arg), sep="")
 	expr <- parse(text=paste("playState$call", getx, sep=""))[[1]]
-	expr <- call("<-", expr, value)
+	expr <- call("<-", expr, quote(value))
 	eval(expr, enclos=parent.frame())
 	playState
 }
@@ -122,11 +140,11 @@ rawYLim <- function(playState) {
 
 rawXYLim <- function(playState) {
 	playDevSet(playState)
-	if (!is.null(playState$vp)) {
+	if (!is.null(playState$viewport)) {
 		# grid graphics plot
-		depth <- try(downViewport(playState$vp))
+		depth <- try(downViewport(playState$viewport))
 		if (inherits(depth, "try-error")) {
-			stop(paste("Viewport", playState$vp, "not found"))
+			stop(paste("Viewport", playState$viewport, "not found"))
 		}
 		xlim <- convertX(unit(0:1, "npc"), "native", valueOnly=T)
 		ylim <- convertY(unit(0:1, "npc"), "native", valueOnly=T)
@@ -178,14 +196,6 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y")) {
 		
 		# convert new scale to factor levels if required
 		if (is.factor(x.panel)) {
-			#offset <- 0
-			#limTerm <- the.call[[paste(x.or.y, "lim", sep="")]]
-			#if (is.character(sublevels <- try(eval(limTerm)))) {
-			#	offset <- 1 - match(sublevels[1], levels(x.panel))
-			#}
-			#newlevels.i <- pmax(0, -offset + seq(ceiling(min(x)), max(x)))
-			#x <- levels(x.panel)[newlevels.i]
-			
 			if (is.null(callArg(playState, scales[[x.or.y]]$labels))) {
 				callArg(playState, scales[[x.or.y]]$labels) <- levels(x.panel)
 				callArg(playState, scales[[x.or.y]]$at) <- 1:nlevels(x.panel)
@@ -195,6 +205,123 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y")) {
 	if ("numeric" %in% class(x)) x <- signif(x, 4)
 	if (x.or.y == "x") callArg(playState, xlim) <- x
 	if (x.or.y == "y") callArg(playState, ylim) <- x
+}
+
+xRange <- function(playState) {
+	xyRange(playState, "x")
+}
+
+yRange <- function(playState) {
+	xyRange(playState, "y")
+}
+
+xyRange <- function(playState, x.or.y=c("x", "y")) {
+	x.or.y <- match.arg(x.or.y)
+	lim <- NULL
+	if (playState$is.lattice) {
+		lim <- range(unlist(lapply(playState$trellis$panel.args, 
+			function(pargs)
+				range(as.numeric(pargs[[x.or.y]]), finite=TRUE)
+			)))
+	} else {
+		lim <- try(range(xy.coords.call(playState$call, 
+			playState$env)[[x.or.y]], finite=TRUE))
+		#lim <- try(range(xyCoords(playState)[[x.or.y]], finite=TRUE)
+		if (inherits(lim, "try-error")) lim <- c(0,0)
+	}
+	lim
+}
+
+xClass <- function(playState) {
+	if (playState$is.lattice) {
+		foo <- playState$trellis$x.limits
+	} else {
+		foo <- xyCoords(playState)$x
+	}
+	if (inherits(foo, "AsIs")) {
+		cls <- setdiff(class(foo), "AsIs")
+		if (length(cls)) return(cls)
+		else return(class(unclass(foo)))
+	}
+	class(foo)
+}
+
+yClass <- function(playState) {
+	if (playState$is.lattice) {
+		foo <- playState$trellis$y.limits
+	} else {
+		foo <- xyCoords(playState)$y
+	}
+	if (inherits(foo, "AsIs")) {
+		cls <- setdiff(class(foo), "AsIs")
+		if (length(cls)) return(cls)
+		else return(class(unclass(foo)))
+	}
+	class(foo)
+}
+
+xyCoords <- function(playState) {
+	if (playState$is.lattice) {
+		warning("only data limits returned")
+		return(list(x=playState$trellis$x.limits,
+			y=playState$trellis$y.limits))
+	}
+	x <- callArg(playState, 1)
+	y <- callArg(playState, name="y")
+	if (is.null(y)) {
+		if (is.language(x)) {
+			if (inherits(x, "formula") && length(x) == 3) {
+				y <- eval(x[[2]], environment(x), playState$env)
+				x <- eval(x[[3]], environment(x), playState$env)
+			}
+			else stop("invalid first argument")
+		}
+		else if (inherits(x, "zoo")) {
+			y <- if (is.matrix(x)) x[, 1] else x
+			x <- stats::time(x)
+		}
+		else if (inherits(x, "ts")) {
+			y <- if (is.matrix(x)) x[, 1] else x
+			x <- stats::time(x)
+		}
+		else if (is.complex(x)) {
+			y <- Im(x)
+			x <- Re(x)
+		}
+		else if (is.matrix(x) || is.data.frame(x)) {
+			x <- data.matrix(x)
+			if (ncol(x) == 1) {
+				y <- x[, 1]
+				x <- seq_along(y)
+			}
+			else {
+				colnames <- dimnames(x)[[2]]
+				y <- x[, 2]
+				x <- x[, 1]
+			}
+		}
+		else if (is.list(x)) {
+			y <- x[["y"]]
+			x <- x[["x"]]
+		}
+		else {
+			if (is.factor(x)) x <- as.numeric(x)
+			y <- x
+			x <- seq_along(x)
+		}
+	}
+	if (inherits(x, "zoo")) {
+		# and y is not null
+		x <- as.numeric(x)
+		y <- as.numeric(y)
+	}
+	if (inherits(x, "POSIXt")) x <- as.POSIXct(x)
+	if (length(x) != length(y)) {
+		if ((nx <- length(x)) < (ny <- length(y))) 
+			x <- rep(x, length.out = ny)
+		else y <- rep(y, length.out = nx)
+	}
+	list(x=x, y=y)
 }
 
 untransformXlim <- function(x, the.call, is.lattice=T) {

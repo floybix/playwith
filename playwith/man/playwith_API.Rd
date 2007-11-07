@@ -2,6 +2,7 @@
 \alias{playwith_API}
 \alias{quickTool}
 \alias{playDevCur}
+\alias{playDevList}
 \alias{playDevSet}
 \alias{playDevOff}
 \alias{playNewPlot}
@@ -9,6 +10,10 @@
 \alias{callArg}
 \alias{rawXLim}
 \alias{rawYLim}
+\alias{xRange}
+\alias{yRange}
+\alias{xClass}
+\alias{yClass}
 \alias{playFocus}
 \alias{playPrompt}
 \alias{playFreezeGUI}
@@ -35,6 +40,7 @@ quickTool(
 	show = TRUE)
 
 playDevCur()
+playDevList()
 playDevSet(playState)
 playDevOff(playState = playDevCur())
 
@@ -48,6 +54,11 @@ rawXLim(playState)
 rawXLim(playState) <- value
 rawYLim(playState)
 rawYLim(playState) <- value
+
+xRange(playState)
+yRange(playState)
+xClass(playState)
+yClass(playState)
 
 playFocus(playState, highlight=TRUE, ...)
 

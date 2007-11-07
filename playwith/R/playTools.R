@@ -20,7 +20,6 @@ playApplicationTools <- list(
 
 playInteractionTools <- list(
 	"expand",
-	"--",
 	"identify",
 	"annotate",
 	"arrow",
@@ -35,7 +34,6 @@ playInteractionTools <- list(
 
 play3DTools <- list(
 	"expand",
-	"--",
 	"annotate",
 	"arrow",
 	"edit.annotations",
@@ -49,7 +47,6 @@ play3DTools <- list(
 
 playSplomTools <- list(
 	"expand",
-	"--",
 	"annotate",
 	"arrow",
 	"edit.annotations",
@@ -119,12 +116,15 @@ settings_handler <- function(widget, playState) {
 	# convenience extractor
 	arg <- function(x) do.call(callArg, list(playState, substitute(x)))
 	
+	# TODO: LEGEND / KEY
+	
 	# TITLES
 	labgroup <- gframe("Titles", horizontal=FALSE, container=wingroup)
 	lay <- glayout(container=labgroup)
 	rownum <- 1
 	for (nm in c("main", "sub", "xlab", "ylab")) {
-		argVal <- callArg(playState, name=nm)
+		argVal <- if (playState$is.lattice) playState$trellis[[nm]]
+			else callArg(playState, name=nm)
 		isExpr <- is.language(argVal)
 		if (isExpr) argVal <- deparse(as.expression(argVal)[[1]])
 		wid[[nm]] <- gedit(toString(argVal), width=60)
@@ -204,6 +204,8 @@ settings_handler <- function(widget, playState) {
 	# STYLE
 	stylegroup <- gframe("Style", horizontal=FALSE, container=wingroup)
 	enabled(stylegroup) <- FALSE
+	# lattice theme
+	# TODO color (white bg) / color (dark bg) / greyscale
 	# type
 	arg_type <- callArg(playState, type)
 	hasPoints <- (is.null(arg_type) || any(c("p","b","o") %in% arg_type))
@@ -431,7 +433,7 @@ save_handler <- function(widget, user.data) {
 		dev.off()
 	}
 	else if (ext %in% c("jpeg","jpg")) {
-		dev.copy(jpeg, file=filename, width=myWidth, height=myHeight, units="in")
+		dev.copy(jpeg, file=filename, width=myWidth, height=myHeight, res=72, units="in")
 		dev.off()
 	}
 	else if (ext %in% "svg") {
@@ -538,17 +540,17 @@ data_handler <- function(widget, playState) {
 ## TIME.MODE
 
 toolConstructors$time.mode <- function(playState) {
-	foo <- quickTool(playState,
+	with (playState$widgets, {
+		timeScrollbar["sensitive"] <- playState$time.mode
+		timeEntry["sensitive"] <- playState$time.mode
+	})
+	quickTool(playState,
 		label = "Time mode", 
 		icon = "gtk-media-forward-ltr",
 		tooltip = "Time mode: scroll along the x-axis",
 		f = time.mode_handler, 
 		post.plot.action = time.mode_postplot_action,
 		isToggle = TRUE)
-	foo["active"] <- playState$time.mode
-	timeScrollbar["sensitive"] <- playState$time.mode
-	timeEntry["sensitive"] <- playState$time.mode
-	foo
 }
 
 time.mode_handler <- function(widget, playState) {
@@ -557,51 +559,47 @@ time.mode_handler <- function(widget, playState) {
 		timeScrollBox["visible"] <- TRUE
 		timeScrollbar["sensitive"] <- playState$time.mode
 		timeEntry["sensitive"] <- playState$time.mode
-		# TODO: need to update adjustment IFF plot has been drawn (not from constructor)
 	}))
+	# update scrollbar etc
+	time.mode_postplot_action(widget, playState)
 }
 
 time.mode_postplot_action <- function(widget, playState) {
-	if (playState$time.mode) {
-		# TODO: callArg(playState, time.index)
-		
-		if (playState$is.lattice) {
-			# lattice plot
-			if (!any(panel.number())) {
-				okPnl <- which(trellis.currentLayout() > 0, arr=T)[1,]
-				trellis.focus("panel", okPnl['col'], okPnl['row'], highlight=F)
-				on.exit(trellis.unfocus())
-			}
-			xy <- trellis.panelArgs()
-		} else {
-			# base graphics plot
-			xy <- xy.coords.call(playState$call, envir=playState$env)
-		}
-		blockRedraws({
-			widg <- playState$widgets
-			x.range <- extendrange(xy$x)
-			x.lim <- rawXLim(playState)
-			x.page <- abs(diff(x.lim))
-			x.page <- min(x.page, abs(diff(x.range)))
-			x.pos <- min(x.lim)
-			x.pos <- max(x.pos, min(x.range))
-			x.pos <- min(x.pos, max(x.range))
-		#	print(list(value=x.pos, lower=min(x.range), upper=max(x.range),
-		#		step.incr=x.page/2, page.incr=x.page, page.size=x.page))
-			#widg$timeScrollbar$setAdjustment(gtkAdjustment(
-			#	value=min(x.lim), lower=min(x.range), upper=max(x.range),
-			#	step.incr=x.page/2, page.incr=x.page, page.size=x.page))
-			widg$timeEntry["text"] <- paste(signif(x.lim, 4), collapse=" to ")
-			widg$timeScrollbar["adjustment"] <- gtkAdjustment(
-				value=x.pos, lower=min(x.range), upper=max(x.range),
-				step.incr=x.page/2, page.incr=x.page, page.size=x.page)
-			widg$timeScrollbar$setValue(x.pos) # need this (bug?)
-			#widg$timeScrollbar["adjustment"]["page-size"] <- x.page
-			#widg$timeScrollbar["adjustment"]["page-increment"] <- x.page
-			#widg$timeScrollbar["adjustment"]["step-increment"] <- x.page / 2
-			#widg$timeScrollbar["adjustment"]["value"] <- x.pos
-		})
+	if (playState$time.mode == FALSE) return()
+	if (widget["active"] == FALSE) {
+		widget["active"] <- TRUE # triggers update
+		return()
 	}
+	blockRedraws({
+		widg <- playState$widgets
+		if (!is.null(playState$env$time.index)) {
+			
+			current.index <- 1
+			current.time <- playState$time.index[current.index]
+			widg$timeEntry["text"] <- 
+			widg$timeScrollbar["adjustment"] <- gtkAdjustment(
+				value=x.pos, lower=, upper=,
+				step.incr=, page.incr=, page.size=)
+			widg$timeScrollbar$setValue() # need this (bug?)
+			return()
+		}
+		x.range <- extendrange(xRange(playState))
+		x.lim <- rawXLim(playState)
+		x.page <- abs(diff(x.lim))
+		x.page <- min(x.page, abs(diff(x.range)))
+		x.pos <- min(x.lim)
+		x.pos <- max(x.pos, min(x.range))
+		x.pos <- min(x.pos, max(x.range))
+		# format x limits for text box
+		xlim <- signif(x.lim, 4)
+		class(x.lim) <- xClass(playState)
+		widg$timeEntry["text"] <- paste(format(x.lim), collapse=" to ")
+		# set up scrollbar
+		widg$timeScrollbar["adjustment"] <- gtkAdjustment(
+			value=x.pos, lower=min(x.range), upper=max(x.range),
+			step.incr=x.page/2, page.incr=x.page, page.size=x.page)
+		widg$timeScrollbar$setValue(x.pos) # need this (bug?)
+	})
 }
 
 ## OPTIONS
@@ -859,7 +857,7 @@ identify_handler <- function(widget, playState) {
 	if (!is.null(playState$label.points)) 
 		idCall[[2]] <- playState$label.points
 	idCall <- as.call(c(as.list(idCall), playState$label.style))
-	newFocus <- playFocus(clip.off=T)
+	newFocus <- playFocus(playState, clip.off=T)
 	if (!any(newFocus > 0)) return()
 	playPrompt(playState) <- paste("Identifying data points...",
 		"Click the right mouse button to finish.")
@@ -884,7 +882,7 @@ identify.region_handler <- function(widget, playState) {
 	if (!nav.x) highEdge <- "top edge"
 	# get region
 	if (playState$is.lattice) {
-		newFocus <- playFocus(clip.off=T)
+		newFocus <- playFocus(playState, clip.off=T)
 		if (!any(newFocus)) return()
 		playPrompt(playState) <- paste("Identifying data points in a region...",
 			"click at the", lowEdge)
@@ -1047,12 +1045,12 @@ annotate_handler <- function(widget, user.data) {
 	if (isFigure) myPrompt <- "Click to place a label on the figure"
 	if (isArrow) myPrompt <- "Click at the start of the arrow (\"from\")"
 	nextPrompt <- "OK, now click at the end of the arrow (\"to\")"
-	if (playState$is.lattice || !is.null(playState$vp)) {
-		if (!is.null(playState$vp) && !isFigure) {
+	if (playState$is.lattice || !is.null(playState$viewport)) {
+		if (!is.null(playState$viewport) && !isFigure) {
 			# grid graphics plot
-			depth <- downViewport(playState$vp)
+			depth <- downViewport(playState$viewport)
 			on.exit(upViewport(depth), add=TRUE)
-			myPacket <- "vp"
+			myPacket <- "viewport"
 		} else {
 			# lattice plot
 			if (isFigure) {
@@ -1181,14 +1179,14 @@ placeLabelDialog <- function(text="", title="New label", prompt="", width.chars=
 
 annotate_postplot_action <- function(widget, playState) {
 	# draw annotations
-	if (!is.null(playState$vp)) {
+	if (!is.null(playState$viewport)) {
 		# grid graphics plot
 		for (myPacket in names(playState$annotations)) {
 			depth <- if (myPacket == "all") { # figure
 				pushViewport(viewport(name="playwith_toplevel"))
 				downViewport("playwith_toplevel")
 			} else { # plot region
-				downViewport(playState$vp)
+				downViewport(playState$viewport)
 			}
 			for (expr in playState$annotations[[myPacket]]) {
 				eval(expr, playState$env)
@@ -1333,10 +1331,10 @@ zoom_handler <- function(widget, playState) {
 	maskGrob <- rectGrob(gp=gpar(col="transparent", 
 		fill=rgb(0.5,0.5,0.5, alpha=0.25)), name="tmp.mask")
 	# get new scales interactively
-	if (playState$is.lattice || !is.null(playState$vp)) {
-		if (!is.null(playState$vp)) {
+	if (playState$is.lattice || !is.null(playState$viewport)) {
+		if (!is.null(playState$viewport)) {
 			# grid graphics plot
-			depth <- downViewport(playState$vp)
+			depth <- downViewport(playState$viewport)
 			on.exit(upViewport(depth), add=TRUE)
 		} else {
 			# lattice plot

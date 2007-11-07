@@ -12,6 +12,29 @@
 }
 \usage{
 
+playwith(expr, 
+	title = NULL, 
+	playDev = NULL,
+	...,
+	time.mode = FALSE,
+	top.tools = playApplicationTools, 
+	left.tools = playInteractionTools, 
+	bottom.tools = list(),
+	right.tools = list(), 
+	show.call = TRUE,
+	label.points = NULL, 
+	labels = NULL, 
+	label.style = list(cex=1),
+	is.lattice = NA, 
+	viewport = NULL, 
+	eval.args = NA, 
+	invert.match = F, 
+	envir = parent.frame(), 
+	win.size = c(640, 480), 
+	modal = FALSE,
+	deletable = TRUE,
+	restore.on.close = NULL, 
+	plot.call)
 	
 playwith(expr, name = "plot", nav.scales = c("x","y"), trans.scales = c("y"), 
 	 buttons = list("annotate", "identify", "zoom", "zoomfit"), 

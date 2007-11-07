@@ -35,7 +35,8 @@ if (!exists("StateEnv", environment(), inherits=FALSE)) {
 playwith <- function(
 	expr, 
 	title = NULL, 
-	playDev = NULL,
+	playState = NULL,
+	...,
 	time.mode = FALSE,
 	top.tools = playApplicationTools, 
 	left.tools = playInteractionTools, 
@@ -46,17 +47,18 @@ playwith <- function(
 	labels = NULL, 
 	label.style = list(cex=1),
 	is.lattice = NA, 
-	vp = NULL, 
+	viewport = NULL, 
 	eval.args = NA, 
 	invert.match = F, 
 	envir = parent.frame(), 
-	size = c(640, 480), 
+	win.size = c(640, 480), 
 	modal = FALSE,
 	deletable = TRUE,
 	restore.on.close = NULL, 
 	plot.call)
 {
-	if (!missing(plot.call) && !missing(expr)) stop("give only one of 'expr' and 'plot.call'")
+	if (!missing(plot.call) && !missing(expr))
+		stop("give only one of 'expr' and 'plot.call'")
 	if (missing(plot.call) && missing(expr)) expr <- quote({})
 	if (missing(plot.call)) plot.call <- substitute(expr)
 	if (is.expression(plot.call)) {
@@ -64,23 +66,23 @@ playwith <- function(
 			as.call(c(as.symbol("{"), plot.call)) else plot.call[[1]]
 	}
 	# check types
-	if (!is.call(plot.call)) stop("'plot.call' should be a call object")
+	if (!is.call(plot.call)) stop("'expr' / 'plot.call' should be a call")
 	if (!is.null(title) && !is.character(title)) stop("'title' should be character")
-	# work out id (unique identifier for the "device")
-	ID <- title
-	if (!is.null(playDev)) {
-		ID <- playDev$ID
-		if (is.null(title)) title <- playDev$title
-	}
-	if (is.null(ID)) ID <- basename(tempfile())
-	# playState is the <environment> encapsulating the plot window and device
-	playState <- if (exists(ID, StateEnv, inherits=FALSE)) {
-		playState <- StateEnv[[ID]]
+	# playState is the <environment> encapsulating the plot, window and device
+	cleanupStateEnv()
+	if (!is.null(playState)) {
+		stopifnot(is.environment(playState))
+		if (is.null(title)) title <- playState$title
 	} else {
-	 	playState <- new.env()
+		ID <- title
+		if (!is.null(ID) && exists(ID, StateEnv, inherits=FALSE)) {
+			playState <- StateEnv[[ID]]
+		} else {
+			playState <- new.env()
+			ID <- basename(tempfile())
+			StateEnv[[ID]] <- playState
+		}
 	}
-	playState$ID <- ID
-	StateEnv[[ID]] <- playState
 	StateEnv$.current <- playState
 	# work out evaluation rules
 	env <- new.env()
@@ -106,17 +108,13 @@ playwith <- function(
 			"Make sure you have recent versions of",
 			"RGtk2 and the GTK+ libraries.",
 			"See http://www.ggobi.org/rgtk2/"))
-		myWin["default-width"] <- size[1]
-		myWin["default-height"] <- size[2]
+		myWin["default-width"] <- win.size[1]
+		myWin["default-height"] <- win.size[2]
 		myWin["modal"] <- modal
 		myWin["deletable"] <- deletable
 		myWin$show()
 		gSignalConnect(myWin, "delete-event",  window.close_handler, 
 			data=playState)
-		gSignalConnect(myWin, "focus-in-event", 
-			window.focus.in_handler, data=playState)
-		gSignalConnect(myWin, "focus-out-event", 
-			window.focus.out_handler, data=playState)
 	}
 	if (!is.null(title)) myWin["title"] <- title
 	widg <- list()
@@ -251,7 +249,10 @@ playwith <- function(
 				gmessage.error("Give bounds in form \"LOWER to UPPER\".")
 				return()
 			}
-			# TODO date / time
+			cls <- xClass(playState)
+			if ("POSIXt" %in% cls) newLim <- as.POSIXct(newLim)
+			else if ("Date" %in% cls) newLim <- as.Date(newLim)
+			else if ("integer" %in% cls) newLim <- as.integer(newLim)
 			callArg(playState, xlim) <- as.numeric(newLim)
 			playReplot(playState)
 		},
@@ -303,6 +304,13 @@ playwith <- function(
 	# store the state of this plot window in a new environment
 	missing_top.tools <- missing(top.tools)
 	missing_left.tools <- missing(left.tools)
+	# store extra arguments in the attached local environment
+	dots <- list(...)
+	for (arg in names(dots)) {
+		if (arg == "") next
+		env[[arg]] <- dots[[arg]]
+	}
+	# construct the state object (playState)
 	evalq({
 		win <- myWin
 		dev <- dev.cur()
@@ -314,7 +322,7 @@ playwith <- function(
 		labels <- labels
 		label.style <- label.style
 		is.lattice <- is.lattice
-		vp <- vp
+		viewport <- viewport
 		ids <- list()
 		brushed <- list()
 		annotations <- list()
@@ -524,29 +532,12 @@ playReplot <- function(playState) {
 
 ## Window signal handlers
 
-window.focus.in_handler <- function(widget, event, playState) {
-	#playDevSet(playState)
-	return(FALSE)
-}
-
-window.focus.out_handler <- function(widget, event, playState) {
-	#name <- user.data$name
-	# revert to previous device
-	#dev.set(playState$old.dev)
-	return(FALSE)
-}
-
 devoff_handler <- function(widget, event, playState) {
 	# destroy the window, but store a flag to avoid destroying twice
 	if (any(playState$devoff)) return(FALSE)
 	playState$devoff <- TRUE
 	try(playState$win$destroy(), silent=TRUE)
-	
-	#name <- StateEnv$.current # TODO: get this from user.data
-	# destroy the window, but store a flag to avoid destroying twice
-	#if (any(playState$devoff)) return(FALSE)
-	#playState$devoff <- TRUE
-	#try(playState$win$destroy(), silent=TRUE)
+	cleanupStateEnv()
 	return(FALSE)
 }
 
@@ -555,10 +546,21 @@ window.close_handler <- function(widget, event, playState) {
 	if (!is.null(restoreWin) && inherits(restoreWin, "gtkWindow")) {
 		try(restoreWin$present())
 	}
-	rm(list=playState$ID, envir=StateEnv)
-	# TODO: does this happen on dev.off() ?
-	StateEnv$.current <- if (length(StateEnv)) StateEnv[[ ls(StateEnv)[1] ]]
+	cleanupStateEnv()
 	return(FALSE)
+}
+
+cleanupStateEnv <- function() {
+	for (ID in ls(StateEnv)) {
+		if (!inherits(StateEnv[[ID]]$win, "gtkWindow")) {
+			# window is defunct
+			rm(list=ID, envir=StateEnv)
+		}
+	}
+	if (!inherits(StateEnv$.current$win, "gtkWindow")) {
+		StateEnv$.current <- if (length(ls(StateEnv))) 
+			StateEnv[[ ls(StateEnv)[1] ]] else NULL
+	}
 }
 
 ## List of known Lattice (high-level) function names
@@ -698,7 +700,8 @@ copyArgsIntoEnv <- function(the.call, envir=parent.frame(), newEnv, inherits=F, 
 		if (is.call(this.arg) && this.arg[[1]] == as.symbol("$"))
 			this.arg <- this.arg[[2]]
 		
-		if (mode(this.arg) %in% c("call", "(", "list", "expression")) {
+		#if (mode(this.arg) %in% c("call", "(", "list", "expression")) {
+		if (is.recursive(this.arg)) {
 			# call recursively...
 			copyArgsIntoEnv(this.arg, envir=envir, newEnv=newEnv,
 				inherits=inherits, pattern=pattern, 

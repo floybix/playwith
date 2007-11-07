@@ -544,6 +544,15 @@ toolConstructors$time.mode <- function(playState) {
 		timeScrollbar["sensitive"] <- playState$time.mode
 		timeEntry["sensitive"] <- playState$time.mode
 	})
+	if (!is.null(playState$index.time)) {
+		if (is.null(playState$env$cur.index)) {
+			playState$env$cur.index <- 
+				if (!is.null(playState$cur.index))
+					playState$cur.index else 1
+		}
+		playState$env$cur.time <- playState$index.time[
+			playState$env$cur.index]
+	}
 	quickTool(playState,
 		label = "Time mode", 
 		icon = "gtk-media-forward-ltr",
@@ -572,15 +581,16 @@ time.mode_postplot_action <- function(widget, playState) {
 	}
 	blockRedraws({
 		widg <- playState$widgets
-		if (!is.null(playState$env$time.index)) {
-			
-			current.index <- 1
-			current.time <- playState$time.index[current.index]
-			widg$timeEntry["text"] <- 
+		if (!is.null(playState$index.time)) {
+			x.pos <- playState$env$cur.index
+			x.max <- length(playState$index.time)
+			x.jump <- round(log2(x.max))
+			cur.time <- playState$env$cur.time
+			widg$timeEntry["text"] <- toString(cur.time)
 			widg$timeScrollbar["adjustment"] <- gtkAdjustment(
-				value=x.pos, lower=, upper=,
-				step.incr=, page.incr=, page.size=)
-			widg$timeScrollbar$setValue() # need this (bug?)
+				value=x.pos, lower=1, upper=x.max,
+				step.incr=1, page.incr=x.jump, page.size=0)
+			widg$timeScrollbar$setValue(x.pos) # need this (bug?)
 			return()
 		}
 		x.range <- extendrange(xRange(playState))

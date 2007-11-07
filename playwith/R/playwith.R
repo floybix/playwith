@@ -36,13 +36,12 @@ playwith <- function(
 	expr, 
 	title = NULL, 
 	playState = NULL,
-	...,
-	time.mode = FALSE,
 	top.tools = playApplicationTools, 
 	left.tools = playInteractionTools, 
 	bottom.tools = list(),
 	right.tools = list(), 
 	show.call = TRUE,
+	time.mode = FALSE,
 	label.points = NULL, 
 	labels = NULL, 
 	label.style = list(cex=1),
@@ -55,6 +54,7 @@ playwith <- function(
 	modal = FALSE,
 	deletable = TRUE,
 	restore.on.close = NULL, 
+	...,
 	plot.call)
 {
 	if (!missing(plot.call) && !missing(expr))
@@ -244,6 +244,10 @@ playwith <- function(
 	timeEntry["width-chars"] <- 30
 	gSignalConnect(timeEntry, "activate", 
 		function(widget, playState) {
+			if (!is.null(playState$index.time)) {
+				# TODO
+				return()
+			}
 			newLim <- strsplit(widget["text"], " to ")[[1]]
 			if ((length(newLim) != 2)) {
 				gmessage.error("Give bounds in form \"LOWER to UPPER\".")
@@ -264,6 +268,13 @@ playwith <- function(
 	gSignalConnect(timeScrollbar, "value-changed", 
 		function(widget, playState) {
 			newLim <- widget$getValue()
+			if (!is.null(playState$index.time)) {
+				newLim <- round(newLim)
+				playState$env$cur.index <- newLim
+				playState$env$cur.time <- playState$index.time[newLim]
+				playReplot(playState)
+				return()
+			}
 			newLim[2] <- newLim + widget["adjustment"]["page-size"]
 			if (widget["adjustment"]["page-size"] == 0) stop()
 			#oldLim <- rawXLim(playState)
@@ -273,30 +284,6 @@ playwith <- function(
 		},
 		data=playState)
 	timeScrollBox$packStart(timeScrollbar)
-	
-			# TODO ... (old stuff)
-			makeIndexButton <- function() {
-				name <- StateEnv$.current
-				myStep <- 1
-				if ('gui.step' %in% names(playState$call))
-					myStep <- eval(playState$call$gui.step, playState$env)
-				spinner <- gtkSpinButton(min=1, max=999999, step=myStep)
-				spinner["value"] <- 1
-				playState$env$gui.index <- 1
-				gSignalConnect(spinner, "value-changed", .plotAndPlay_index_event)
-				vbox <- gtkVBox()
-				vbox$packStart(gtkLabel("Index:"))
-				vbox$packStart(spinner)
-				foo <- gtkToolItem()
-				foo$add(vbox)
-				foo
-			}
-			.plotAndPlay_index_event <- function(widget, user.data) {
-				name <- StateEnv$.current
-				playState$env$gui.index <- widget["value"]
-				plotAndPlayUpdate()
-			}
-	
 	# create the bottom toolbar
 	bottomToolbar <- gtkToolbar()
 	bottomToolbar["toolbar-style"] <- GtkToolbarStyle['both']
@@ -304,17 +291,19 @@ playwith <- function(
 	# store the state of this plot window in a new environment
 	missing_top.tools <- missing(top.tools)
 	missing_left.tools <- missing(left.tools)
-	# store extra arguments in the attached local environment
+	# set defaults -- these can be replaced by user arguments
+	playState$page <- 1
+	playState$annotation.mode <- "figure"
+	# store user arguments (...) in the state object (playState)
 	dots <- list(...)
 	for (arg in names(dots)) {
 		if (arg == "") next
-		env[[arg]] <- dots[[arg]]
+		playState[[arg]] <- dots[[arg]]
 	}
 	# construct the state object (playState)
 	evalq({
 		win <- myWin
 		dev <- dev.cur()
-		old.dev <- dev.cur()
 		call <- plot.call
 		env <- env
 		time.mode <- time.mode
@@ -326,8 +315,6 @@ playwith <- function(
 		ids <- list()
 		brushed <- list()
 		annotations <- list()
-		page <- 1
-		restore.on.close <- restore.on.close
 		tools <- list()
 		widgets <- list(
 			drawingArea = myDA,
@@ -350,6 +337,7 @@ playwith <- function(
 			vbox = myVBox,
 			hbox = myHBox
 		)
+		restore.on.close <- restore.on.close
 		.args <- list(
 			top.tools = top.tools, 
 			left.tools = left.tools,

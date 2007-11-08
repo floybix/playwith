@@ -530,7 +530,8 @@ data_handler <- function(widget, playState) {
 			newObj <- edit(oldObj)
 			if (identical(newObj, oldObj)) return()
 			assign(myName, newObj, envir=envir)
-			gmessage(paste("Edited object", myName))
+			gmessage(paste("Edited object", myName, 
+				"- you might want to reload the plot."))
 		})
 	}
 	browseEnv2(playState$env)
@@ -549,7 +550,7 @@ toolConstructors$time.mode <- function(playState) {
 			playState$env$cur.index <- 
 				if (!is.null(playState$cur.index))
 					playState$cur.index else 1
-		}
+		} # TODO else if (!is.null(playState$env$cur.time)) 
 		playState$env$cur.time <- playState$index.time[
 			playState$env$cur.index]
 	}
@@ -610,6 +611,57 @@ time.mode_postplot_action <- function(widget, playState) {
 			step.incr=x.page/2, page.incr=x.page, page.size=x.page)
 		widg$timeScrollbar$setValue(x.pos) # need this (bug?)
 	})
+}
+
+time.mode_scrollbar_handler <- function(widget, playState) {
+	newLim <- widget$getValue()
+	if (!is.null(playState$index.time)) {
+		newLim <- round(newLim)
+		playState$env$cur.index <- newLim
+		playState$env$cur.time <- playState$index.time[newLim]
+		playReplot(playState)
+		return()
+	}
+	newLim[2] <- newLim + widget["adjustment"]["page-size"]
+	if (widget["adjustment"]["page-size"] == 0) stop()
+	#oldLim <- rawXLim(playState)
+	#if (min(oldLim) == min(newLim)) return()
+	rawXLim(playState) <- newLim
+	playReplot(playState)
+}
+
+time.mode_entry_handler <- function(widget, playState) {
+	if (!is.null(playState$index.time)) {
+		newLim <- widget["text"]
+		index.time <- playState$index.time
+		max.x <- length(index.time)
+		cls <- class(index.time)
+		if ("POSIXt" %in% cls) newLim <- try(as.POSIXct(newLim))
+		else if ("Date" %in% cls) newLim <- try(as.Date(newLim))
+		if (inherits(newLim, "try-error")) {
+			# treat it as an index into index.time
+			cur.index <- as.integer(widget["text"])
+		} else {
+			newLim <- as.numeric(newLim)
+			cur.index <- findInterval(newLim, index.time)
+		}
+		cur.index <- max(1, min(max.x, cur.index))
+		playState$env$cur.index <- cur.index
+		playState$env$cur.time <- index.time[cur.index]
+		playReplot(playState)
+		return()
+	}
+	newLim <- strsplit(widget["text"], " to ")[[1]]
+	if ((length(newLim) != 2)) {
+		gmessage.error("Give bounds in form \"LOWER to UPPER\".")
+		return()
+	}
+	cls <- xClass(playState)
+	if ("POSIXt" %in% cls) newLim <- as.POSIXct(newLim)
+	else if ("Date" %in% cls) newLim <- as.Date(newLim)
+	else if ("integer" %in% cls) newLim <- as.integer(newLim)
+	callArg(playState, xlim) <- as.numeric(newLim)
+	playReplot(playState)
 }
 
 ## OPTIONS
@@ -776,7 +828,7 @@ toolConstructors$identify <- function(playState) {
 	}
 	labels <- playState$.args$labels
 	if (is.null(labels)) {
-		if (is.null(playState$label.points)) {
+		if (is.null(playState$data.points)) {
 			# try to construct labels from the plot call
 			if (playState$is.lattice) {
 				tmp.data <- NULL
@@ -817,8 +869,8 @@ toolConstructors$identify <- function(playState) {
 				}
 			}
 		} else {
-			# label.points were supplied
-			labels <- makeLabels(playState$label.points)
+			# data.points were supplied
+			labels <- makeLabels(playState$data.points)
 		}
 	}
 	playState$labels <- labels
@@ -864,8 +916,8 @@ identify_handler <- function(widget, playState) {
 	callName <- deparseOneLine(playState$call[[1]])
 	if (callName == "qqmath") 
 		identify.call <- call("panel.identify.qqmath")
-	if (!is.null(playState$label.points)) 
-		idCall[[2]] <- playState$label.points
+	if (!is.null(playState$data.points)) 
+		idCall[[2]] <- playState$data.points
 	idCall <- as.call(c(as.list(idCall), playState$label.style))
 	newFocus <- playFocus(playState, clip.off=T)
 	if (!any(newFocus > 0)) return()
@@ -992,11 +1044,11 @@ identify_postplot_action <- function(widget, playState) {
 			if (length(whichOne) == 0) next
 			myCol <- col(packets)[whichOne]
 			myRow <- row(packets)[whichOne]
-			trellis.focus("panel", myCol, myRow, highlight=F)
+			trellis.focus("panel", myCol, myRow, highlight=FALSE)
 			# find which points are identified
 			ids <- playState$ids[[myPacket]]
-			if (!is.null(playState$label.points)) {
-				xy <- xy.coords(label.points, recycle=T)
+			if (!is.null(playState$data.points)) {
+				xy <- xy.coords(data.points, recycle=TRUE)
 			} else {
 				pargs <- trellis.panelArgs()
 				xy <- pargs
@@ -1017,8 +1069,8 @@ identify_postplot_action <- function(widget, playState) {
 		# base graphics plot
 		ids <- playState$ids$all
 		if (length(ids) > 0) {
-			if (!is.null(playState$label.points)) {
-				xy <- xy.coords(label.points, recycle=T)
+			if (!is.null(playState$data.points)) {
+				xy <- xy.coords(data.points, recycle=TRUE)
 			} else {
 				xy <- xy.coords.call(playState$call, playState$env)
 			}
@@ -1568,6 +1620,7 @@ help_handler <- function(widget, playState) {
 # EDIT.CALL
 
 edit.call.inline_handler <- function(widget, playState) {
+	print(sys.calls())
 	# the original call -- this should match the code in playReplot!
 	callTxt <- deparseOneLine(playState$call)
 	newTxt <- widget["text"]

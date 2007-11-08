@@ -1,6 +1,6 @@
 \name{playwith_API}
 \alias{playwith_API}
-\alias{quickTool}
+\alias{playState}
 \alias{playDevCur}
 \alias{playDevList}
 \alias{playDevSet}
@@ -24,21 +24,9 @@
 \alias{gmessage.error}
 \title{The playwith API}
 \description{
-  Make new tools for a \code{\link{playwith}} plot window.
+  The \code{\link{playwith}} Application Programming Interface.
 }
 \usage{
-
-quickTool(
-	playState,
-	label = "", 
-	icon.name = NULL, 
-	tooltip = NULL, 
-	f, 
-	data = NULL, 
-	post.plot.action = NULL,
-	isToggle = F, 
-	show = TRUE)
-
 playDevCur()
 playDevList()
 playDevSet(playState)
@@ -69,29 +57,17 @@ blockRedraws(expr, playState = playDevCur())
 
 unlogX(x, the.call, is.lattice = T)
 unlogY(x, the.call, is.lattice = T)
-
 }
 \arguments{
-  \item{label}{ the button label. }
-  \item{icon.name}{ name of the GTK icon to use, starting with "gtk-". 
-  See \url{http://developer.gnome.org/doc/API/2.0/gtk/gtk-Stock-Items.html\#GTK-STOCK-ABOUT:CAPS} for a list. }
-  \item{tooltip}{ the button tooltip. }
-  \item{f}{ function to be called when the button is clicked ("callback function"). }
-  \item{data}{ extra data to be passed to the callback function. }
-  \item{isToggle}{ whether the button should be a \code{gtkToggleToolButton}. }
-  \item{item}{ name of one element of the state list (see below). 
-  	If \code{NULL} (the default), the whole list is returned or set. }
-  \item{name}{ name of a plot window. This can almost always be ignored. }
-  \item{\dots}{ to \code{plotAndPlaySetState}, 
-	pass one named item to replace the corresponding named element of the state list (see below). 
-  	If not named, it will replace the whole state list. }
+  \item{playState}{  }
+  \item{arg}{  }
+  \item{name}{  }
+  \item{value}{  }
   \item{highlight}{ passed to \code{\link{trellis.focus}}. }
-  \item{text}{ text to display in the plot window prompt. }
+  \item{expr}{  }
   \item{x}{ numeric vector. }
   \item{the.call}{ a plot call. Ignored if \code{is.lattice=F}. }
   \item{is.lattice}{ whether the plot call generates a lattice plot. }
-  \item{envir}{ environment in which to evaluate call arguments. }
-  \item{log, recycle}{ passed to \code{\link[grDevices]{xy.coords}}. }
 }
 \details{
   \code{plotAndPlayButtons} and \code{plotAndPlayBasicButtons} are lists of calls to generate \code{\link[RGtk2]{gtkToolItem}}s.
@@ -127,8 +103,6 @@ unlogY(x, the.call, is.lattice = T)
   Note: this function requires a panel to be in focus, since it uses \code{trellis.panelArgs()}. 
   
   \code{unlogX} just converts back from log-transformed scales if necessary.
-  
-  \code{xy.coords.call} is a wrapper around \code{xy.coords} based on the call arguments.
 }
 \value{
   \code{plotAndPlayGetState()} returns a list containing at least:

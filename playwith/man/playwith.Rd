@@ -8,74 +8,116 @@
 \alias{playSplomTools}
 \title{An interactive plot GUI}
 \description{
-  Open a GTK+ window to view and interact with a plot.
+  Open a graphical user interface for viewing and interacting with a plot.
+  It tries to work out what kind of plot it is, and how you might want to interact with it.
+  The built-in features include: navigating the data space, identifying data points,
+  editing and annotating the plot, and saving to a file. New tools can be defined.
 }
 \usage{
-
 playwith(expr, 
 	title = NULL, 
 	playState = NULL,
+	time.mode = FALSE,
+	labels = NULL, 
+	data.points = NULL, 
+	is.lattice = NA, 
+	viewport = NULL, 
+	...,
 	top.tools = playApplicationTools, 
 	left.tools = playInteractionTools, 
 	bottom.tools = list(),
 	right.tools = list(), 
 	show.call = TRUE,
-	time.mode = FALSE,
-	label.points = NULL, 
-	labels = NULL, 
-	label.style = list(cex=1),
-	is.lattice = NA, 
-	viewport = NULL, 
+	win.size = c(640, 480), 
+	modal = FALSE,
+	on.close = NULL, 
 	eval.args = NA, 
 	invert.match = F, 
 	envir = parent.frame(), 
-	win.size = c(640, 480), 
-	modal = FALSE,
-	deletable = TRUE,
-	restore.on.close = NULL, 
-	...,
 	plot.call)
-	
-playwith(expr, name = "plot", nav.scales = c("x","y"), trans.scales = c("y"), 
-	 buttons = list("annotate", "identify", "zoom", "zoomfit"), 
-	 extra.buttons = list("zero"), basic.buttons=plotAndPlayBasicButtons, 
-	 labels = NULL, label.args = list(cex = 1), identify.call = NULL, 
-	 plot.call, is.lattice = NA, eval.args = NA, invert.match = F, 
-	 envir = parent.frame(), restore.on.close = NULL)
 }
 \arguments{
   \item{expr}{ an expression to create a plot, like \code{plot(mydata)}. 
   	Note, this can have lots of arguments, just like a normal plot call (see examples).
-  	Can also be a chunk of code in \code{\{braces\}}, but that form does not allow interaction. }
-  \item{name}{ character value to identify the plot window. }
-  \item{nav.scales}{ one or more of \code{c("x","y")} defining which scale(s) to navigate along (e.g. zoom in). }
-  \item{trans.scales}{ one or more of \code{c("x","y")} defining which scale(s) to transform (e.g. log). }
-  \item{buttons}{ a list of buttons for the toolbar.
-	Each element should be a call to generate a \code{\link[RGtk2]{gtkToolItem}}, or a character string. 
-	If it is a character string, that element is taken from the pre-defined \code{plotAndPlayButtons}.
-  	See the \code{Details} and \code{Examples} sections. }
-  \item{extra.buttons}{ same as \code{buttons}, provided for convenient additions to the default set. }
-  \item{basic.buttons}{ same as \code{buttons}, the default here is almost always useful, so you probably do not want to change this. }
+  	Can also be a chunk of code in \code{\{}braces\code{\}}, but that form does not allow interaction. }
+  \item{title}{ optional window title. If a plot window exists with the same title, 
+  	the new plot will appear in that window, replacing the old plot. }
+  \item{playState}{ the \code{\link{playState}} object for an existing plot window.
+	If given, the new plot will appear in that window, replacing the old plot.}
+  \item{time.mode}{ whether the plot is to start in "time mode", with navigation along the x-axis. }
   \item{labels}{ a character vector of labels for data points, for use in \code{\link{identify}}. 
-  	If missing, it will be guessed from the plot call. If \code{identify.call} is given, this is ignored. }
-  \item{label.args}{ a list of arguments passed to \code{\link{identify}} and \code{\link{text}}: can include \code{cex}, \code{col} and \code{font}. 
-	Will also be added to \code{identify.call} if that is given. }
-  \item{identify.call}{ a \code{\link{call}} to be evaluated when the identify button is clicked. 
-  	If missing, it will be constructed from the plot call. Generally this argument should not be needed. }
-  \item{plot.call}{ a plot call (\code{\link{call}} object), if given this is used instead of \code{expr}. }
+  	If missing, it will be guessed from the plot call arguments. }
+  \item{data.points}{ a list with elements "x" and "y" (or other suitable plotting structure)
+	giving locations of data points, in case these can not be guessed from the plot call arguments. }
   \item{is.lattice}{ whether the plot is a \link[lattice]{Lattice} plot, i.e. returns a trellis object.
   	If \code{NA}, the call name is matched against known Lattice function names. }
+  \item{viewport}{ name or \code{\link[grid]{vpPath}} of the \code{\link[grid]{viewport}}
+	representing the data space. This allows interaction with grid graphics plots 
+	(but ignore this for Lattice plots). }
+  \item{\dots}{ extra arguments are stored in the \code{\link{playState}} object.
+  	These can then be accessed by user-defined tools. The default tools will recognise the following
+	extra arguments:
+	\describe{
+		\item{\code{page}}{
+			In multi-page Lattice plots, this will set the initial page to display.
+		}
+		\item{\code{time.index}}{
+			a vector defining discrete times, as numeric, 
+			\code{\link{Date}} or \code{\link[DateTimeClasses]{POSIXt}}. 
+			It must be sorted, increasing.
+			If given, then the "time mode" is used to navigate
+			along these discrete times, rather than along the continuous x-axis.
+			Special objects \code{cur.index} and \code{cur.time} will be provided in the
+			plot environment, so the plot call can refer to these.
+			\code{cur.index} is the current time step, between \code{1} and \code{length(time.index)}, 
+			and \code{cur.time} is \code{time.index[cur.index]}.
+			In this case \code{time.mode} will be on by default.
+		}
+		\item{\code{current.index}, \code{current.time}}{
+			If \code{time.index} is given, this will set the initial time step.
+		}
+		\item{\code{label.style}}{
+			a \code{list} of arguments passed to \code{\link{text}}
+			or \code{\link{panel.text}}, to specify the style of labels: 
+			can include \code{cex}, \code{col} and \code{font}.
+		}
+		\item{\code{annotation.mode}}{
+			\code{"figure"} (the default) or \code{"plot"}.
+		}
+	}
+  }
+  \item{top.tools, left.tools, bottom.tools, right.tools}{
+	each a list of tool widgets for toolbars at the top, left, bottom or right sides of the window.
+	Each list element should be the name of one of the pre-defined tools in \code{toolConstructors},
+	or a function to construct a \code{\link[RGtk2]{gtkToolItem}}. See \code{\link{quickTool}} for details
+	of defining new tools. }
+  \item{show.call}{ set to \code{FALSE} to hide the plot call text-box ("address bar") and associated buttons.}
+  \item{win.size}{ default initial size of the plot window (width, height) in pixels. }
+  \item{modal}{ whether the window is modal: if \code{TRUE}, the session will freeze until the window is closed. }
+  \item{on.close}{ a function to be called when the user closes the plot window. The \code{\link{playState}} object
+	  will passed to the function. If the function returns \code{TRUE}, the window will not be closed. }
   \item{eval.args}{ whether to evaluate the plot call arguments: can be \code{TRUE}, \code{FALSE}, \code{NA} (don't eval global vars) 
 	or a \link[=regex]{regular expression} matching symbols to evaluate. See below. }
   \item{invert.match}{ whether to evaluate arguments that do NOT match the regular expression given in \code{eval.args}. }
   \item{envir}{ \code{\link{environment}} to use in evaluating the call arguments (see \code{eval.args}) }
-  \item{restore.on.close}{ a \code{gtkWindow} to bring to front when the plot window is closed. }
+  \item{plot.call}{ a plot call (\code{\link{call}} object), if given this is used instead of \code{expr}. }
 }
 \details{
-  This function generates a general-purpose graphical user interface for R plots.
-  It tries to work out what kind of plot it is, and how you might want to interact with it.
+	This function opens a GTK+ window containing a plot device 
+	(a Cairo-based device from the \code{cairoDevice} package)
+	and several toolbars.
+	
+	
   This is based firstly on whether the plot function name is recognised as a Lattice plot or not.
-  If it is a not a standard high-level function you may need \code{is.lattice=T}.
+  If it is a not a standard high-level function you may need \code{is.lattice=TRUE}.
+  
+  \code{\link[lattice]{wireframe}} and \code{\link[lattice]{cloud}}
+
+  \code{\link[lattice]{splom}}
+  
+  
+  
+  
   
   In order for the plot to be modified, its supporting data needs to be stored.
   By default, all non-global data is copied into an attached environment and stored.
@@ -91,6 +133,8 @@ playwith(expr, name = "plot", nav.scales = c("x","y"), trans.scales = c("y"),
   or text, in which case it is taken from the pre-defined set.
   Type \code{str(plotAndPlayButtons)} to see the pre-defined set of button handlers.
   However, you can usually ignore this, as most buttons will be automatically added to the toolbar for relevant plots. 
+  
+  
   Specifically: \itemize{
 	  \item \code{"expand"} will be added to lattice plots with more than one panel per page. 
 	  An alternative is \code{"focus"}, which is the same but does not expand the chosen panel to the full window.
@@ -129,12 +173,11 @@ playwith(expr, name = "plot", nav.scales = c("x","y"), trans.scales = c("y"),
   If \code{eval.args=F} then the plot call will be left alone (not evaluated until plot time).
 }
 \value{
-	\code{playwith} invisibly returns the value from the plot call
-	(which for lattice plots is a \code{\link[=print.trellis]{trellis}} object).
+	\code{playwith} invisibly returns the value from the plot call.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
-\seealso{ \code{\link{setAutoPlaywith}}, \code{\link{plotAndPlayButtons}}, 
-	\code{\link[lattice]{xyplot}}, \link[lattice]{Lattice} }
+\seealso{ \code{\link{autoplay}}, \code{\link{playState}}, \code{\link{quickTool}},
+	\link[lattice]{Lattice} }
 \examples{
 \dontrun{
 

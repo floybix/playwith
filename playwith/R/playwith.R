@@ -36,25 +36,23 @@ playwith <- function(
 	expr, 
 	title = NULL, 
 	playState = NULL,
+	time.mode = FALSE,
+	labels = NULL, 
+	data.points = NULL, 
+	is.lattice = NA, 
+	viewport = NULL, 
+	...,
 	top.tools = playApplicationTools, 
 	left.tools = playInteractionTools, 
 	bottom.tools = list(),
 	right.tools = list(), 
 	show.call = TRUE,
-	time.mode = FALSE,
-	label.points = NULL, 
-	labels = NULL, 
-	label.style = list(cex=1),
-	is.lattice = NA, 
-	viewport = NULL, 
+	win.size = c(640, 480), 
+	modal = FALSE,
+	on.close = NULL, 
 	eval.args = NA, 
 	invert.match = F, 
 	envir = parent.frame(), 
-	win.size = c(640, 480), 
-	modal = FALSE,
-	deletable = TRUE,
-	restore.on.close = NULL, 
-	...,
 	plot.call)
 {
 	if (!missing(plot.call) && !missing(expr))
@@ -83,6 +81,7 @@ playwith <- function(
 			StateEnv[[ID]] <- playState
 		}
 	}
+	playState$creation.time <- Sys.time()
 	StateEnv$.current <- playState
 	# work out evaluation rules
 	env <- new.env()
@@ -111,7 +110,6 @@ playwith <- function(
 		myWin["default-width"] <- win.size[1]
 		myWin["default-height"] <- win.size[2]
 		myWin["modal"] <- modal
-		myWin["deletable"] <- deletable
 		myWin$show()
 		gSignalConnect(myWin, "delete-event",  window.close_handler, 
 			data=playState)
@@ -160,6 +158,7 @@ playwith <- function(
 	callToolbar$insert(helpButton, -1)
 	callEntry <- gtkComboBoxEntryNewText()
 	callEntry$show()
+	str(playState)
 	gSignalConnect(callEntry$getChild(), "activate", 
 		edit.call.inline_handler, data=playState)
 	item <- gtkToolItem()
@@ -243,46 +242,13 @@ playwith <- function(
 	timeEntry <- gtkEntry()
 	timeEntry["width-chars"] <- 30
 	gSignalConnect(timeEntry, "activate", 
-		function(widget, playState) {
-			if (!is.null(playState$index.time)) {
-				# TODO
-				return()
-			}
-			newLim <- strsplit(widget["text"], " to ")[[1]]
-			if ((length(newLim) != 2)) {
-				gmessage.error("Give bounds in form \"LOWER to UPPER\".")
-				return()
-			}
-			cls <- xClass(playState)
-			if ("POSIXt" %in% cls) newLim <- as.POSIXct(newLim)
-			else if ("Date" %in% cls) newLim <- as.Date(newLim)
-			else if ("integer" %in% cls) newLim <- as.integer(newLim)
-			callArg(playState, xlim) <- as.numeric(newLim)
-			playReplot(playState)
-		},
-		data=playState)
+		time.mode_entry_handler, data=playState)
 	timeScrollBox$packStart(timeEntry, expand=FALSE)
 	timeScrollbar <- gtkHScrollbar()
 	timeScrollbar["adjustment"] <- gtkAdjustment()
 	timeScrollbar["update-policy"] <- GtkUpdateType["discontinuous"]
 	gSignalConnect(timeScrollbar, "value-changed", 
-		function(widget, playState) {
-			newLim <- widget$getValue()
-			if (!is.null(playState$index.time)) {
-				newLim <- round(newLim)
-				playState$env$cur.index <- newLim
-				playState$env$cur.time <- playState$index.time[newLim]
-				playReplot(playState)
-				return()
-			}
-			newLim[2] <- newLim + widget["adjustment"]["page-size"]
-			if (widget["adjustment"]["page-size"] == 0) stop()
-			#oldLim <- rawXLim(playState)
-			#if (min(oldLim) == min(newLim)) return()
-			rawXLim(playState) <- newLim
-			playReplot(playState)
-		},
-		data=playState)
+		time.mode_scrollbar_handler, data=playState)
 	timeScrollBox$packStart(timeScrollbar)
 	# create the bottom toolbar
 	bottomToolbar <- gtkToolbar()
@@ -291,10 +257,12 @@ playwith <- function(
 	# store the state of this plot window in a new environment
 	missing_top.tools <- missing(top.tools)
 	missing_left.tools <- missing(left.tools)
-	# set defaults -- these can be replaced by user arguments
+	# set defaults -- these can be replaced by extra arguments
 	playState$page <- 1
+	playState$label.style <- list(cex=1)
 	playState$annotation.mode <- "figure"
-	# store user arguments (...) in the state object (playState)
+	if (!missing(time.index) && missing(time.mode)) time.mode <- TRUE
+	# store extra arguments (...) in the state object (playState)
 	dots <- list(...)
 	for (arg in names(dots)) {
 		if (arg == "") next
@@ -307,9 +275,8 @@ playwith <- function(
 		call <- plot.call
 		env <- env
 		time.mode <- time.mode
-		label.points <- label.points
 		labels <- labels
-		label.style <- label.style
+		data.points <- data.points
 		is.lattice <- is.lattice
 		viewport <- viewport
 		ids <- list()
@@ -337,7 +304,7 @@ playwith <- function(
 			vbox = myVBox,
 			hbox = myHBox
 		)
-		restore.on.close <- restore.on.close
+		on.close <- on.close
 		.args <- list(
 			top.tools = top.tools, 
 			left.tools = left.tools,
@@ -346,7 +313,7 @@ playwith <- function(
 			missing_top.tools = missing_top.tools,
 			missing_left.tools = missing_left.tools,
 			is.lattice = is.lattice,
-			label.points = label.points,
+			data.points = data.points,
 			labels = labels,
 			title = title
 		)
@@ -473,33 +440,23 @@ playReplot <- function(playState) {
 	# do the plot
 	result <- eval(playState$call, playState$env)
 	if (inherits(result, "trellis")) {
-		playState$trellis <- result
 		# set back to this device, since user may have switched during plot
 		playDevSet(playState)
 		# work out panels and pages
-		nPackets <- prod(dim(result))
+		nPackets <- prod(dim(playState$trellis))
 		nPanels <- nPackets
 		nPages <- 1
-		if (!is.null(myLayout <- result$layout)) {
+		if (!is.null(myLayout <- playState$trellis$layout)) {
 			nPanels <- myLayout[1] * myLayout[2]
 			if (myLayout[1] == 0) nPanels <- myLayout[2]
 			nPages <- ceiling(nPackets / nPanels)
 			result$layout[3] <- 1
 		}
 		if (playState$page > nPages) playState$page <- 1
-		curPage <- playState$page
-		if (nPages > 1) {
-			blockRedraws({
-				widg$pageScrollbar["adjustment"]["upper"] <- nPages+1
-				widg$pageScrollbar["adjustment"]["value"] <- curPage
-				widg$pageEntry["text"] <- as.character(curPage)
-			})
-			widg$pageScrollBox$show()
-		} else {
-			widg$pageScrollBox$hide()
-		}
+		playState$pages <- nPages
 		# plot trellis object
-		plot(result, packet.panel=packet.panel.page(curPage))
+		plot(result, packet.panel=packet.panel.page(playState$page))
+		playState$trellis <- result
 	}
 	# run update actions on buttons
 	blockRedraws({
@@ -514,41 +471,44 @@ playReplot <- function(playState) {
 				xUpd(x, playState=playState)
 			}
 		}
+		# the pages scrollbar
+		pages_post.plot.action(widg$pageScrollBox, playState=playState)
 	})
 	invisible(result)
 }
 
+pages_post.plot.action <- function(widget, playState) {
+	widg <- playState$widgets
+	if (playState$pages > 1) {
+		widg$pageScrollbar["adjustment"]["upper"] <- playState$pages+1
+		widg$pageScrollbar["adjustment"]["value"] <- playState$page
+		widg$pageEntry["text"] <- as.character(playState$page)
+		widg$pageScrollBox$show()
+	} else {
+		widg$pageScrollBox$hide()
+	}
+}
+
 ## Window signal handlers
 
+window.close_handler <- function(widget, event, playState) {
+	if (!is.null(playState$on.close)) {
+		foo <- try(playState$on.close(playState))
+		# if on.close() returns TRUE, do not close the window
+		if (identical(foo, TRUE)) return(TRUE)
+	}
+	# close the window and clean up
+	playDevOff(playState)
+	return(FALSE)
+}
+
 devoff_handler <- function(widget, event, playState) {
+	# this handles dev.off()
 	# destroy the window, but store a flag to avoid destroying twice
 	if (any(playState$devoff)) return(FALSE)
 	playState$devoff <- TRUE
-	try(playState$win$destroy(), silent=TRUE)
-	cleanupStateEnv()
+	playDevOff(playState)
 	return(FALSE)
-}
-
-window.close_handler <- function(widget, event, playState) {
-	restoreWin <- playState$restore.on.close
-	if (!is.null(restoreWin) && inherits(restoreWin, "gtkWindow")) {
-		try(restoreWin$present())
-	}
-	cleanupStateEnv()
-	return(FALSE)
-}
-
-cleanupStateEnv <- function() {
-	for (ID in ls(StateEnv)) {
-		if (!inherits(StateEnv[[ID]]$win, "gtkWindow")) {
-			# window is defunct
-			rm(list=ID, envir=StateEnv)
-		}
-	}
-	if (!inherits(StateEnv$.current$win, "gtkWindow")) {
-		StateEnv$.current <- if (length(ls(StateEnv))) 
-			StateEnv[[ ls(StateEnv)[1] ]] else NULL
-	}
 }
 
 ## List of known Lattice (high-level) function names

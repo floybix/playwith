@@ -25,6 +25,19 @@ playDevOff <- function(playState = playDevCur()) {
 	cleanupStateEnv()
 }
 
+cleanupStateEnv <- function() {
+	for (ID in ls(StateEnv)) {
+		if (!inherits(StateEnv[[ID]]$win, "gtkWindow")) {
+			# window is defunct
+			rm(list=ID, envir=StateEnv)
+		}
+	}
+	if (!inherits(StateEnv$.current$win, "gtkWindow")) {
+		StateEnv$.current <- if (length(ls(StateEnv))) 
+			StateEnv[[ ls(StateEnv)[1] ]] else NULL
+	}
+}
+
 callArg <- function(playState, arg, name=NULL) {
 	if (missing(arg) && missing(name)) stop("give 'arg' or 'name'")
 	arg <- if (missing(arg)) parse(text=name)[[1]]
@@ -217,6 +230,9 @@ yRange <- function(playState) {
 
 xyRange <- function(playState, x.or.y=c("x", "y")) {
 	x.or.y <- match.arg(x.or.y)
+	if (!is.null(playState$data.points)) {
+		return(xy.coords(playState$data.points, recycle=TRUE)[[x.or.y]])
+	}
 	lim <- NULL
 	if (playState$is.lattice) {
 		lim <- range(unlist(lapply(playState$trellis$panel.args, 

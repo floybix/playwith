@@ -10,11 +10,13 @@
 \alias{callArg}
 \alias{rawXLim}
 \alias{rawYLim}
-\alias{xRange}
-\alias{yRange}
-\alias{xClass}
-\alias{yClass}
-\alias{playFocus}
+\alias{xyCoords}
+\alias{xyData}
+\alias{playDo}
+\alias{playPointInput}
+\alias{playLineInput}
+\alias{playRectInput}
+\alias{playSelectDataRect}
 \alias{playPrompt}
 \alias{playFreezeGUI}
 \alias{playThawGUI}
@@ -35,20 +37,26 @@ playDevOff(playState = playDevCur())
 playNewPlot(playState)
 playReplot(playState)
 
-callArg(playState, arg, name=NULL)
-callArg(playState, arg, name=NULL) <- value
+callArg(playState, arg, name = NULL)
+callArg(playState, arg, name = NULL) <- value
 
-rawXLim(playState)
+playDo(playState, stuff, space = "plot", clip.off = FALSE)
+
+xyCoords(playState, space = "plot")
+xyData(playState, space = "plot")
+
+playSelectData(playState, prompt = "Click or drag to select data points.")
+playPointInput(playState, prompt = "Click on the plot")
+playLineInput(playState, prompt = "Click and drag to define a line")
+playRectInput(playState, prompt = "Click and drag to define a rectangular region")
+
+rawXLim(playState, space = "plot", unit = "native")
+rawYLim(playState, space = "plot", unit = "native")
 rawXLim(playState) <- value
-rawYLim(playState)
 rawYLim(playState) <- value
 
-xRange(playState)
-yRange(playState)
-xClass(playState)
-yClass(playState)
-
-playFocus(playState, highlight=TRUE, ...)
+whichSpace(playState, x.device, y.device)
+deviceCoordsToSpace(playState, x.device, y.device, space = "plot")
 
 playPrompt(playState) <- value
 playFreezeGUI(playState)
@@ -63,6 +71,7 @@ unlogY(x, the.call, is.lattice = T)
   \item{arg}{  }
   \item{name}{  }
   \item{value}{  }
+  \item{all.packets}{  }
   \item{highlight}{ passed to \code{\link{trellis.focus}}. }
   \item{expr}{  }
   \item{x}{ numeric vector. }

@@ -21,7 +21,7 @@ playDevSet <- function(playState) {
 }
 
 playDevOff <- function(playState = playDevCur()) {
-	try(playState$win$destroy())
+	try(playState$win$destroy(), silent=TRUE)
 	cleanupStateEnv()
 }
 
@@ -95,19 +95,18 @@ blockRedraws <- function(expr, playState = playDevCur()) {
 	oval <- playState$skip.redraws
 	playState$skip.redraws <- TRUE
 	da <- playState$widgets$drawingArea
-	myW <- da$getAllocation()$width
-	myH <- da$getAllocation()$height
 	da$setSizeRequest(da$getAllocation()$width, da$getAllocation()$height)
 	#playState$win$setGeometryHints(da, list(max.width=myW, min.width=myW, 
 	#	max.height=myH, min.height=myH))
-	#da["window"]$freezeUpdates()
+	da$window$freezeUpdates()
 	eval.parent(substitute(expr))
-	#da["window"]$thawUpdates()
+	da$window$thawUpdates()
 	#playState$win$setGeometryHints(da, list())
 	da$setSizeRequest(-1, -1)
 	playState$skip.redraws <- oval
 }
 
+# TODO: delete this
 playFocus <- function(playState, highlight=TRUE, ...) {
 	playDevSet(playState)
 	if (sum(trellis.currentLayout() > 0) > 1) 
@@ -143,15 +142,22 @@ playFocus <- function(playState, highlight=TRUE, ...) {
 	playState
 }
 
-rawXLim <- function(playState) {
-	rawXYLim(playState)$x
+rawXLim <- function(playState, space="plot") {
+	rawXYLim(playState, space=space)$x
 }
 
-rawYLim <- function(playState) {
-	rawXYLim(playState)$y
+rawYLim <- function(playState, space="plot") {
+	rawXYLim(playState, space=space)$y
 }
 
-rawXYLim <- function(playState) {
+rawXYLim <- function(playState, space="plot") {
+	return(playDo(playState, alist(
+		x=convertX(unit(0:1, "npc"), "native", valueOnly=TRUE),
+		y=convertY(unit(0:1, "npc"), "native", valueOnly=TRUE)
+		), space=space)
+	)
+	
+# TODO: delete this
 	playDevSet(playState)
 	if (!is.null(playState$viewport)) {
 		# grid graphics plot
@@ -164,13 +170,18 @@ rawXYLim <- function(playState) {
 		upViewport(depth)
 	} else if (playState$is.lattice) {
 		# lattice plot
-		if (!any(panel.number())) {
-			okPnl <- which(trellis.currentLayout() > 0, arr=T)[1,]
-			trellis.focus("panel", okPnl['col'], okPnl['row'], highlight=F)
-			on.exit(trellis.unfocus())
+		xlim <- playState$trellis$x.limits
+		ylim <- playState$trellis$y.limits
+		if (is.list(xlim)) {
+			if (length(packet.number()) > 0)
+				xlim <- xlim[[packet.number()]]
+			else xlim <- range(unlist(xlim))
 		}
-		xlim <- convertX(unit(0:1, "npc"), "native", valueOnly=T)
-		ylim <- convertY(unit(0:1, "npc"), "native", valueOnly=T)
+		if (is.list(ylim)) {
+			if (length(packet.number()) > 0)
+				ylim <- ylim[[packet.number()]]
+			else ylim <- range(unlist(ylim))
+		}
 	} else {
 		# traditional graphics plot
 		xlim <- par("usr")[1:2]
@@ -195,18 +206,11 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y")) {
 	# convert back from log scale if required
 	x <- unlogXY(x, playState$call, playState$is.lattice, x.or.y=x.or.y)
 	if (playState$is.lattice) {
-		if (!any(panel.number())) {
-			okPnl <- which(trellis.currentLayout() > 0, arr=T)[1,]
-			trellis.focus("panel", okPnl['col'], okPnl['row'], highlight=F)
-			on.exit(trellis.unfocus())
-		}
-		x.panel <- trellis.panelArgs()[[x.or.y]]
+		x.panel <- xyData(playState)[[x.or.y]]
 		# convert new scale to appropriate date time class if required
-		if (inherits(x.panel, "Date") || inherits(x.panel, "POSIXt")) {
-			mostattributes(x) <- attributes(x.panel)
-		}
-		# TODO: class "dates", "times"? do they come through to panelArgs?
-		
+		#if (inherits(x.panel, "Date") || inherits(x.panel, "POSIXt")) {
+		#	mostattributes(x) <- attributes(x.panel)
+		#}
 		# convert new scale to factor levels if required
 		if (is.factor(x.panel)) {
 			if (is.null(callArg(playState, scales[[x.or.y]]$labels))) {
@@ -215,22 +219,26 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y")) {
 			}
 		}
 	}
-	if ("numeric" %in% class(x)) x <- signif(x, 4)
+	if (is.numeric(x)) x <- signif(x, 4)
 	if (x.or.y == "x") callArg(playState, xlim) <- x
 	if (x.or.y == "y") callArg(playState, ylim) <- x
 }
 
+# deprecated: use range(xyCoords(all=T)$x)
 xRange <- function(playState) {
 	xyRange(playState, "x")
 }
 
+# deprecated: use range(xyCoords(all=T)$y)
 yRange <- function(playState) {
 	xyRange(playState, "y")
 }
 
+# TODO: delete this
 xyRange <- function(playState, x.or.y=c("x", "y")) {
 	x.or.y <- match.arg(x.or.y)
 	if (!is.null(playState$data.points)) {
+		
 		return(xy.coords(playState$data.points, recycle=TRUE)[[x.or.y]])
 	}
 	lim <- NULL
@@ -248,11 +256,12 @@ xyRange <- function(playState, x.or.y=c("x", "y")) {
 	lim
 }
 
+# deprecated: use class(xyData()$x)
 xClass <- function(playState) {
-	if (playState$is.lattice) {
+	if (playState$is.lattice && is.null(playState$data.points)) {
 		foo <- playState$trellis$x.limits
 	} else {
-		foo <- xyCoords(playState)$x
+		foo <- xyCoordsWithClass(playState)$x
 	}
 	if (inherits(foo, "AsIs")) {
 		cls <- setdiff(class(foo), "AsIs")
@@ -262,11 +271,12 @@ xClass <- function(playState) {
 	class(foo)
 }
 
+# deprecated: use class(xyData()$y)
 yClass <- function(playState) {
-	if (playState$is.lattice) {
+	if (playState$is.lattice && is.null(playState$data.points)) {
 		foo <- playState$trellis$y.limits
 	} else {
-		foo <- xyCoords(playState)$y
+		foo <- xyCoordsWithClass(playState)$y
 	}
 	if (inherits(foo, "AsIs")) {
 		cls <- setdiff(class(foo), "AsIs")
@@ -276,14 +286,294 @@ yClass <- function(playState) {
 	class(foo)
 }
 
-xyCoords <- function(playState) {
+# note space="page" means the root viewport
+playDo <- function(playState, stuff, space="plot", clip.off=FALSE) {
+	playDevSet(playState)
+	cur.vp <- current.vpPath()
+	upViewport(0) # go to root viewport
+	on.exit(expression()) # placeholder
+	if (space != "page") {
+		# user / plot coordinates
+		if (!is.null(playState$viewport)) {
+			# grid graphics plot
+			depth <- downViewport(playState$viewport[[space]])
+			if (inherits(depth, "try-error")) {
+				stop(paste("Viewport", playState$viewport, "not found"))
+			}
+			on.exit(upViewport(depth), add=TRUE)
+		}
+		else if (playState$is.lattice) {
+			# lattice plot
+			packets <- trellis.currentLayout(which="packet")
+			if (space == "plot") space <- panel.number()
+			if (is.null(space)) {
+				if (sum(packets > 0) > 1)
+					stop("space not well specified")
+				space <- space[1]
+			}
+			whichOne <- which(packets == as.numeric(space))
+			if (length(whichOne) == 0) return()
+			myCol <- col(packets)[whichOne]
+			myRow <- row(packets)[whichOne]
+			myVp <- trellis.vpname("panel", myCol, myRow, clip.off=clip.off)
+			depth <- downViewport(myVp)
+			on.exit(upViewport(depth), add=TRUE)
+			#trellis.focus("panel", myCol, myRow, highlight=FALSE)
+			#on.exit(trellis.unfocus())
+		}
+		else {
+			# base graphics
+			depth <- downViewport(playState$baseViewports[["plot"]])
+			on.exit(upViewport(depth), add=TRUE)
+		}
+	}
+	if (!is.null(cur.vp)) on.exit(downViewport(cur.vp), add=TRUE)
+	# do the stuff and return the result
+	if (is.list(stuff)) lapply(stuff, eval, playState$env, parent.frame())
+	else eval(stuff, playState$env, parent.frame())
+}
+
+playSelectData <- function(playState, prompt="Click or drag to select data points.") {
+	foo <- playRectInput(playState, prompt=prompt)
+	if (is.null(foo)) return(NULL)
+	if (is.null(foo$coords)) return(NULL)
+	coords <- foo$coords
+	data <- xyCoords(playState, space=foo$space)
+	ok <- ((min(coords$x) <= data$x) & (data$x <= max(coords$x))
+		& (min(coords$y) <= data$y) & (data$y <= max(coords$y)))
+	#if (!any(ok)) return(FALSE)
+	which <- which(ok)
+	pos <- NULL
+	if (foo$is.click) {
+		x <- mean(coords$x)
+		y <- mean(coords$y)
+		if (length(which) > 1) {
+			# TODO: need to do this in device coords, not user coords!
+			pdists <- sqrt((data$x[ok] - x)^2 + (data$y[ok] - y)^2)
+			which <- which[which.min(pdists)]
+		}
+		# pos argument to text
+		if (length(which)) pos <- lattice:::getTextPosition(
+			x=(x - data$x[which]), y=(y - data$y[which]))
+	}
+	list(which=which, space=foo$space, 
+		x=data$x[ok], y=data$y[ok], 
+		pos=pos, is.click=foo$is.click)
+}
+
+playPointInput <- function(playState, prompt="Click on the plot") {
+	playPrompt(playState) <- prompt
+	on.exit(playPrompt(playState) <- NULL)
+	cur.vp <- current.vpPath()
+	upViewport(0)
+	if (!is.null(cur.vp)) on.exit(downViewport(cur.vp), add=TRUE)
+	dc <- grid.locator()
+	if (is.null(dc)) return(NULL)
+	ndc <- list(x=convertX(dc$x, "npc"), y=convertY(dc$y, "npc"))
+	dc <- lapply(dc, as.numeric)
+	ndc <- lapply(ndc, as.numeric)
+	coords <- NULL
+	space <- whichSpace(playState, dc$x, dc$y)
+	if (space != "page") {
+		coords <- deviceCoordsToSpace(playState, dc$x, dc$y, space=space)
+	}
+	list(coords=coords, space=space, dc=dc, ndc=ndc)
+}
+
+playPolyInput <- function(playState, prompt="Click points to define a region; right-click to end") {
+	playPrompt(playState) <- prompt
+	on.exit(playPrompt(playState) <- NULL)
+	vp <- current.vpPath()
+	upViewport(0)
+	on.exit(if (!is.null(vp)) downViewport(vp), add=TRUE)
+	# wait for click
+	xy0 <- grid.locator()
+	if (is.null(xy0)) return(NULL)
+	xy0 <- lapply(xy0, as.numeric)
+	# TODO...
+	repeat {
+	}
+}
+
+playLineInput <- function(playState, prompt="Click and drag to define a line") {
+	playPrompt(playState) <- prompt
+	on.exit(playPrompt(playState) <- NULL)
+	vp <- current.vpPath()
+	upViewport(0)
+	on.exit(if (!is.null(vp)) downViewport(vp), add=TRUE)
+	# wait for click
+	xy0 <- grid.locator()
+	if (is.null(xy0)) return(NULL)
+	xy0 <- lapply(xy0, as.numeric)
+	playClickOrDrag(playState, x0=xy0$x, y=xy0$y, shape="line")
+}
+
+playRectInput <- function(playState, prompt="Click and drag to define a rectangular region") {
+	playPrompt(playState) <- prompt
+	on.exit(playPrompt(playState) <- NULL)
+	vp <- current.vpPath()
+	upViewport(0)
+	on.exit(if (!is.null(vp)) downViewport(vp), add=TRUE)
+	# wait for click
+	xy0 <- grid.locator()
+	if (is.null(xy0)) return(NULL)
+	xy0 <- lapply(xy0, as.numeric)
+	playClickOrDrag(playState, x0=xy0$x, y=xy0$y, shape="rect")
+}
+
+# assumes that the mouse button has already been pressed
+# converts into user coordinates
+playClickOrDrag <- function(playState, x0, y0, shape=c("rect", "line")) {
+	shape <- match.arg(shape)
+	da <- playState$widgets$drawingArea
+	foo <- handleClickOrDrag(da, x0=x0, y0=y0, shape=shape)
+	if (is.null(foo)) return(NULL)
+	dc <- foo$dc
+	coords <- NULL
+	space <- whichSpace(playState, dc$x[1], dc$y[1])
+	if (space == "page") space <- whichSpace(playState, dc$x[2], dc$y[2])
+	if (space != "page") {
+		xy0 <- deviceCoordsToSpace(playState, dc$x[1], dc$y[1], space=space)
+		xy1 <- deviceCoordsToSpace(playState, dc$x[2], dc$y[2], space=space)
+		coords <- list(x=c(xy0$x, xy1$x), y=c(xy0$y, xy1$y))
+	}
+	foo$coords <- coords
+	foo$space <- space
+	foo
+}
+
+# assumes that the mouse button has already been pressed
+handleClickOrDrag <- function(da, x0, y0, shape=c("rect", "line")) {
+	shape <- match.arg(shape)
+	px0 <- list(x=x0, y=y0)
+	da.w <- da$getAllocation()$width
+	da.h <- da$getAllocation()$height
+	buf <- gdkPixbufGetFromDrawable(src=da$window, src.x=0, src.y=0, 
+		dest.x=0, dest.y=0, width=da.w, height=da.h)
+	if (is.null(buf)) stop("Could not make pixbuf")
+	#gc1 <- gdkGCNew(da[["window"]])
+	#color <- c(red = 30000, green = 0, blue = 30000)
+	#gc1$setRgbFgColor(color)
+	###gc <- gdkGCNew(da$window)
+	gc <- gdkGCNewWithValues(da$window, list(
+		foreground=gdkColorParse("red")$color,
+		line.style=GdkLineStyle["on-off-dash"]
+	))
+	gc <- gdkGCNew(da$window)
+	gc$copy(da[["style"]][["blackGc"]])
+	#gc["line.style"] <- GdkLineStyle["on-off-dash"]
+	color <- c(red = 65535, green = 0, blue = 0)
+	gc$setRgbFgColor(color)
+	gc$setLineAttributes(line.width=1, line.style=GdkLineStyle["on-off-dash"],
+		cap.style=GdkCapStyle["projecting"], join.style=GdkJoinStyle["miter"])
+	gc$setDashes(c(10, 10))
+	#gc$setRgbFgColor(gdkColorParse("red")$color)
+	#gc$  GdkLineStyle["on-off-dash"]
+	#gc$setDashes(c(10))
+	#list(foreground="red", 
+	#		line.style=GdkLineStyle["on-off-dash"]))
+	px00 <- px0
+	px00.prev <- px0
+	release_handler <- function(widget, event, env) {
+		# mouse button was released
+		env$px1 <- list(x=event$x, y=event$y)
+		return(TRUE)
+	}
+	expose_handler <- function(widget, event, env) {
+		area <- event$area
+		gdkDrawPixbuf(event$window, pixbuf=env$buf, 
+			src.x=area$x, src.y=area$y, dest.x=area$x, dest.y=area$y,
+			width=area$width, height=area$height)
+		xx <- range(c(env$px0$x, env$px00$x))
+		yy <- range(c(env$px0$y, env$px00$y))
+		wd <- xx[2] - xx[1]
+		ht <- yy[2] - yy[1]
+		switch(env$shape,
+			line=gdkDrawLine(event$window, gc=env$gc, 
+				x1=env$px0$x, y1=env$px0$y, 
+				x2=env$px00$x, y2=env$px00$y),
+			rect=gdkDrawRectangle(event$window, gc=env$gc, filled=FALSE, 
+				x=xx[1], yy[1], width=wd, height=ht)
+		)
+		return(TRUE) # stop event here
+	}
+	tmpSigE <- gSignalConnect(da, "expose-event", expose_handler, data=environment())
+	tmpSigR <- gSignalConnect(da, "button-release-event", release_handler, data=environment())
+	repeat {
+		if (exists("px1", inherits=FALSE)) break
+		px00.prev <- px00
+		px00 <- da$window$getPointer()
+		if (is.null(px00$retval)) break
+		if ((as.flag(px00$mask) & GdkModifierType["button1-mask"]) == 0) {
+			# mouse button was released
+			px1 <- px00
+			break
+		}
+		xx <- range(c(px0$x, px00$x, px00.prev$x))
+		yy <- range(c(px0$y, px00$y, px00.prev$y))
+		wd <- xx[2] - xx[1] + 2
+		ht <- yy[2] - yy[1] + 2
+		da$window$invalidateRect(list(x=xx[1], y=yy[1], width=wd, height=ht),
+			invalidate.children=FALSE)
+	}
+	gSignalHandlerDisconnect(da, tmpSigR)
+	gSignalHandlerDisconnect(da, tmpSigE)
+	da$window$invalidateRect(invalidate.children=FALSE)
+	if (!exists("px1", inherits=FALSE)) return(NULL)
+	dc <- list(x=c(px0$x, px1$x), y=c(px0$y, px1$y))
+	# was it a click or a drag? (threshold 3 pixels) - TODO: better to use timing
+	is.click <- ((abs(diff(dc$x)) <= 3) && (abs(diff(dc$y)) <= 3))
+	if (is.click) {
+		# coords are +/- 20 pixels
+		dc$x <- dc$x[1] + c(-20, 20)
+		dc$y <- dc$y[1] + c(-20, 20)
+	}
+	ndc <- list(x=dc$x / da.w, y=dc$y / da.h)
+	list(dc=dc, ndc=ndc, is.click=is.click)
+}
+
+xyCoords <- function(playState, space="plot") {
+	foo <- xyData(playState, space=space)
+	foo$x <- as.numeric(foo$x)
+	foo$y <- as.numeric(foo$y)
+	foo
+}
+
+xyData <- function(playState, space="plot") {
+	if (!is.null(playState$data.points)) {
+		return(xy.coords_with_class(playState$data.points))
+	}
 	if (playState$is.lattice) {
-		warning("only data limits returned")
-		return(list(x=playState$trellis$x.limits,
-			y=playState$trellis$y.limits))
+		if (space == "page") {
+			# data from all packets
+			return(do.call(rbind, 
+				lapply(playState$trellis$panel.args, as.data.frame)
+			))
+		}
+		if (space == "plot") {
+			space <- panel.number()
+			if (is.null(space)) {
+				packets <- trellis.currentLayout(which="packet")
+				if (sum(packets > 0) > 1) stop("space not well specified")
+				space <- space[1]
+			}
+		}
+		packet <- as.numeric(space)
+		foo <- trellis.panelArgs(playState$trellis, packet.number=packet)
+		if (length(foo$x) != length(foo$y)) {
+			if ((nx <- length(foo$x)) < (ny <- length(foo$y))) 
+				foo$x <- rep(foo$x, length.out = ny)
+			else foo$y <- rep(foo$y, length.out = nx)
+		}
+		return(foo)
 	}
 	x <- callArg(playState, 1)
 	y <- callArg(playState, name="y")
+	xy.coords_with_class(x, y)
+}
+
+# adapted from grDevices::xy.coords
+xy.coords_with_class <- function(x, y=NULL, recycle=TRUE) {
 	if (is.null(y)) {
 		if (is.language(x)) {
 			if (inherits(x, "formula") && length(x) == 3) {
@@ -333,19 +623,21 @@ xyCoords <- function(playState) {
 	}
 	if (inherits(x, "POSIXt")) x <- as.POSIXct(x)
 	if (length(x) != length(y)) {
-		if ((nx <- length(x)) < (ny <- length(y))) 
-			x <- rep(x, length.out = ny)
-		else y <- rep(y, length.out = nx)
+		if (recycle) {
+			if ((nx <- length(x)) < (ny <- length(y))) 
+				x <- rep(x, length.out = ny)
+			else y <- rep(y, length.out = nx)
+		} else stop("'x' and 'y' lengths differ")
 	}
 	list(x=x, y=y)
 }
 
-untransformXlim <- function(x, the.call, is.lattice=T) {
-	untransformXYlim(x, the.call, is.lattice, x.or.y="x")
+unlogX <- function(x, the.call, is.lattice=T) {
+	unlogXY(x, the.call, is.lattice, x.or.y="x")
 }
 
-untransformYlim <- function(x, the.call, is.lattice=T) {
-	untransformXYlim(x, the.call, is.lattice, x.or.y="y")
+unlogY <- function(x, the.call, is.lattice=T) {
+	unlogXY(x, the.call, is.lattice, x.or.y="y")
 }
 
 unlogXY <- function(x, the.call, is.lattice=T, x.or.y=c("x", "y")) {
@@ -366,20 +658,109 @@ unlogXY <- function(x, the.call, is.lattice=T, x.or.y=c("x", "y")) {
 	x
 }
 
-unlogX <- function(x, the.call, is.lattice=T) {
-	unlogXY(x, the.call, is.lattice, x.or.y="x")
-}
-
-unlogY <- function(x, the.call, is.lattice=T) {
-	unlogXY(x, the.call, is.lattice, x.or.y="y")
-}
-
 latticeLogBase <- function(x) {
 	x <- eval(x)
 	if (is.null(x) || identical(x, FALSE)) return(NULL)
 	if (isTRUE(x)) return(10)
 	if (identical(x, "e")) return(exp(1))
 	x
+}
+
+whichSpace <- function(playState, x.device, y.device) {
+	for (space in names(playState$deviceToSpace)) {
+		spaceFun <- playState$deviceToSpace[[space]]
+		xy <- spaceFun(x.device, y.device)
+		if (xy$inside) return(space)
+	}
+	# return "page" if not inside any of the viewports
+	return("page")
+}
+
+deviceCoordsToSpace <- function(playState, x.device, y.device, space = "plot") {
+	if (space == "page") return(list(x=x.device, y=y.device))
+	if (playState$is.lattice && (space == "plot")) {
+		space <- panel.number()
+		if (is.null(space)) {
+			packets <- trellis.currentLayout(which="packet")
+			if (sum(packets > 0) > 1) stop("space not well specified")
+			space <- space[1]
+		}
+	}
+	space <- as.character(space)
+	spaceFun <- playState$deviceToSpace[[space]]
+	spaceFun(x.device, y.device)
+}
+
+# this is called by playReplot
+# makes a function to transform device native x, y (i.e. pixels)
+# into plot coordinates (current viewport native coords if is.grid=T)
+deviceToUserCoordsFunction <- function(is.grid = TRUE) {
+	# get device size in pixels
+	vp <- current.vpPath()
+	upViewport(0) # go to root viewport
+	dpx <- abs(c(diff(convertX(unit(0:1, "npc"), "native", valueOnly=TRUE)),
+		diff(convertY(unit(0:1, "npc"), "native", valueOnly=TRUE))))
+	# pixels per inch
+	dpi <- convertX(unit(1, "inches"), "native", valueOnly=TRUE)
+	if (!is.null(vp)) downViewport(vp)
+	# device size in inches
+	din <- dpx / dpi
+	if (is.grid) {
+		# using current viewport
+		xlim <- convertX(unit(0:1, "npc"), "native", valueOnly=T)
+		ylim <- convertY(unit(0:1, "npc"), "native", valueOnly=T)
+		plot.in <-    convertX(unit(1, "npc"), "inches", valueOnly=T)
+		plot.in[2] <- convertY(unit(1, "npc"), "inches", valueOnly=T)
+		transform <- solve(grid::current.transform())
+		function(x.px, y.px) {
+			n <- max(length(x.px), length(y.px))
+			x.px <- rep(x.px, length=n)
+			y.px <- rep(y.px, length=n)
+			y.px <- dpx[2] - y.px # y scale origin at bottom
+			# TODO: handle vectors directly, this loop is a hack
+			x_npc <- y_npc <- numeric(0)
+			for (i in seq_along(x.px)) {
+				pos.ndc <- c(x.px[i], y.px[i]) / dpx
+				pos.din <- c(din * pos.ndc, 1)
+				pos.in <- (pos.din %*% transform)
+				pos.in <- (pos.in / pos.in[3])
+				x_npc[i] <- pos.in[1] / plot.in[1]
+				y_npc[i] <- pos.in[2] / plot.in[2]
+			}
+			x <- xlim[1] + x_npc * diff(xlim)
+			y <- ylim[1] + y_npc * diff(ylim)
+			inside <- ((min(xlim) <= x) & (x <= max(xlim))
+				& (min(ylim) <= y) & (y <= max(ylim)))
+			# TODO: unlog
+			list(x=x, y=y, inside=inside)
+		}
+	} else {
+		xlim <- par("usr")[1:2]
+		ylim <- par("usr")[3:4]
+		xmar <- (par("mai") + par("omi"))[c(2,4)]
+		ymar <- (par("mai") + par("omi"))[c(1,3)]
+		plot.px <- par("pin") * dpi
+		xmar.px <- xmar * dpi
+		ymar.px <- ymar * dpi
+		xlog <- par("xlog")
+		ylog <- par("ylog")
+		function(x.px, y.px) {
+			n <- max(length(x.px), length(y.px))
+			x.px <- rep(x.px, length=n)
+			y.px <- rep(y.px, length=n)
+			y.px <- dpx[2] - y.px # y scale origin at bottom
+			x_npc <- (x.px - xmar.px[1]) / plot.px[1]
+			y_npc <- (y.px - ymar.px[1]) / plot.px[2]
+			x <- xlim[1] + x_npc * diff(xlim)
+			y <- ylim[1] + y_npc * diff(ylim)
+			inside <- ((min(xlim) <= x) & (x <= max(xlim))
+				& (min(ylim) <= y) & (y <= max(ylim)))
+			# unlog
+			if (xlog) x <- 10 ^ x
+			if (ylog) y <- 10 ^ y
+			list(x=x, y=y, inside=inside)
+		}
+	}
 }
 
 gmessage.error <- function(message, title="Error", icon="error", ...)

@@ -8,14 +8,18 @@
 playApplicationTools <- list(
 	"options",
 	"--",
+	"keep",
+	"stayontop",
 	"save",
 	"copy",
 	"print",
 	"data",
 	"--",
-	"time.mode",
+	"settings",
+	"theme",
 	"---",
-	"settings"
+	"coords",
+	"time.mode"
 )
 
 playInteractionTools <- list(
@@ -106,257 +110,38 @@ toolConstructors$settings <- function(playState) {
 		tooltip = "Change the plot type and options",
 		f = settings_handler)
 }
-
-settings_handler <- function(widget, playState) {
-	playState$tools$settings["sensitive"] <- FALSE
-	on.exit(playState$tools$settings["sensitive"] <- TRUE)
-	wingroup <- ggroup(horizontal=FALSE)
-	wid <- list()
-	
-	# convenience extractor
-	arg <- function(x) do.call(callArg, list(playState, substitute(x)))
-	
-	# TODO: LEGEND / KEY
-	
-	# TITLES
-	labgroup <- gframe("Titles", horizontal=FALSE, container=wingroup)
-	lay <- glayout(container=labgroup)
-	rownum <- 1
-	for (nm in c("main", "sub", "xlab", "ylab")) {
-		argVal <- if (playState$is.lattice) playState$trellis[[nm]]
-			else callArg(playState, name=nm)
-		isExpr <- is.language(argVal)
-		if (isExpr) argVal <- deparse(as.expression(argVal)[[1]])
-		wid[[nm]] <- gedit(toString(argVal), width=60)
-		nm.expr <- paste(nm, "expr", sep=".")
-		wid[[nm.expr]] <- gcheckbox("plotmath", checked=isExpr)
-		lay[rownum, 1] <- nm
-		lay[rownum, 2] <- wid[[nm]]
-		lay[rownum, 3] <- wid[[nm.expr]]
-		rownum <- rownum + 1
-	}
-	visible(lay) <- TRUE
-	
-	# AXES
-	axisgroup <- gframe("Axes", horizontal=FALSE, container=wingroup)
-	lay <- glayout(container=axisgroup)
-	wid$xaxis.show <- gcheckbox("visible", checked=!(
-		any(arg(scales$x$draw) == FALSE) ||
-		any(arg(scales$draw) == FALSE) ||
-		any(arg(axes) == FALSE) ||
-		any(arg(xaxt) == "n")
-	))
-	wid$yaxis.show <- gcheckbox("visible", checked=!(
-		any(arg(scales$y$draw) == FALSE) ||
-		any(arg(scales$draw) == FALSE) ||
-		any(arg(axes) == FALSE) ||
-		any(arg(yaxt) == "n")
-	))
-	wid$xaxis.log <- gcheckbox("logarithmic", checked=(
-		any(as.character(arg(scales$x$log)) != "FALSE") ||
-		any(as.character(arg(scales$log)) != "FALSE") ||
-		any(grep("x", arg(log)))
-	))
-	wid$yaxis.log <- gcheckbox("logarithmic", checked=(
-		any(as.character(arg(scales$y$log)) != "FALSE") ||
-		any(as.character(arg(scales$log)) != "FALSE") ||
-		any(grep("y", arg(log)))
-	))
-	wid$aspect.iso <- gcheckbox("isometric scale", checked=(
-		any(arg(aspect) == "iso") ||
-		any(arg(asp) == 1)
-	))
-	lay[1,1] <- "x-axis:"
-	lay[1,2] <- wid$xaxis.show
-	lay[1,3] <- wid$xaxis.log
-	lay[2,1] <- "y-axis:"
-	lay[2,2] <- wid$yaxis.show
-	lay[2,3] <- wid$yaxis.log
-	visible(lay) <- TRUE
-	add(axisgroup, wid$aspect.iso)
-	
-	# DECORATIONS
-	decogroup <- gframe("Decorations", horizontal=FALSE, container=wingroup)
-	enabled(decogroup) <- FALSE
-	# reference lines
-	linegroup <- ggroup(container=decogroup)
-	wid$abline_h <- gcheckbox("horizontal", checked=F)
-	wid$abline_v <- gcheckbox("vertical", checked=F)
-	wid$abline_d <- gcheckbox("diagonal", checked=F)
-	add(linegroup, glabel("Reference line (origin):"))
-	add(linegroup, wid$abline_h)
-	add(linegroup, wid$abline_v)
-	add(linegroup, wid$abline_d)
-	# grid
-	gridgroup <- ggroup(container=decogroup)
-	wid$grid_h <- gcheckbox("horizontal", checked=F)
-	wid$grid_v <- gcheckbox("vertical", checked=F)
-	add(gridgroup, glabel("Grid:"))
-	add(gridgroup, wid$grid_h)
-	add(gridgroup, wid$grid_v)
-	# rug
-	wid$rug <- gcheckbox("Rug (marginal distribution)", checked=F)
-	add(decogroup, wid$rug)
-	
-	# panel.lmline()
-	# panel.loess()
-	
-	# STYLE
-	stylegroup <- gframe("Style", horizontal=FALSE, container=wingroup)
-	enabled(stylegroup) <- FALSE
-	# lattice theme
-	# TODO color (white bg) / color (dark bg) / greyscale
-	# type
-	arg_type <- callArg(playState, type)
-	hasPoints <- (is.null(arg_type) || any(c("p","b","o") %in% arg_type))
-	hasLines <- any(c("l","b","o") %in% arg_type)
-	hasDroplines <- any("h" %in% arg_type)
-	wid$points <- gcheckbox("Points", checked=hasPoints)
-	wid$lines <- gcheckbox("Lines", checked=hasLines)
-	wid$droplines <- gcheckbox("Drop lines", checked=hasDroplines)
-	typegroup <- ggroup(container=stylegroup)
-	add(typegroup, wid$points)
-	add(typegroup, wid$lines)
-	add(typegroup, wid$droplines)
-	lay <- glayout(container=stylegroup)
-	# cex
-	wid$cex <- gedit(toString(callArg(playState, cex)), width=5, 
-		coerce.with=as.numeric)
-	lay[1,1] <- "Expansion factor:"
-	lay[1,2] <- wid$cex
-	# pch
-	pchList <- list(
-		`open circle`=21,
-		`open diamond`=23,
-		`open square`=22,
-		`open triangle`=24,
-		`solid circle`=19,
-		`solid diamond`=18,
-		`solid square`=15,
-		`solid triangle`=17,
-		`plus (+)`=3,
-		`cross (x)`=4,
-		`dot (.)`="."
-	)
-	which_pch <- which(sapply(pchList, identical, callArg(playState, pch)))
-	if (length(which_pch) == 0) which_pch <- 0
-	wid$pch <- gdroplist(names(pchList), selected=which_pch)
-	lay[2,1] <- "Plot symbol:"
-	lay[2,2] <- wid$pch
-	# col
-	colList <- palette()
-	arg_col <- callArg(playState, col)
-	which_col <- if (is.numeric(arg_col)) which(arg_col == seq_along(colList))
-		else which(sapply(colList, identical, arg_col))
-	if (length(which_col) == 0) which_col <- 0
-	wid$col <- gdroplist(colList, selected=which_col)
-	lay[3,1] <- "Color (foreground):"
-	lay[3,2] <- wid$col
-	# lty
-	ltyList <- c("solid", "dashed", "dotted", "dotdash", "longdash")
-	# lwd TODO
-	# fontface / fontfamily / font
-	familyList <- list("sans", "serif", "mono")
-	fontList <- list(plain=1, bold=2, italic=3, bolditalic=4)
-	visible(lay) <- TRUE
-	
-	# lattice
-	# panel.grid()
-	# panel.rug()
-	# panel.abline()
-	# panel.lmline()
-	# panel.loess()
-	
-	# plot.default (panel.first)
-	# grid()
-	# rug()
-	# abline()
-	# lines(lm())
-	
-	# grid / panel.grid()
-	# rug
-	# axis lines abline(h=0), abline(v=0)
-	# regression line panel.lmline / type="r"
-	# smooth panel.smooth
-	
-	# OTHER
-	
-	# superpose
-	
-	# layers
-	
-	# TODO: make the dialog not modal
-	
-	gbasicdialog("Plot settings", widget=wingroup, action=playState, 
-	handler=function(h, ...) {
-		playState <- h$action
-		playDevSet(playState)
-		
-		# TITLES
-		argExpr <- function(wid, expr.wid) {
-			newVal <- svalue(wid)
-			if (newVal == "") return(NULL)
-			if (svalue(expr.wid)) 
-				newVal <- parse(text=newVal, srcfile=NULL)
-			newVal
-		}
-		callArg(playState, main) <- argExpr(wid$main, wid$main.expr)
-		callArg(playState, sub) <- argExpr(wid$sub, wid$sub.expr)
-		callArg(playState, xlab) <- argExpr(wid$xlab, wid$xlab.expr)
-		callArg(playState, ylab) <- argExpr(wid$ylab, wid$ylab.expr)
-		
-		# AXES
-		if (playState$is.lattice) {
-			newXdraw <- if (svalue(wid$xaxis.show)) NULL else FALSE
-			newYdraw <- if (svalue(wid$yaxis.show)) NULL else FALSE
-			callArg(playState, scales$x$draw) <- newXdraw
-			callArg(playState, scales$y$draw) <- newYdraw
-			newXlog <- if (svalue(wid$xaxis.log)) TRUE else NULL
-			newYlog <- if (svalue(wid$yaxis.log)) TRUE else NULL
-			callArg(playState, scales$x$log) <- newXlog
-			callArg(playState, scales$y$log) <- newYlog
-			newAspect <- if (svalue(wid$aspect.iso)) "iso" else NULL
-			callArg(playState, aspect) <- newAspect
-		} else {
-			# base graphics plot
-			newXaxt <- if (svalue(wid$xaxis.show)) NULL else "n"
-			newYaxt <- if (svalue(wid$yaxis.show)) NULL else "n"
-			callArg(playState, xaxt) <- newXaxt
-			callArg(playState, yaxt) <- newYaxt
-			newLog <- paste(c(if (svalue(wid$xaxis.log)) "x",
-					if (svalue(wid$yaxis.log)) "y"), 
-					collapse="")
-			if (newLog == "") newLog <- NULL
-			callArg(playState, log) <- newLog
-			newAsp <- if (svalue(wid$aspect.iso)) 1 else NULL
-			callArg(playState, asp) <- newAsp
-		}
-		
-		# DECORATIONS
-		wid$abline_h
-		wid$abline_v
-		wid$abline_d
-		wid$grid_h
-		wid$grid_v
-		wid$rug
-		
-		# dispose(h$obj)
-		playReplot(playState)
-	})
-	playState$win$present()
-}
+# note: settings_handler can be found in plotSettingsGui.R
 
 ## KEEP
 
 toolConstructors$keep <- function(playState) {
-	quickTool(playState,
+	widget <- quickTool(playState,
 		label = "Keep plot", 
 		icon = "gtk-leave-fullscreen", 
 		tooltip = "Keep this window, do not replace it (open next plot in a new window)",
-		f = keep_handler)
+		f = keep_handler,
+		isToggle = TRUE)
+	if (playState$keep) widget["active"] <- TRUE
+	widget
 }
 
 keep_handler <- function(widget, playState) {
+	playState$keep <- widget["active"]
+}
+
+## STAYONTOP
+
+toolConstructors$stayontop <- function(playState) {
+	quickTool(playState,
+		label = "Stay on top", 
+		icon = "gtk-leave-fullscreen", 
+		tooltip = "Always show this window",
+		f = stayontop_handler,
+		isToggle = TRUE)
+}
+
+stayontop_handler <- function(widget, playState) {
+	playState$win$setKeepAbove(widget["active"])
 }
 
 ## SAVE
@@ -399,7 +184,7 @@ save_handler <- function(widget, user.data) {
 	myTitle <- paste("Save plot to file",  if (is.null(user.data$ext)) "" 
 		else paste("(", myExt, ")", sep=""))
 	filename <- gfile(myTitle, type="save", initialfilename=myDefault)
-	okExt <- c("pdf","png","jpg","jpeg","ps","eps","svg","wmf","fig")
+	okExt <- c("pdf","png","jpg","jpeg","ps","eps","svg","wmf","emf","fig")
 	if (is.na(filename)) return()
 	ext <- tolower(get.extension(filename))
 	if ( (!is.null(user.data$ext) && (ext != myExt)) ||
@@ -409,43 +194,44 @@ save_handler <- function(widget, user.data) {
 	}
 	# save plot to file
 	playDevSet(playState)
-	mySize <- playState$widgets$drawingArea$getAllocation()
-	myWidth <- mySize$width
-	myHeight <- mySize$height
-	myScale <- 1/72
-	myWidth <- myWidth * myScale
-	myHeight <- myHeight * myScale
+	# TODO: baseViewports will be corrupted if device size changes
+	# -- so do a playReplot rather than dev.copy?
+	da <- playState$widgets$drawingArea
+	w.px <- da$getAllocation()$width
+	h.px <- da$getAllocation()$height
+	w.in <- w.px / 96
+	h.in <- h.px / 96
 	if (ext %in% "pdf") {
-		dev.copy(pdf, file=filename, width=myWidth, height=myHeight)
+		dev.copy(pdf, file=filename, width=w.in, height=h.in)
 		dev.off()
 	}
 	else if (ext %in% "ps") {
-		dev.copy(postscript, file=filename, width=myWidth, height=myHeight)
+		dev.copy(postscript, file=filename, width=w.in, height=h.in)
 		dev.off()
 	}
 	else if (ext %in% "eps") {
-		dev.copy(postscript, file=filename, width=myWidth, height=myHeight,
+		dev.copy(postscript, file=filename, width=w.in, height=h.in,
 			horizontal=FALSE, onefile=FALSE, paper="special")
 		dev.off()
 	}
 	else if (ext %in% "png") {
-		dev.copy(Cairo_png, file=filename, width=myWidth, height=myHeight)
+		dev.copy(Cairo_png, file=filename, width=w.in, height=h.in)
 		dev.off()
 	}
 	else if (ext %in% c("jpeg","jpg")) {
-		dev.copy(jpeg, file=filename, width=myWidth, height=myHeight, res=72, units="in")
+		dev.copy(jpeg, file=filename, width=w.px, height=h.px, units="px")
 		dev.off()
 	}
 	else if (ext %in% "svg") {
-		dev.copy(Cairo_svg, file=filename, width=myWidth, height=myHeight)
+		dev.copy(Cairo_svg, file=filename, width=w.in, height=h.in)
 		dev.off()
 	}
 	else if (ext %in% c("wmf", "emf")) {
-		dev.copy(win.metafile, file=filename, width=myWidth, height=myHeight)
+		dev.copy(win.metafile, file=filename, width=w.in, height=h.in)
 		dev.off()
 	}
 	else if (ext %in% "fig") {
-		dev.copy(xfig, file=filename, width=myWidth, height=myHeight)
+		dev.copy(xfig, file=filename, width=w.in, height=h.in)
 		dev.off()
 	}
 	else {
@@ -472,13 +258,12 @@ copy_handler <- function(widget, playState) {
 	# save plot to file
 	filename <- paste(tempfile(), ".png", sep="")
 	playDevSet(playState)
-	mySize <- playState$widgets$drawingArea$getAllocation()
-	myWidth <- mySize$width
-	myHeight <- mySize$height
-	myScale <- 1/72
-	myWidth <- myWidth * myScale
-	myHeight <- myHeight * myScale
-	dev.copy(Cairo_png, file=filename, width=myWidth, height=myHeight)
+	da <- playState$widgets$drawingArea
+	w.px <- da$getAllocation()$width
+	h.px <- da$getAllocation()$height
+	w.in <- w.px / 96
+	h.in <- h.px / 96
+	dev.copy(Cairo_png, file=filename, width=w.in, height=h.in)
 	dev.off()
 	im <- gdkPixbufNewFromFile(filename)$retval
 	gtkClipboardGet("CLIPBOARD")$setImage(im)
@@ -496,6 +281,7 @@ toolConstructors$print <- function(playState) {
 
 print_handler <- function(widget, playState) {
 	playDevSet(playState)
+	# TODO: print at current size, otherwise figure annotations might move!
 	isWindows <- (.Platform$OS.type == "windows")
 	if (isWindows) dev.print(win.print)
 	else dev.print()
@@ -531,12 +317,82 @@ data_handler <- function(widget, playState) {
 			if (identical(newObj, oldObj)) return()
 			assign(myName, newObj, envir=envir)
 			gmessage(paste("Edited object", myName, 
-				"- you might want to reload the plot."))
+				"-- you might want to reload the plot."))
 		})
 	}
 	browseEnv2(playState$env)
 }
 
+## THEME
+
+toolConstructors$theme <- function(playState) {
+	if (!playState$is.lattice) return(NA)
+	myButton <- gtkButton("Theme")
+	myMenu <- gtkMenu()
+	myLabel <- gtkMenuItem("Lattice theme:")
+	myLabel["sensitive"] <- FALSE
+	myMenu$append(myLabel)
+	themeItems <- list(
+		whitebg=gtkMenuItem(label="White BG (general)"),
+		standard.screen=gtkMenuItem(label="Dark BG (for screen)")
+		standard.print=gtkMenuItem(label="Greyscale (for print)")
+	)
+	for (x in names(themeItems)) {
+		myMenu$append(themeItems[[x]])
+		gSignalConnect(themeItems[[x]], "activate", theme_handler, 
+			data=list(playState=playState, theme=x))
+	}
+	# attach the menu
+	gSignalConnect(myButton, "button_press_event", 
+		function(widget, event, menu) {
+			menu$popup(button=event[["button"]], activate.time=event[["time"]])
+		}, data=myMenu)
+	foo <- gtkToolItem()
+	foo$add(myButton)
+	foo
+}
+
+theme_handler <- function(widget, user.data) {
+	playState <- user.data$playState
+	switch(user.data$theme,
+		whitebg=trellis.par.set(theme=col.whitebg()),
+		standard.screen=trellis.par.set(theme=standard.theme("X11")),
+		standard.print=trellis.par.set(theme=standard.theme("postscript"))
+	)
+	playReplot(playState)
+}
+
+## COORDS
+
+toolConstructors$coords <- function(playState) {
+	coordsLabel <- gtkLabel()
+	playState$widgets$coordsLabel <- coordsLabel
+	if (is.null(playState$widgets$plotClickEventSig)) {
+		playState$widgets$plotClickEventSig <- 
+			gSignalConnect(playState$widgets$drawingArea, 
+			"button-press-event", coords_click_handler, data=playState)
+	}
+	widget <- gtkToolItem()
+	widget$add(coordsLabel)
+	widget
+}
+
+coords_click_handler <- function(widget, event, playState) {
+	x <- event$x
+	y <- event$y
+	coordsTxt <- ""
+	pn <- whichPacket(playState, x, y)
+	if (!is.na(pn)) {
+		xy <- playState$data.spaces[[pn]](x, y)
+		#xy <- format(c(xy$x, xy$y), digits=3)
+		xy$x <- signif(xy$x, 3)
+		xy$y <- signif(xy$y, 3)
+		xy <- format(c(xy$x, xy$y))#, digits=3)
+		coordsTxt <- paste("(", xy[1], ", ", xy[2], ")", sep="")
+	}
+	playState$widgets$coordsLabel["label"] <- coordsTxt
+	return(FALSE)
+}
 
 ## TIME.MODE
 
@@ -589,12 +445,14 @@ time.mode_postplot_action <- function(widget, playState) {
 			cur.time <- playState$env$cur.time
 			widg$timeEntry["text"] <- toString(cur.time)
 			widg$timeScrollbar["adjustment"] <- gtkAdjustment(
-				value=x.pos, lower=1, upper=x.max,
-				step.incr=1, page.incr=x.jump, page.size=0)
+				value=x.pos, lower=1, upper=x.max+1,
+				step.incr=1, page.incr=x.jump, page.size=1)
 			widg$timeScrollbar$setValue(x.pos) # need this (bug?)
 			return()
 		}
-		x.range <- extendrange(xRange(playState))
+		xy <- xyData(playState, all.packets=TRUE)
+		#x.range <- extendrange(xRange(playState))
+		x.range <- extendrange(as.numeric(xy$x))
 		x.lim <- rawXLim(playState)
 		x.page <- abs(diff(x.lim))
 		x.page <- min(x.page, abs(diff(x.range)))
@@ -603,7 +461,7 @@ time.mode_postplot_action <- function(widget, playState) {
 		x.pos <- min(x.pos, max(x.range))
 		# format x limits for text box
 		xlim <- signif(x.lim, 4)
-		class(x.lim) <- xClass(playState)
+		mostattributes(x.lim) <- attributes(xy$x)
 		widg$timeEntry["text"] <- paste(format(x.lim), collapse=" to ")
 		# set up scrollbar
 		widg$timeScrollbar["adjustment"] <- gtkAdjustment(
@@ -656,7 +514,7 @@ time.mode_entry_handler <- function(widget, playState) {
 		gmessage.error("Give bounds in form \"LOWER to UPPER\".")
 		return()
 	}
-	cls <- xClass(playState)
+	cls <- class(xyData(playState)$x)
 	if ("POSIXt" %in% cls) newLim <- as.POSIXct(newLim)
 	else if ("Date" %in% cls) newLim <- as.Date(newLim)
 	else if ("integer" %in% cls) newLim <- as.integer(newLim)
@@ -848,9 +706,9 @@ toolConstructors$identify <- function(playState) {
 							xObj <- xObj[[2]]
 						xObj <- eval(xObj, tmp.data, 
 							environment(tmp.x))
-						labels <- makeLabels(xObj)
+						labels <- makeLabels(xObj, orSeq=T)
 					} else {
-						labels <- makeLabels(tmp.x)
+						labels <- makeLabels(tmp.x, orSeq=T)
 					}
 				}
 			} else {
@@ -862,15 +720,15 @@ toolConstructors$identify <- function(playState) {
 							tmp.x[[2]] else tmp.x[[3]]
 						xObj <- eval(xObj, environment(tmp.x), 
 							playState$env)
-						labels <- makeLabels(xObj)
+						labels <- makeLabels(xObj, orSeq=T)
 					} else {
-						labels <- makeLabels(tmp.x)
+						labels <- makeLabels(tmp.x, orSeq=T)
 					}
 				}
 			}
 		} else {
 			# data.points were supplied
-			labels <- makeLabels(playState$data.points)
+			labels <- makeLabels(playState$data.points, orSeq=T)
 		}
 	}
 	playState$labels <- labels
@@ -883,7 +741,7 @@ toolConstructors$identify <- function(playState) {
 		post.plot.action = identify_postplot_action)
 }
 
-makeLabels <- function(x) {
+makeLabels <- function(x, orSeq=FALSE) {
 	labels <- row.names(x)
 	if (inherits(x, "POSIXt"))
 		labels <- format(x)
@@ -891,196 +749,97 @@ makeLabels <- function(x) {
 		labels <- format(x)
 	if (inherits(x, "ts") || inherits(x, "zoo"))
 		labels <- rep(format(stats::time(x)), NCOL(x))
+	if (orSeq && is.null(labels)) labels <- seq_along(x)
 	labels
+}
+
+drawLabels <- function(playState, which, packet="plot", pos=1) {
+	playDevSet(playState)
+	xy <- xyCoords(playState, packet=packet)
+	x <- xy$x[which]
+	y <- xy$y[which]
+	labels <- playState$labels
+	if (playState$is.lattice && (length(labels) > length(xy$subscripts)))
+		labels <- labels[ xy$subscripts ]
+	labels <- labels[which]
+	myStyle <- eval(playState$label.style)
+	if (is.null(playState$label.style)) {
+		# default style is taken (at plot time) from lattice settings
+		myStyle <- do.call(gpar, trellis.par.get("add.text"))
+	}
+	annots <- list()
+	# TODO: do this without a loop
+	for (i in seq_along(labels)) {
+		ux <- unit(x[i], "native")
+		uy <- unit(y[i], "native")
+		offset <- 0.5
+		if (!is.null(pos)) {
+			if (pos == 1) {
+			    uy <- uy - unit(offset, "char")
+			    adj <- c(0.5, 1)
+			}
+			else if (pos == 2) {
+			    ux <- ux - unit(offset, "char")
+			    adj <- c(1, 0.5)
+			}
+			else if (pos == 3) {
+			    uy <- uy + unit(offset, "char")
+			    adj <- c(0.5, 0)
+			}
+			else if (pos == 4) {
+			    ux <- ux + unit(offset, "char")
+			    adj <- c(0, 0.5)
+			}
+			else stop("Invalid value of 'pos'")
+		}
+		annots[[i]] <- call("grid.text", labels[i], x=ux, y=uy, 
+			default.units="native", just=adj,
+			gp=myStyle)
+	}
+	playAnnotate(playState, annots, packet=packet)
 }
 
 identify_handler <- function(widget, playState) {
 	playDevSet(playState)
 	on.exit(playPrompt(playState) <- NULL)
-	# do identify
-	if (!playState$is.lattice) {
-		# base graphics plot
-		idCall <- call("identify", 
-			xy.coords.call(playState$call, env=playState$env))
-		idCall <- as.call(c(as.list(idCall), playState$label.style))
-		playPrompt(playState) <- paste("Identifying data points...",
-			"Click the right mouse button to finish.")
-		ids.new <- eval(idCall)
-		# set identified points
-		ids.old <- playState$ids$all # may be NULL
-		playState$ids$all <- union(ids.old, ids.new)
-		return()
+	# TODO qqmath? - or just pass in data.points
+	playPrompt(playState) <- 
+			"Click or drag to identify points. Right-click to end."
+	repeat {
+		foo <- playSelectData(playState)
+		if (is.null(foo)) break
+		if (length(foo$which) == 0) next
+		with(foo, {
+			if (!is.click) pos <- 1
+			# store newly identified points in playState
+			ids.new <- data.frame(which=which, pos=pos)
+			ids.old <- playState$ids[[packet]] # may be NULL
+			if (is.null(ids.old)) ids.old <- ids.new
+			else ids.new <- rbind(ids.old, ids.new)
+			playState$ids[[packet]] <- ids.new
+			# draw them
+			drawLabels(playState, which=which, packet=packet, pos=pos)
+		})
 	}
-	# lattice plot
-	idCall <- call("panel.identify")
-	callName <- deparseOneLine(playState$call[[1]])
-	if (callName == "qqmath") 
-		identify.call <- call("panel.identify.qqmath")
-	if (!is.null(playState$data.points)) 
-		idCall[[2]] <- playState$data.points
-	idCall <- as.call(c(as.list(idCall), playState$label.style))
-	newFocus <- playFocus(playState, clip.off=T)
-	if (!any(newFocus > 0)) return()
-	playPrompt(playState) <- paste("Identifying data points...",
-		"Click the right mouse button to finish.")
-	ids.new <- eval(idCall)
-	# set identified points
-	myPacket <- as.character(packet.number())
-	ids.old <- playState$ids[[myPacket]] # may be NULL
-	playState$ids[[myPacket]] <- union(ids.old, ids.new)
-	trellis.unfocus()
-}
-
-identify.region_handler <- function(widget, playState) {
-	playDevSet(playState)
-	nav.x <- T
-	nav.y <- T
-	on.exit(playPrompt(playState) <- NULL)
-	lowEdge <- "bottom-left corner"
-	if (!nav.y) lowEdge <- "left edge"
-	if (!nav.x) lowEdge <- "bottom edge"
-	highEdge <- "top-right corner"
-	if (!nav.y) highEdge <- "right edge"
-	if (!nav.x) highEdge <- "top edge"
-	# get region
-	if (playState$is.lattice) {
-		newFocus <- playFocus(playState, clip.off=T)
-		if (!any(newFocus)) return()
-		playPrompt(playState) <- paste("Identifying data points in a region...",
-			"click at the", lowEdge)
-		xlim <- convertX(unit(0:1, "npc"), "native", valueOnly=T)
-		ylim <- convertY(unit(0:1, "npc"), "native", valueOnly=T)
-		# get lower limits
-		clickLoc <- grid.locator()
-		if (is.null(clickLoc)) {
-			trellis.unfocus()
-			return()
-		}
-		clickLoc <- lapply(clickLoc, as.numeric)
-		xlim.new <- if (nav.x) clickLoc$x else xlim[1]
-		ylim.new <- if (nav.y) clickLoc$y else ylim[1]
-		# draw lower bounds
-		if (nav.x) panel.abline(v=xlim.new)
-		if (nav.y) panel.abline(h=ylim.new)
-		# get upper limits
-		playPrompt(playState) <- paste("OK, now click at the", highEdge)
-		clickLoc <- grid.locator()
-		if (is.null(clickLoc)) {
-			playReplot(playState)
-			return()
-		}
-		clickLoc <- lapply(clickLoc, as.numeric)
-		xlim.new[2] <- if (nav.x) clickLoc$x else xlim[2]
-		ylim.new[2] <- if (nav.y) clickLoc$y else ylim[2]
-		# draw upper bounds
-		if (nav.x) panel.abline(v=xlim.new[2])
-		if (nav.y) panel.abline(h=ylim.new[2])
-		xlim <- unlogX(xlim.new, playState$call)
-		ylim <- unlogY(ylim.new, playState$call)
-		# set identified points
-		if ('x' %in% names(idCall <- playState$id.call)) {
-			xy <- xy.coords.call(idCall, playState$env)
-			subscripts <- seq_along(xy$x)
-		} else {
-			pargs <- trellis.panelArgs()
-			xy <- xy.coords(pargs, recycle=T)
-			# convert back from log scale if required
-			xy$x <- unlogX(xy$x, playState$call)
-			xy$y <- unlogY(xy$y, playState$call)
-			subscripts <- pargs$subscripts
-		}
-		ids.new <- which(
-			(min(xlim.new) < xy$x) & (xy$x < max(xlim.new)) &
-			(min(ylim.new) < xy$y) & (xy$y < max(ylim.new))
-		)
-		ids.new <- subscripts[ids.new]
-		myPacket <- as.character(packet.number())
-		ids.old <- playState$ids[[myPacket]] # may be NULL
-		playState$ids[[myPacket]] <- union(ids.old, ids.new)
-	} else {
-		# traditional graphics plot
-		playPrompt(playState) <- paste("Identifying data points in a region...",
-			"click at the", lowEdge)
-		xlim <- par("usr")[1:2]
-		ylim <- par("usr")[3:4]
-		# get lower limits
-		clickLoc <- locator(n=1)
-		if (is.null(clickLoc)) return()
-		xlim.new <- if (nav.x) clickLoc$x else xlim[1]
-		ylim.new <- if (nav.y) clickLoc$y else ylim[1]
-		if (nav.x) abline(v=xlim.new, col="red")
-		if (nav.y) abline(h=ylim.new, col="red")
-		# get upper limits
-		playPrompt(playState) <- paste("OK, now click at the", highEdge)
-		clickLoc <- locator(n=1)
-		if (is.null(clickLoc)) {
-			return()
-		}
-		xlim.new[2] <- if (nav.x) clickLoc$x else xlim[2]
-		ylim.new[2] <- if (nav.y) clickLoc$y else ylim[2]
-		if (nav.x) abline(v=xlim.new[2], col="red")
-		if (nav.y) abline(h=ylim.new[2], col="red")
-		xlim <- unlogX(xlim.new, playState$call, is.lattice=F)
-		ylim <- unlogY(ylim.new, playState$call, is.lattice=F)
-		xy <- xy.coords.call(playState$id.call, playState$env)
-		ids.new <- which(
-			(min(xlim.new) < xy$x) & (xy$x < max(xlim.new)) &
-			(min(ylim.new) < xy$y) & (xy$y < max(ylim.new))
-		)
-		# set identified points
-		ids.old <- playState$ids$all # may be NULL
-		playState$ids$all <- union(ids.old, ids.new)
-	}
-	playReplot(playState)
 }
 
 identify_postplot_action <- function(widget, playState) {
 	# draw persistent labels
-	labels <- playState$labels
 	if (playState$is.lattice) {
+		# lattice plot
 		packets <- trellis.currentLayout(which="packet")
-		for (myPacket in names(playState$ids)) {
+		for (packet in names(playState$ids)) {
 			whichOne <- which(packets == as.numeric(myPacket))
 			if (length(whichOne) == 0) next
-			myCol <- col(packets)[whichOne]
-			myRow <- row(packets)[whichOne]
-			trellis.focus("panel", myCol, myRow, highlight=FALSE)
-			# find which points are identified
-			ids <- playState$ids[[myPacket]]
-			if (!is.null(playState$data.points)) {
-				xy <- xy.coords(data.points, recycle=TRUE)
-			} else {
-				pargs <- trellis.panelArgs()
-				xy <- pargs
-				subscripts <- pargs$subscripts
-				if (length(labels) == 0) labels <- subscripts
-				if (length(labels) > length(subscripts))
-					labels <- labels[subscripts]
-				ids <- which(subscripts %in% ids)
-			}
-			if (length(labels) > 0) {
-				do.call(panel.text, c(list(xy$x[ids], xy$y[ids], 
-					labels=labels[ids], pos=1), 
-					playState$label.style))
-			}
-			trellis.unfocus()
+			idInfo <- playState$ids[[packet]]
+			drawLabels(playState, which=idInfo$which, packet=packet, 
+				pos=idInfo$pos)
 		}
 	} else {
-		# base graphics plot
-		ids <- playState$ids$all
-		if (length(ids) > 0) {
-			if (!is.null(playState$data.points)) {
-				xy <- xy.coords(data.points, recycle=TRUE)
-			} else {
-				xy <- xy.coords.call(playState$call, playState$env)
-			}
-			if (length(labels) == 0) labels <- seq_along(xy$x)
-			if (length(labels) > 0) {
-				do.call(text, c(list(xy$x[ids], xy$y[ids], 
-					labels=labels[ids], pos=1), 
-					playState$label.style))
-			}
-		}
+		packet <- "plot"
+		idInfo <- playState$ids[[packet]]
+		drawLabels(playState, which=idInfo$which, packet=packet, 
+				pos=idInfo$pos)
 	}
 }
 
@@ -1092,14 +851,69 @@ toolConstructors$annotate <- function(playState) {
 		icon = "gtk-italic",
 		tooltip = "Add your own labels to the plot",
 		f = annotate_handler,
-		data = list(),
 		post.plot.action = annotate_postplot_action)
 }
 
-annotate_handler <- function(widget, user.data) {
-	playState <- user.data$playState
-	isFigure <- !identical(playState$annotation.mode, "plot")
-	isArrow <- (!missing(user.data) && isTRUE(user.data$arrow))
+annotate_handler <- function(widget, playState) {
+	pageAnnotation <- identical(playState$annotation.mode, "page")
+	foo <- playRectInput(playState, prompt="Click (or drag) to place text. (Right-click to cancel)")
+	if (is.null(foo)) return()
+	if (is.null(foo$coords)) pageAnnotation <- TRUE
+	space <- foo$space
+	if (pageAnnotation) space <- "page"
+	annot <- NULL
+	myLabel <- placeLabelDialog()
+	if (is.null(myLabel)) return()
+	myJust <- switch(as.character(myLabel$align[1]),
+		`0`="left", `0.5`="centre", `1`="right")
+	myJust[2] <- switch(as.character(myLabel$align[2]),
+		`0`="bottom", `0.5`="centre", `1`="top")
+	myXY <- if (space == "page") foo$ndc else foo$coords
+	if (foo$is.click) {
+		myX <- myXY$x[1]
+		myY <- myXY$y[1]
+	} else {
+		# it was a drag
+		# figure out which coordinates are top/bottom, left/right
+		x.leftright <- sort(myXY$x)
+		if (is.unsorted(rawXLim(playState, space=space)))
+			x.leftright <- rev(x.leftright)
+		y.bottop <- sort(myXY$y)
+		if (is.unsorted(rawYLim(playState, space=space)))
+			y.bottop <- rev(y.bottop)
+		myX <- switch(myJust[1],
+			left=x.leftright[1],
+			right=x.leftright[2],
+			centre=mean(x.leftright))
+		myY <- switch(myJust[2],
+			bottom=y.bottop[1],
+			top=y.bottop[2],
+			centre=mean(y.bottop))
+	}
+	annot <- call("grid.text", myLabel$text, x=myX, y=myY, just=myJust)
+	if (space != "page") annot$default.units <- "native"
+	# add user-specified style
+	annot$gp <- playState$label.style
+	if (is.null(playState$label.style)) {
+		# default style is taken (at plot time) from lattice settings
+		annot$gp <- quote(do.call(gpar, trellis.par.get("add.text")))
+	}
+	# draw it
+	playDo(playState, annot, space=space)
+	# store it
+	playState$annotations[[space]] <- 
+		c(playState$annotations[[space]], annot)
+	with(playState$tools, {
+		if (!is.null(edit.annotations)) edit.annotations["visible"] <- TRUE
+		if (!is.null(clear)) clear["visible"] <- TRUE
+	})
+
+
+
+
+	return()
+	
+# TODO: delete this
 	on.exit(playPrompt(playState) <- NULL)
 	# get location
 	myPacket <- "all"
@@ -1196,6 +1010,8 @@ annotate_handler <- function(widget, user.data) {
 
 placeLabelDialog2 <- function() {
 	# TODO (use gWidgets)
+	# position relative to point
+	# style? cex, font, col...
 }
 
 placeLabelDialog <- function(text="", title="New label", prompt="", width.chars=-1) {
@@ -1241,55 +1057,57 @@ placeLabelDialog <- function(text="", title="New label", prompt="", width.chars=
 
 annotate_postplot_action <- function(widget, playState) {
 	# draw annotations
-	if (!is.null(playState$viewport)) {
-		# grid graphics plot
-		for (myPacket in names(playState$annotations)) {
-			depth <- if (myPacket == "all") { # figure
-				pushViewport(viewport(name="playwith_toplevel"))
-				downViewport("playwith_toplevel")
-			} else { # plot region
-				downViewport(playState$viewport)
-			}
-			for (expr in playState$annotations[[myPacket]]) {
-				eval(expr, playState$env)
-			}
-			upViewport(depth)
-		}
-	} else if (playState$is.lattice) {
-		# lattice plot
-		packets <- trellis.currentLayout(which="packet")
-		for (myPacket in names(playState$annotations)) {
-			if (myPacket == "all") { # figure
-				trellis.focus("toplevel", highlight=F)
-			} else { # plot region (panel)
-				whichOne <- which(packets == as.numeric(myPacket))
-				if (length(whichOne) == 0) next
-				myCol <- col(packets)[whichOne]
-				myRow <- row(packets)[whichOne]
-				trellis.focus("panel", myCol, myRow, highlight=F)
-			}
-			for (expr in playState$annotations[[myPacket]]) {
-				eval(expr, playState$env)
-			}
-			trellis.unfocus()
-		}
-	} else {
-		# base graphics plot
-		for (expr in playState$annotations$all) {
-			eval(expr, playState$env)
-		}
+	for (packet in names(playState$annotations)) {
+		playAnnotate(playState, playState$annotations[[packet]], 
+			packet=packet)
 	}
 }
 
 ## ARROW
 
 toolConstructors$arrow <- function(playState) {
+	if (is.null(playState$arrow.arrow))
+		playState$arrow.arrow <- quote(arrow(length=unit(0.15, "inches")))
 	quickTool(playState,
 		label = "Arrow", 
 		icon = "gtk-connect", 
 		tooltip = "Add an arrow to the plot",
-		f = annotate_handler,
-		data = list(arrow=TRUE))
+		f = arrow_handler
+}
+
+arrow_handler <- function(widget, playState) {
+	isFigure <- !identical(playState$annotation.mode, "plot")
+	foo <- playLineInput(playState, prompt="Click and drag to draw an arrow. (Right-click to cancel)")
+	if (is.null(foo)) return()
+	if (is.null(foo$coords)) isFigure <- TRUE
+	if (foo$is.click) return()
+	packet <- if (isFigure) "figure" else "plot"
+	if (playState$is.lattice && !isFigure) packet <- foo$packet
+	annot <- NULL
+	if (isFigure) {
+		# device coordinates
+		annot <- call("grid.lines", x=foo$ndc$x, y=foo$ndc$y)
+	} else {
+		# user coordinates
+		annot <- call("grid.lines", x=foo$coords$x, y=foo$coords$y,
+			default.units="native")
+	}
+	# add user-specified style
+	annot$arrow <- playState$arrow.arrow
+	annot$gp <- playState$arrow.style
+	if (is.null(playState$arrow.style)) {
+		# default style is taken (at plot time) from lattice settings
+		annot$gp <- quote(do.call(gpar, trellis.par.get("add.line")))
+	}
+	# draw it
+	playAnnotate(playState, annot, packet=packet)
+	# store it
+	playState$annotations[[packet]] <- 
+		c(playState$annotations[[packet]], annot)
+	with(playState$tools, {
+		if (!is.null(edit.annotations)) edit.annotations["visible"] <- TRUE
+		if (!is.null(clear)) clear["visible"] <- TRUE
+	})
 }
 
 ## EDIT.ANNOTATIONS
@@ -1305,7 +1123,7 @@ toolConstructors$edit.annotations <- function(playState) {
 
 edit.annotations_handler <- function(widget, playState) {
 	theAnnots <- playState$annotations$all
-	callTxt <- paste(unlist(lapply(theAnnots, deparse)), collapse="\n")
+	callTxt <- paste(unlist(lapply(theAnnots, deparse, control="showAttributes")), collapse="\n")
 	repeat {
 		newTxt <- NULL
 		txtBox <- gtext(callTxt, font.attr=c(family="monospace"), wrap=FALSE, width=600)
@@ -1372,6 +1190,11 @@ clear_handler <- function(widget, playState) {
 ## ZOOM
 
 toolConstructors$zoom <- function(playState) {
+	callFun <- eval(playState$call[[1]])
+	if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
+		# call does not take arguments
+		return(NA)
+	}
 	quickTool(playState,
 		label = "Zoom...", 
 		icon = "gtk-zoom-in", 
@@ -1380,6 +1203,28 @@ toolConstructors$zoom <- function(playState) {
 }
 
 zoom_handler <- function(widget, playState) {
+	nav.x <- TRUE
+	nav.y <- !(playState$time.mode)
+	foo <- playRectInput(playState, prompt="Click and drag to define the new plot region. (Right-click to cancel)")
+	if (is.null(foo)) return()
+	if (is.null(foo$coords)) return()
+	if (foo$is.click) return()
+	with(foo$ndc,
+		grid.polygon(x=c(x[1], x[1], x[2], x[2]),
+			y=c(y[1], y[2], y[2], y[1]),
+			gp=gpar(col="red", lty="dashed")))
+	xlim <- range(foo$coords$x)
+	ylim <- range(foo$coords$x)
+	# reverse axis scales if needed
+	if (is.unsorted(rawXLim(playState))) xlim <- rev(xlim)
+	if (is.unsorted(rawYLim(playState))) ylim <- rev(ylim)
+	# this converts from raw numeric to original format (including unlog)
+	if (nav.x) rawXLim(playState) <- xlim
+	if (nav.y) rawYLim(playState) <- ylim
+	playReplot(playState)
+}
+
+zoom_handler_old <- function(widget, playState) {
 	nav.x <- TRUE
 	nav.y <- !(playState$time.mode)
 	on.exit(playPrompt(playState) <- NULL)
@@ -1484,6 +1329,11 @@ zoom_handler <- function(widget, playState) {
 ## ZOOMOUT
 
 toolConstructors$zoomout <- function(playState) {
+	callFun <- eval(playState$call[[1]])
+	if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
+		# call does not take arguments
+		return(NA)
+	}
 	quickTool(playState,
 		label = "Zoom out", 
 		tooltip = "Zoom out to show 4x plot area",
@@ -1509,6 +1359,11 @@ zoomout_handler <- function(widget, playState) {
 ## ZOOMFIT
 
 toolConstructors$zoomfit <- function(playState) {
+	callFun <- eval(playState$call[[1]])
+	if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
+		# call does not take arguments
+		return(NA)
+	}
 	quickTool(playState,
 		label = "Fit data",
 		icon = "gtk-zoom-fit", 
@@ -1537,6 +1392,11 @@ zoomfit_postplot_action <- function(widget, playState) {
 ## ZERO
 
 toolConstructors$zero <- function(playState) {
+	callFun <- eval(playState$call[[1]])
+	if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
+		# call does not take arguments
+		return(NA)
+	}
 	quickTool(playState,
 		label = "Full scale", 
 		icon = "gtk-goto-bottom", 
@@ -1601,18 +1461,14 @@ help_handler <- function(widget, playState) {
 		gmessage.error("Do not know the name of the plot function.")
 		return()
 	}
-	callName <- deparse(playState$call[[1]])
+	callName <- deparseOneLine(playState$call[[1]])
 	# work out which (S3) method was called, if any
 	methNames <- methods(callName)
 	if ((length(methNames) > 0) && length(playState$call > 1)) {
-		#firstArg <- playState$call[[2]]
-		#if (is.symbol(firstArg) || (is.call(firstArg) &&
-		#	firstArg[[1]] == quote(`~`))) {
-			myClass <- class(callArg(playState, 1))
-			myMeth <- paste(callName, myClass, sep=".")
-			ok <- (myMeth %in% methNames)
-			if (any(ok)) callName <- myMeth[ok][1]
-		#}
+		myClass <- class(callArg(playState, 1))
+		myMeth <- paste(callName, myClass, sep=".")
+		ok <- (myMeth %in% methNames)
+		if (any(ok)) callName <- myMeth[ok][1]
 	}
 	print(help(callName))
 }
@@ -1620,9 +1476,8 @@ help_handler <- function(widget, playState) {
 # EDIT.CALL
 
 edit.call.inline_handler <- function(widget, playState) {
-	print(sys.calls())
 	# the original call -- this should match the code in playReplot!
-	callTxt <- deparseOneLine(playState$call)
+	callTxt <- deparseOneLine(playState$call, control="showAttributes")
 	newTxt <- widget["text"]
 	if (identical(newTxt, callTxt)) return()
 	if (identical(newTxt, "")) return()
@@ -1641,7 +1496,7 @@ edit.call.inline_handler <- function(widget, playState) {
 
 edit.call_handler <- function(widget, playState) {
 	theCall <- playState$call
-	callTxt <- paste(deparse(theCall), collapse="\n")
+	callTxt <- paste(deparse(theCall, control="showAttributes"), collapse="\n")
 	repeat {
 		newTxt <- NULL
 		txtBox <- gtext(callTxt, font.attr=c(family="monospace"), wrap=FALSE, width=600)
@@ -1649,8 +1504,6 @@ edit.call_handler <- function(widget, playState) {
 				action=environment(), handler=function(h, ...)
 				assign("newTxt", svalue(h[[1]]), env=h$action)
 		)
-		#newTxt <- guiTextInput(callTxt, title="Edit plot call", 
-		#	prompt="", accepts.tab=F)
 		if (is.null(newTxt)) break
 		callTxt <- newTxt
 		tmp <- tryCatch(parse(text=callTxt), error=function(e)e)

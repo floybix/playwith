@@ -15,8 +15,8 @@
 }
 \usage{
 playwith(expr, 
+	new = FALSE,
 	title = NULL, 
-	playState = NULL,
 	time.mode = FALSE,
 	labels = NULL, 
 	data.points = NULL, 
@@ -34,16 +34,16 @@ playwith(expr,
 	eval.args = NA, 
 	invert.match = F, 
 	envir = parent.frame(), 
+	playState = if (!new) playDevCur(),
 	plot.call)
 }
 \arguments{
   \item{expr}{ an expression to create a plot, like \code{plot(mydata)}. 
   	Note, this can have lots of arguments, just like a normal plot call (see examples).
   	Can also be a chunk of code in \code{\{}braces\code{\}}, but that form does not allow interaction. }
+  \item{new}{ if \code{TRUE} open in a new window, otherwise replace the current window. }
   \item{title}{ optional window title. If a plot window exists with the same title, 
   	the new plot will appear in that window, replacing the old plot. }
-  \item{playState}{ the \code{\link{playState}} object for an existing plot window.
-	If given, the new plot will appear in that window, replacing the old plot.}
   \item{time.mode}{ whether the plot is to start in "time mode", with navigation along the x-axis. }
   \item{labels}{ a character vector of labels for data points, for use in \code{\link{identify}}. 
   	If missing, it will be guessed from the plot call arguments. }
@@ -77,20 +77,26 @@ playwith(expr,
 			If \code{time.index} is given, this will set the initial time step.
 		}
 		\item{\code{label.style}}{
-			a \code{list} of arguments passed to \code{\link{text}}
-			or \code{\link{panel.text}}, to specify the style of labels: 
-			can include \code{cex}, \code{col} and \code{font}.
+			output from \code{\link{gpar}}, specifying the style of labels.
+			e.g. \code{gpar(cex=1.5, fontface="italic", fontfamily="serif")}.
+		}
+		\item{\code{arrow.style}}{
+			output from \code{\link{gpar}}, specifying the style of arrows. 
+			e.g. \code{gpar(lwd=2, col="red", alpha=0.5)}.
+		}
+		\item{\code{arrow.arrow}}{
+			output from \code{\link{arrow}}, specifying the type of arrows to draw.
+			e.g. \code{arrow(ends="both", type="closed")}.
 		}
 		\item{\code{annotation.mode}}{
-			\code{"figure"} (the default) or \code{"plot"}.
+			\code{"figure"} or \code{"plot"} (the default).
 		}
 	}
   }
   \item{top.tools, left.tools, bottom.tools, right.tools}{
-	each a list of tool widgets for toolbars at the top, left, bottom or right sides of the window.
-	Each list element should be the name of one of the pre-defined tools in \code{toolConstructors},
-	or a function to construct a \code{\link[RGtk2]{gtkToolItem}}. See \code{\link{quickTool}} for details
-	of defining new tools. }
+	each a list of tools for toolbars at the top, left, bottom or right sides of the window.
+	Each list element should be the name of one of the pre-defined tools (\code{names(toolConstructors)},
+	or a function to construct a \code{\link[RGtk2]{gtkToolItem}}. See \code{\link{quickTool}} for details. }
   \item{show.call}{ set to \code{FALSE} to hide the plot call text-box ("address bar") and associated buttons.}
   \item{win.size}{ default initial size of the plot window (width, height) in pixels. }
   \item{modal}{ whether the window is modal: if \code{TRUE}, the session will freeze until the window is closed. }
@@ -100,20 +106,47 @@ playwith(expr,
 	or a \link[=regex]{regular expression} matching symbols to evaluate. See below. }
   \item{invert.match}{ whether to evaluate arguments that do NOT match the regular expression given in \code{eval.args}. }
   \item{envir}{ \code{\link{environment}} to use in evaluating the call arguments (see \code{eval.args}) }
+  \item{playState}{ the \code{\link{playState}} object for an existing plot window.
+	If given, the new plot will appear in that window, replacing the old plot.
+	This over-rides the \code{new} argument.}
   \item{plot.call}{ a plot call (\code{\link{call}} object), if given this is used instead of \code{expr}. }
 }
 \details{
 	This function opens a GTK+ window containing a plot device 
-	(a Cairo-based device from the \code{cairoDevice} package)
-	and several toolbars.
+	(from the \code{cairoDevice} package) and several toolbars. 
+	There is a call toolbar (similar to the "address bar" of a web browser) at the top,
+	showing the current plot call, which can also be edited in-place. 
+	Then there are up to four toolbars, one on each side of the plot.
+	The tools to be placed in these four toolbars can be specified as arguments.
+	However, the default set of tools should be adequate in most cases.
 	
+	See X for a description of the pre-defined tools.
+	Note that different sets of tools will be used be default for calls to 
+	\code{\link[lattice]{splom}}, \code{\link[lattice]{cloud}} and \code{\link[lattice]{wireframe}}.
 	
-  This is based firstly on whether the plot function name is recognised as a Lattice plot or not.
-  If it is a not a standard high-level function you may need \code{is.lattice=TRUE}.
+	It is important to be aware that \code{playwith} makes a lot of guesses 
+	about the plot, the data, and how to interact with them.
+	Most interaction is based on evaluating and changing arguments to the plot call.
+	This is designed to work in common cases, but could never work for all types
+	of plots. For basic interaction, ensure that the call accepts \code{xlim}
+	and \code{ylim} arguments.
+	Generally, it can be expected to work best with Lattice plots.
+	
+	Three types of plots are handled slightly differently: 
+	\itemize{
+		\item Lattice graphics: a plot will be recognised as a Lattice plot if 
+			the call is to one of the standard high-level functions.
+			Otherwise you may need \code{is.lattice=TRUE}.
+		\item base graphics: this is the default case. If the call has the same
+			name as a high-level Lattice function, you may need \code{is.lattice=FALSE}.
+		\item grid graphics (not Lattice): you must give the \code{viewport}
+			argument to enable interaction. This has not been well tested.
+	}
+	
   
-  \code{\link[lattice]{wireframe}} and \code{\link[lattice]{cloud}}
+  
 
-  \code{\link[lattice]{splom}}
+  
   
   
   
@@ -135,17 +168,6 @@ playwith(expr,
   However, you can usually ignore this, as most buttons will be automatically added to the toolbar for relevant plots. 
   
   
-  Specifically: \itemize{
-	  \item \code{"expand"} will be added to lattice plots with more than one panel per page. 
-	  An alternative is \code{"focus"}, which is the same but does not expand the chosen panel to the full window.
-	  \item \code{"pages"} will be added to lattice plots with more than one page.
-	  \item \code{"layers"} might be added to lattice plots with any of the arguments \code{"layers", "sp.layout", "panel"}.
-	  \item \code{c("zoomin.3d", "zoomout.3d", "fly.left.3d", "fly.right.3d")} will be added to \code{\link[lattice]{wireframe}} and \code{\link[lattice]{cloud}} 
-	  (note, these do not yet work with non-Lattice plots like \code{\link{persp}}).
-	  \item \code{c("brush", "brush.region", "brush.drag", "clear")} will be added to \code{\link[lattice]{splom}} 
-	  (note, these do not yet work with non-Lattice plots like \code{\link{pairs}}).
-  }
-  But these may be overridden by specifying \code{buttons} explicitly.
   
   See \code{\link{plotAndPlayButtons}} if you want to define new buttons.
   

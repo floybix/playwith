@@ -34,8 +34,8 @@ if (!exists("StateEnv", environment(), inherits=FALSE)) {
 
 playwith <- function(
 	expr, 
+	new = FALSE,
 	title = NULL, 
-	playState = NULL,
 	time.mode = FALSE,
 	labels = NULL, 
 	data.points = NULL, 
@@ -53,6 +53,7 @@ playwith <- function(
 	eval.args = NA, 
 	invert.match = F, 
 	envir = parent.frame(), 
+	playState = if (!new) playDevCur(),
 	plot.call)
 {
 	if (!missing(plot.call) && !missing(expr))
@@ -66,6 +67,7 @@ playwith <- function(
 	# check types
 	if (!is.call(plot.call)) stop("'expr' / 'plot.call' should be a call")
 	if (!is.null(title) && !is.character(title)) stop("'title' should be character")
+	if (!is.null(viewport) && !is.list(viewport)) viewport <- list(plot=viewport)
 	# playState is the <environment> encapsulating the plot, window and device
 	cleanupStateEnv()
 	if (!is.null(playState)) {
@@ -75,13 +77,14 @@ playwith <- function(
 		ID <- title
 		if (!is.null(ID) && exists(ID, StateEnv, inherits=FALSE)) {
 			playState <- StateEnv[[ID]]
-		} else {
-			playState <- new.env()
-			ID <- basename(tempfile())
-			StateEnv[[ID]] <- playState
 		}
 	}
-	playState$creation.time <- Sys.time()
+	if (is.null(playState) || isTRUE(playState$keep)) {
+		playState <- new.env()
+		ID <- basename(tempfile())
+		StateEnv[[ID]] <- playState
+	}
+	playState$plot.ready <- FALSE
 	StateEnv$.current <- playState
 	# work out evaluation rules
 	env <- new.env()
@@ -97,7 +100,6 @@ playwith <- function(
 		# remove everything
 		playState$devoff <- TRUE # to avoid trigger close
 		myWin$getChild()$destroy()
-		#myWin$remove(myWin$getChild())
 		myWin$present()
 	} else {
 		# create a new window
@@ -129,9 +131,7 @@ playwith <- function(
 			with(playState$widgets, {
 				callEntry["active"] <- callEntry["active"] + 1
 				callEntry$getChild()$activate()
-				#playState$call <- parse(text=callEntry['text'])[[1]]
-				#TODO if callEntry['model']$iterNChildren()
-				redoButton['sensitive'] <- TRUE
+				redoButton["sensitive"] <- TRUE
 			})
 		})
 	redoButton <- quickTool(playState, "Forward", 
@@ -158,7 +158,6 @@ playwith <- function(
 	callToolbar$insert(helpButton, -1)
 	callEntry <- gtkComboBoxEntryNewText()
 	callEntry$show()
-	str(playState)
 	gSignalConnect(callEntry$getChild(), "activate", 
 		edit.call.inline_handler, data=playState)
 	item <- gtkToolItem()
@@ -177,14 +176,14 @@ playwith <- function(
 	myVBox$packStart(toolbarPromptHBox, expand=FALSE)
 	# create the top toolbar
 	topToolbar <- gtkToolbar()
-	topToolbar["toolbar-style"] <- GtkToolbarStyle['both']
+	topToolbar["toolbar-style"] <- GtkToolbarStyle["both"]
 	toolbarPromptHBox$packStart(topToolbar)
 	# create the prompt
 	promptBox <- gtkEventBox(show=FALSE)
 	promptLabel <- gtkLabel()
 	promptBox$add(promptLabel)
-	promptBox$modifyBg(GtkStateType['normal'], "yellow")
-	promptLabel$modifyFg(GtkStateType['normal'], "black")
+	promptBox$modifyBg(GtkStateType["normal"], "yellow")
+	promptLabel$modifyFg(GtkStateType["normal"], "black")
 	toolbarPromptHBox$packStart(promptBox)
 	# create the plot area and side toolbars
 	myHBox <- gtkHBox()
@@ -192,13 +191,18 @@ playwith <- function(
 	# create the left toolbar
 	leftToolbar <- gtkToolbar()
 	leftToolbar["orientation"] <- GtkOrientation["vertical"]
-	leftToolbar["toolbar-style"] <- GtkToolbarStyle['both']
+	leftToolbar["toolbar-style"] <- GtkToolbarStyle["both"]
 	myHBox$packStart(leftToolbar, expand=FALSE)
 	# create the plot area
 	myDA <- gtkDrawingArea()
 	myHBox$packStart(myDA)
-	myHBox["resize-mode"] <- GtkResizeMode["queue"] # ?
+	myHBox["resize-mode"] <- GtkResizeMode["queue"] # does nothing?
 	asCairoDevice(myDA)
+	# TODO: playReplot after resize window - how?
+	# (to re-generate data.spaces and baseViewports)
+	# clear plot when begin resizing
+	gSignalConnect(myDA, "configure-event", configure_handler,
+		data=playState)
 	gSignalConnect(myHBox, "remove", devoff_handler, 
 		data=playState, after=TRUE)
 	trellis.device(new=F)
@@ -252,22 +256,25 @@ playwith <- function(
 	timeScrollBox$packStart(timeScrollbar)
 	# create the bottom toolbar
 	bottomToolbar <- gtkToolbar()
-	bottomToolbar["toolbar-style"] <- GtkToolbarStyle['both']
+	bottomToolbar["toolbar-style"] <- GtkToolbarStyle["both"]
 	myVBox$packStart(bottomToolbar, expand=FALSE)
 	# store the state of this plot window in a new environment
 	missing_top.tools <- missing(top.tools)
 	missing_left.tools <- missing(left.tools)
 	# set defaults -- these can be replaced by extra arguments
+	playState$keep <- FALSE
 	playState$page <- 1
-	playState$label.style <- list(cex=1)
-	playState$annotation.mode <- "figure"
-	if (!missing(time.index) && missing(time.mode)) time.mode <- TRUE
+	playState$pages <- 1
+	playState$annotation.mode <- "plot"
+	# TODO: toolbar style? = "both"
 	# store extra arguments (...) in the state object (playState)
 	dots <- list(...)
 	for (arg in names(dots)) {
 		if (arg == "") next
 		playState[[arg]] <- dots[[arg]]
 	}
+	if (!is.null(playState$time.index) && missing(time.mode))
+		time.mode <- TRUE
 	# construct the state object (playState)
 	evalq({
 		win <- myWin
@@ -327,9 +334,8 @@ playwith <- function(
 
 playNewPlot <- function(playState) {
 	playDevSet(playState)
-	plot.call <- playState$call
-	env <- playState$env
 	# clear the current plot if any, to avoid redraws
+	playState$plot.ready <- FALSE
 	plot.new()
 	# clear toolbars and scrollbars
 	playState$widgets$pageScrollBox$hide()
@@ -343,28 +349,22 @@ playNewPlot <- function(playState) {
 	# get access to some of the original arguments
 	argfoo <- playState$.args
 	for (foo in names(argfoo)) assign(foo, argfoo[[foo]])
-	# TODO: global user option for default buttons?
-	# put call into canonical form
-	callFun <- eval(plot.call[[1]], env)
-	callName <- deparseOneLine(plot.call[[1]])
+	callFun <- eval(playState$call[[1]])
+	callName <- deparseOneLine(playState$call[[1]])
 	if (is.na(is.lattice)) is.lattice <- (callName %in% latticeNames)
 	playState$is.lattice <- is.lattice
 	# check whether the call accepts arguments
-	noArgs <- F
 	if ((typeof(callFun) == "closure") && !is.null(formals(callFun))) {
+		# put call into canonical form
+		plot.call <- playState$call
 		firstArgName <- names(plot.call)[2]
 		plot.call <- match.call(callFun, plot.call)
 		if (is.null(firstArgName) || (firstArgName == ""))
 			if (!is.null(names(plot.call))) names(plot.call)[2] <- ""
-	} else {
-		noArgs <- T
+		playState$call <- plot.call
 	}
-	# set cleaned-up call
-	playState$call <- plot.call
 	# choose buttons automatically depending on the type of plot
-	if (noArgs) {
-		if (missing_left.tools) left.tools <- list()
-	}
+	# TODO: global user option for default buttons?
 	if (is.lattice && (callName %in% c("cloud", "wireframe"))) {
 		if (missing_left.tools) left.tools <- play3DTools
 	}
@@ -416,6 +416,7 @@ playReplot <- function(playState) {
 	if (isTRUE(playState$skip.redraws)) return()
 	#str(sys.calls())
 	playDevSet(playState)
+	playState$plot.ready <- FALSE
 	plot.new()
 	playPrompt(playState) <- NULL
 	# disable toolbars until this is over
@@ -425,7 +426,7 @@ playReplot <- function(playState) {
 	# add current call to text box
 	callTxt <- ""
 	if (object.size(playState$call) < 50000) {
-		callTxt <- deparseOneLine(playState$call) #control="showAttributes")
+		callTxt <- deparseOneLine(playState$call, control="showAttributes")
 		if (is.null(playState$title)) playState$win["title"] <- 
 			toString(callTxt, width=34)
 		oldCallTxt <- widg$callEntry$getActiveText()
@@ -439,8 +440,9 @@ playReplot <- function(playState) {
 	}
 	# do the plot
 	result <- eval(playState$call, playState$env)
+
 	if (inherits(result, "trellis")) {
-		# set back to this device, since user may have switched during plot
+		# set back to this device, since may have switched during plot
 		playDevSet(playState)
 		# work out panels and pages
 		nPackets <- prod(dim(playState$trellis))
@@ -458,6 +460,39 @@ playReplot <- function(playState) {
 		plot(result, packet.panel=packet.panel.page(playState$page))
 		playState$trellis <- result
 	}
+	# store coordinate system(s)
+	playState$deviceToSpace <- list()
+	if (!is.null(playState$viewport)) {
+		# grid graphics plot
+		for (space in names(viewport)) {
+			playState$deviceToSpace[[space]] <- playDo(playState, 
+				call("deviceToUserCoordsFunction"), space=space)
+		}
+	}
+	else if (playState$is.lattice) {
+		# lattice plot
+		packets <- trellis.currentLayout(which="packet")
+		for (pn in packets[packets > 0]) {
+			space <- as.character(pn)
+			playState$deviceToSpace[[space]] <- playDo(playState, 
+				call("deviceToUserCoordsFunction"), space=space)
+		}
+	}
+	else {
+		# base graphics plot
+		vps <- baseViewports()
+		playState$baseViewports <- list()
+		pushViewport(vps$inner)
+		playState$baseViewports$inner <- current.vpPath()
+		pushViewport(vps$figure)
+		playState$baseViewports$figure <- current.vpPath()
+		pushViewport(vps$plot)
+		playState$baseViewports$plot <- current.vpPath()
+		upViewport(3)
+		playState$deviceToSpace[["plot"]] <- playDo(playState, 
+			call("deviceToUserCoordsFunction"), space="plot")
+	}
+	playState$plot.ready <- TRUE
 	# run update actions on buttons
 	blockRedraws({
 		for (x in playState$tools) {
@@ -477,6 +512,8 @@ playReplot <- function(playState) {
 	invisible(result)
 }
 
+## Window signal handlers
+
 pages_post.plot.action <- function(widget, playState) {
 	widg <- playState$widgets
 	if (playState$pages > 1) {
@@ -489,8 +526,6 @@ pages_post.plot.action <- function(widget, playState) {
 	}
 }
 
-## Window signal handlers
-
 window.close_handler <- function(widget, event, playState) {
 	if (!is.null(playState$on.close)) {
 		foo <- try(playState$on.close(playState))
@@ -500,6 +535,14 @@ window.close_handler <- function(widget, event, playState) {
 	# close the window and clean up
 	playDevOff(playState)
 	return(FALSE)
+}
+
+configure_handler <- function(widget, event, playState) {
+	playDevSet(playState)
+	# blank the plot to avoid slow redraws while resizing.
+	# user must explicitly reload the plot after resizing.
+	plot.new()
+	return(TRUE)
 }
 
 devoff_handler <- function(widget, event, playState) {
@@ -593,7 +636,7 @@ playwith.plot.new <- function(...) {
 		dev.off() # close screen device (from `plot.new`)
 		parentFrame <- sys.frame(sys.parents()[frameNum])
 		newCall <- call("playwith", sys.call(frameNum), 
-			is.lattice=FALSE, envir=parentFrame)
+			envir=parentFrame)
 		if (multifig) {
 			newCall$buttons <- list("annotate")
 			newCall$extra.buttons <- list()
@@ -694,21 +737,6 @@ recursive.as.list.call <- function(x) {
 }
 
 toIndexStr <- function(x) paste('[[', x ,']]', sep='', collapse='')
-
-# based on grid::locator
-deviceNPCToVp <- function(pos, unit="native", valueOnly=FALSE) {
-	stopifnot(length(pos) == 2)
-	# first find device size in inches
-	# (note: par("din") is wrong, at least in my cairoDevice window)
-	din <- grid:::grid.Call("L_currentViewport")[c("devwidthcm","devheightcm")]
-	din <- convertX(unit(unlist(din),"cm"), "inches", valueOnly=T)
-	location <- c(din * as.numeric(unlist(pos)), 1)
-        transform <- solve(grid::current.transform())
-        location <- (location %*% transform)
-	location <- unit(location/location[3], "inches")
-	list(x=convertX(location[1], unit, valueOnly=valueOnly), 
-		y=convertY(location[2], unit, valueOnly=valueOnly))
-}
 
 ## by Deepayan Sarkar <Deepayan.Sarkar@R-project.org>
 

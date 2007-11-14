@@ -1,4 +1,246 @@
+## playwith: interactive plots in R using GTK+
+##
+## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
+## GPL version 2 or newer
 
+settings_handler <- function(widget, playState) {
+	playState$tools$settings["sensitive"] <- FALSE
+	on.exit(playState$tools$settings["sensitive"] <- TRUE)
+	wingroup <- ggroup(horizontal=FALSE)
+	wid <- list()
+	
+	# convenience extractor
+	arg <- function(x) do.call(callArg, list(playState, substitute(x)))
+	
+	# TODO: LEGEND / KEY
+	
+	# TITLES
+	labgroup <- gframe("Titles", horizontal=FALSE, container=wingroup)
+	lay <- glayout(container=labgroup)
+	rownum <- 1
+	for (nm in c("main", "sub", "xlab", "ylab")) {
+		argVal <- if (playState$is.lattice) playState$trellis[[nm]]
+			else callArg(playState, name=nm)
+		isExpr <- is.language(argVal)
+		if (isExpr) argVal <- deparse(as.expression(argVal)[[1]])
+		wid[[nm]] <- gedit(toString(argVal), width=60)
+		nm.expr <- paste(nm, "expr", sep=".")
+		wid[[nm.expr]] <- gcheckbox("plotmath", checked=isExpr)
+		lay[rownum, 1] <- nm
+		lay[rownum, 2] <- wid[[nm]]
+		lay[rownum, 3] <- wid[[nm.expr]]
+		rownum <- rownum + 1
+	}
+	visible(lay) <- TRUE
+	
+	# AXES
+	axisgroup <- gframe("Axes", horizontal=FALSE, container=wingroup)
+	lay <- glayout(container=axisgroup)
+	wid$xaxis.show <- gcheckbox("visible", checked=!(
+		any(arg(scales$x$draw) == FALSE) ||
+		any(arg(scales$draw) == FALSE) ||
+		any(arg(axes) == FALSE) ||
+		any(arg(xaxt) == "n")
+	))
+	wid$yaxis.show <- gcheckbox("visible", checked=!(
+		any(arg(scales$y$draw) == FALSE) ||
+		any(arg(scales$draw) == FALSE) ||
+		any(arg(axes) == FALSE) ||
+		any(arg(yaxt) == "n")
+	))
+	wid$xaxis.log <- gcheckbox("logarithmic", checked=(
+		any(as.character(arg(scales$x$log)) != "FALSE") ||
+		any(as.character(arg(scales$log)) != "FALSE") ||
+		any(grep("x", arg(log)))
+	))
+	wid$yaxis.log <- gcheckbox("logarithmic", checked=(
+		any(as.character(arg(scales$y$log)) != "FALSE") ||
+		any(as.character(arg(scales$log)) != "FALSE") ||
+		any(grep("y", arg(log)))
+	))
+	wid$aspect.iso <- gcheckbox("isometric scale", checked=(
+		any(arg(aspect) == "iso") ||
+		any(arg(asp) == 1)
+	))
+	lay[1,1] <- "x-axis:"
+	lay[1,2] <- wid$xaxis.show
+	lay[1,3] <- wid$xaxis.log
+	lay[2,1] <- "y-axis:"
+	lay[2,2] <- wid$yaxis.show
+	lay[2,3] <- wid$yaxis.log
+	visible(lay) <- TRUE
+	add(axisgroup, wid$aspect.iso)
+	
+	# DECORATIONS
+	decogroup <- gframe("Decorations", horizontal=FALSE, container=wingroup)
+	enabled(decogroup) <- FALSE
+	# reference lines
+	linegroup <- ggroup(container=decogroup)
+	wid$abline_h <- gcheckbox("horizontal", checked=F)
+	wid$abline_v <- gcheckbox("vertical", checked=F)
+	wid$abline_d <- gcheckbox("diagonal", checked=F)
+	add(linegroup, glabel("Reference line (origin):"))
+	add(linegroup, wid$abline_h)
+	add(linegroup, wid$abline_v)
+	add(linegroup, wid$abline_d)
+	# grid
+	gridgroup <- ggroup(container=decogroup)
+	wid$grid_h <- gcheckbox("horizontal", checked=F)
+	wid$grid_v <- gcheckbox("vertical", checked=F)
+	add(gridgroup, glabel("Grid:"))
+	add(gridgroup, wid$grid_h)
+	add(gridgroup, wid$grid_v)
+	# rug
+	wid$rug <- gcheckbox("Rug (marginal distribution)", checked=F)
+	add(decogroup, wid$rug)
+	
+	# panel.lmline()
+	# panel.loess()
+	
+	# STYLE
+	stylegroup <- gframe("Style", horizontal=FALSE, container=wingroup)
+	enabled(stylegroup) <- FALSE
+	# lattice theme
+	# TODO color (white bg) / color (dark bg) / greyscale
+	# type
+	arg_type <- callArg(playState, type)
+	hasPoints <- (is.null(arg_type) || any(c("p","b","o") %in% arg_type))
+	hasLines <- any(c("l","b","o") %in% arg_type)
+	hasDroplines <- any("h" %in% arg_type)
+	wid$points <- gcheckbox("Points", checked=hasPoints)
+	wid$lines <- gcheckbox("Lines", checked=hasLines)
+	wid$droplines <- gcheckbox("Drop lines", checked=hasDroplines)
+	typegroup <- ggroup(container=stylegroup)
+	add(typegroup, wid$points)
+	add(typegroup, wid$lines)
+	add(typegroup, wid$droplines)
+	lay <- glayout(container=stylegroup)
+	# cex
+	wid$cex <- gedit(toString(callArg(playState, cex)), width=5, 
+		coerce.with=as.numeric)
+	lay[1,1] <- "Expansion factor:"
+	lay[1,2] <- wid$cex
+	# pch
+	pchList <- list(
+		`open circle`=21,
+		`open diamond`=23,
+		`open square`=22,
+		`open triangle`=24,
+		`solid circle`=19,
+		`solid diamond`=18,
+		`solid square`=15,
+		`solid triangle`=17,
+		`plus (+)`=3,
+		`cross (x)`=4,
+		`dot (.)`="."
+	)
+	which_pch <- which(sapply(pchList, identical, callArg(playState, pch)))
+	if (length(which_pch) == 0) which_pch <- 0
+	wid$pch <- gdroplist(names(pchList), selected=which_pch)
+	lay[2,1] <- "Plot symbol:"
+	lay[2,2] <- wid$pch
+	# col
+	colList <- palette()
+	arg_col <- callArg(playState, col)
+	which_col <- if (is.numeric(arg_col)) which(arg_col == seq_along(colList))
+		else which(sapply(colList, identical, arg_col))
+	if (length(which_col) == 0) which_col <- 0
+	wid$col <- gdroplist(colList, selected=which_col)
+	lay[3,1] <- "Color (foreground):"
+	lay[3,2] <- wid$col
+	# lty
+	ltyList <- c("solid", "dashed", "dotted", "dotdash", "longdash")
+	# lwd TODO
+	# fontface / fontfamily / font
+	familyList <- list("sans", "serif", "mono")
+	fontList <- list(plain=1, bold=2, italic=3, bolditalic=4)
+	visible(lay) <- TRUE
+	
+	# lattice
+	# panel.grid()
+	# panel.rug()
+	# panel.abline()
+	# panel.lmline()
+	# panel.loess()
+	
+	# plot.default (panel.first)
+	# grid()
+	# rug()
+	# abline()
+	# lines(lm())
+	
+	# grid / panel.grid()
+	# rug
+	# axis lines abline(h=0), abline(v=0)
+	# regression line panel.lmline / type="r"
+	# smooth panel.smooth
+	
+	# OTHER
+	
+	# superpose
+	
+	# layers
+	
+	# TODO: make the dialog not modal
+	
+	gbasicdialog("Plot settings", widget=wingroup, action=playState, 
+	handler=function(h, ...) {
+		playState <- h$action
+		playDevSet(playState)
+		
+		# TITLES
+		argExpr <- function(wid, expr.wid) {
+			newVal <- svalue(wid)
+			if (newVal == "") return(NULL)
+			if (svalue(expr.wid)) 
+				newVal <- parse(text=newVal, srcfile=NULL)
+			newVal
+		}
+		callArg(playState, main) <- argExpr(wid$main, wid$main.expr)
+		callArg(playState, sub) <- argExpr(wid$sub, wid$sub.expr)
+		callArg(playState, xlab) <- argExpr(wid$xlab, wid$xlab.expr)
+		callArg(playState, ylab) <- argExpr(wid$ylab, wid$ylab.expr)
+		
+		# AXES
+		if (playState$is.lattice) {
+			newXdraw <- if (svalue(wid$xaxis.show)) NULL else FALSE
+			newYdraw <- if (svalue(wid$yaxis.show)) NULL else FALSE
+			callArg(playState, scales$x$draw) <- newXdraw
+			callArg(playState, scales$y$draw) <- newYdraw
+			newXlog <- if (svalue(wid$xaxis.log)) TRUE else NULL
+			newYlog <- if (svalue(wid$yaxis.log)) TRUE else NULL
+			callArg(playState, scales$x$log) <- newXlog
+			callArg(playState, scales$y$log) <- newYlog
+			newAspect <- if (svalue(wid$aspect.iso)) "iso" else NULL
+			callArg(playState, aspect) <- newAspect
+		} else {
+			# base graphics plot
+			newXaxt <- if (svalue(wid$xaxis.show)) NULL else "n"
+			newYaxt <- if (svalue(wid$yaxis.show)) NULL else "n"
+			callArg(playState, xaxt) <- newXaxt
+			callArg(playState, yaxt) <- newYaxt
+			newLog <- paste(c(if (svalue(wid$xaxis.log)) "x",
+					if (svalue(wid$yaxis.log)) "y"), 
+					collapse="")
+			if (newLog == "") newLog <- NULL
+			callArg(playState, log) <- newLog
+			newAsp <- if (svalue(wid$aspect.iso)) 1 else NULL
+			callArg(playState, asp) <- newAsp
+		}
+		
+		# DECORATIONS
+		wid$abline_h
+		wid$abline_v
+		wid$abline_d
+		wid$grid_h
+		wid$grid_v
+		wid$rug
+		
+		# dispose(h$obj)
+		playReplot(playState)
+	})
+	playState$win$present()
+}
 
 
 .plotAndPlay_logscale_event <- function(widget, user.data) {

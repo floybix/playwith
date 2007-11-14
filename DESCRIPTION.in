@@ -5,8 +5,8 @@ Version: VERSION
 Date: DATE
 Author: Felix Andrews <felix@nfrac.org>
 Maintainer: Felix Andrews <felix@nfrac.org>
-Depends: R (>= 2.5.0), RGtk2, cairoDevice
-Imports: gWidgets, lattice (>= 0.16), grid, grDevices, graphics
+Depends: R (>= 2.5.0)
+Imports: RGtk2, cairoDevice, gWidgets, lattice (>= 0.16), grid, gridBase, graphics, grDevices
 Suggests: lattice
 Description: A graphical user interface for R plots. Wrap it around your plot calls,
   like playwith(plot(mydata)). A window pops up with the plot and a toolbar to 

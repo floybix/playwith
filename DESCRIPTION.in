@@ -6,7 +6,7 @@ Date: DATE
 Author: Felix Andrews <felix@nfrac.org>
 Maintainer: Felix Andrews <felix@nfrac.org>
 Depends: R (>= 2.5.0)
-Imports: RGtk2, cairoDevice, gWidgets, lattice (>= 0.16), grid, gridBase, graphics, grDevices
+Imports: lattice (>= 0.16), grid, graphics, gridBase, grDevices, RGtk2, cairoDevice, gWidgets
 Suggests: lattice
 Description: A graphical user interface for R plots. Wrap it around your plot calls,
   like playwith(plot(mydata)). A window pops up with the plot and a toolbar to 

@@ -243,43 +243,6 @@ settings_handler <- function(widget, playState) {
 }
 
 
-.plotAndPlay_logscale_event <- function(widget, user.data) {
-	name <- StateEnv$.current
-	trans.x <- ("x" %in% StateEnv[[name]]$trans.scales)
-	trans.y <- ("y" %in% StateEnv[[name]]$trans.scales)
-	# get new log scale setting
-	logScale <- widget$getActive()
-	# make change and re-draw plot
-	if (StateEnv[[name]]$is.lattice) {
-		if (trans.x && trans.y) {
-			# apply to both scales
-			StateEnv[[name]]$call$scales$log <- logScale
-		} else {
-			if (trans.x) StateEnv[[name]]$call$scales$x$log <- logScale
-			if (trans.y) StateEnv[[name]]$call$scales$y$log <- logScale
-		}
-	} else {
-		logSpec <- "xy"
-		if (!trans.y) logSpec <- "x"
-		if (!trans.x) logSpec <- "y"
-		StateEnv[[name]]$call$log <- if (logScale) logSpec
-	}
-	plotAndPlayUpdate()
-}
-
-.plotAndPlay_greyscale_event <- function(widget, user.data) {
-	name <- StateEnv$.current
-	# get new greyscale setting
-	greyscale <- widget$getActive()
-	# make change and re-draw plot
-	if (greyscale) {
-		trellis.device(new=F, color=F)
-	} else {
-		trellis.device(new=F)
-	}
-	plotAndPlayUpdate()
-}
-
 makeLayersMenuButton <- function() {
 	name <- StateEnv$.current
 	layersButton <- gtkMenuToolButton(gtkImageNewFromStock("gtk-index", 

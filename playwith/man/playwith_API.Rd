@@ -13,16 +13,16 @@
 \alias{xyCoords}
 \alias{xyData}
 \alias{playDo}
+\alias{playSelectData}
 \alias{playPointInput}
 \alias{playLineInput}
 \alias{playRectInput}
-\alias{playSelectDataRect}
+\alias{whichSpace}
+\alias{deviceCoordsToSpace}
 \alias{playPrompt}
 \alias{playFreezeGUI}
 \alias{playThawGUI}
 \alias{blockRedraws}
-\alias{unlogX}
-\alias{unlogY}
 \alias{gmessage.error}
 \title{The playwith API}
 \description{
@@ -50,33 +50,32 @@ playPointInput(playState, prompt = "Click on the plot")
 playLineInput(playState, prompt = "Click and drag to define a line")
 playRectInput(playState, prompt = "Click and drag to define a rectangular region")
 
-rawXLim(playState, space = "plot", unit = "native")
-rawYLim(playState, space = "plot", unit = "native")
+rawXLim(playState, space = "plot")
+rawYLim(playState, space = "plot")
 rawXLim(playState) <- value
 rawYLim(playState) <- value
 
 whichSpace(playState, x.device, y.device)
 deviceCoordsToSpace(playState, x.device, y.device, space = "plot")
 
-playPrompt(playState) <- value
+playPrompt(playState, text = NULL)
 playFreezeGUI(playState)
 playThawGUI(playState)
 blockRedraws(expr, playState = playDevCur())
-
-unlogX(x, the.call, is.lattice = T)
-unlogY(x, the.call, is.lattice = T)
 }
 \arguments{
   \item{playState}{  }
   \item{arg}{  }
   \item{name}{  }
   \item{value}{  }
-  \item{all.packets}{  }
-  \item{highlight}{ passed to \code{\link{trellis.focus}}. }
+  \item{stuff}{  }
+  \item{space}{  }
+  \item{clip.off}{  }
+  \item{prompt}{  }
+  \item{x.device}{  }
+  \item{y.device}{  }
+  \item{text}{  }
   \item{expr}{  }
-  \item{x}{ numeric vector. }
-  \item{the.call}{ a plot call. Ignored if \code{is.lattice=F}. }
-  \item{is.lattice}{ whether the plot call generates a lattice plot. }
 }
 \details{
   \code{plotAndPlayButtons} and \code{plotAndPlayBasicButtons} are lists of calls to generate \code{\link[RGtk2]{gtkToolItem}}s.

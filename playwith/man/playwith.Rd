@@ -89,7 +89,10 @@ playwith(expr,
 			e.g. \code{arrow(ends="both", type="closed")}.
 		}
 		\item{\code{annotation.mode}}{
-			\code{"figure"} or \code{"plot"} (the default).
+			\code{"page"} or \code{"plot"} (the default).
+		}
+		\item{\code{keep}, \code{stay.on.top}}{
+			sets the corresponding window state; these should not be needed.
 		}
 	}
   }

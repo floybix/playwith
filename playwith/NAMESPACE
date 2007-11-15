@@ -1,12 +1,13 @@
 
-# no point in doing this because cairoDevice::asCairoDevice calls 'require(RGtk2)'
-#import(RGtk2)
-#import(cairoDevice)
-
 import(lattice)
 import(grid)
-import(grDevices)
 import(graphics)
+import(gridBase)
+import(grDevices)
+import(RGtk2)
+import(cairoDevice)
+import(gWidgets)
+# note cairoDevice::asCairoDevice calls require(RGtk2)
 
 # the main function
 export(
@@ -38,20 +39,19 @@ export(
 	playPointInput,
 	playLineInput,
 	playRectInput,
-	playSelectDataRect,
+	playSelectData,
+	whichSpace,
+	deviceCoordsToSpace,
 	playFreezeGUI,
 	playThawGUI,
 	blockRedraws,
-	playFocus,
-	"playPrompt<-",
+	playPrompt,
 	rawXLim,
 	rawYLim,
 	"rawXLim<-",
 	"rawYLim<-",
 	xyCoords,
 	xyData,
-	unlogX,
-	unlogY,
 	gmessage.error
 )
 

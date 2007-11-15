@@ -70,6 +70,7 @@ playwith <- function(
 	if (!is.null(viewport) && !is.list(viewport)) viewport <- list(plot=viewport)
 	# playState is the <environment> encapsulating the plot, window and device
 	cleanupStateEnv()
+	force(playState)
 	if (!is.null(playState)) {
 		stopifnot(is.environment(playState))
 		if (is.null(title)) title <- playState$title
@@ -262,11 +263,9 @@ playwith <- function(
 	missing_top.tools <- missing(top.tools)
 	missing_left.tools <- missing(left.tools)
 	# set defaults -- these can be replaced by extra arguments
-	playState$keep <- FALSE
+	# TODO: toolbar style? = "both"
 	playState$page <- 1
 	playState$pages <- 1
-	playState$annotation.mode <- "plot"
-	# TODO: toolbar style? = "both"
 	# store extra arguments (...) in the state object (playState)
 	dots <- list(...)
 	for (arg in names(dots)) {
@@ -276,57 +275,52 @@ playwith <- function(
 	if (!is.null(playState$time.index) && missing(time.mode))
 		time.mode <- TRUE
 	# construct the state object (playState)
-	evalq({
-		win <- myWin
-		dev <- dev.cur()
-		call <- plot.call
-		env <- env
-		time.mode <- time.mode
-		labels <- labels
-		data.points <- data.points
-		is.lattice <- is.lattice
-		viewport <- viewport
-		ids <- list()
-		brushed <- list()
-		annotations <- list()
-		tools <- list()
-		widgets <- list(
-			drawingArea = myDA,
-			topToolbar = topToolbar,
-			leftToolbar = leftToolbar,
-			bottomToolbar = bottomToolbar,
-			rightToolbar = rightToolbar,
-			callToolbar = callToolbar,
-			callEntry = callEntry,
-			undoButton = undoButton,
-			redoButton = redoButton,
-			pageEntry = pageEntry,
-			pageScrollbar = pageScrollbar,
-			pageScrollBox = pageScrollBox,
-			timeEntry = timeEntry,
-			timeScrollbar = timeScrollbar,
-			timeScrollBox = timeScrollBox,
-			promptBox = promptBox,
-			promptLabel = promptLabel,
-			vbox = myVBox,
-			hbox = myHBox
-		)
-		on.close <- on.close
-		.args <- list(
-			top.tools = top.tools, 
-			left.tools = left.tools,
-			bottom.tools = bottom.tools,
-			right.tools = right.tools,
-			missing_top.tools = missing_top.tools,
-			missing_left.tools = missing_left.tools,
-			is.lattice = is.lattice,
-			data.points = data.points,
-			labels = labels,
-			title = title
-		)
-	},
-		envir=playState,
-		enclos=environment()
+	playState$win <- myWin
+	playState$dev <- dev.cur()
+	playState$call <- plot.call
+	playState$env <- env
+	playState$time.mode <- time.mode
+	playState$labels <- labels
+	playState$data.points <- data.points
+	playState$is.lattice <- is.lattice
+	playState$viewport <- viewport
+	playState$ids <- list()
+	playState$brushed <- list()
+	playState$annotations <- list()
+	playState$tools <- list()
+	playState$widgets <- list(
+		drawingArea = myDA,
+		topToolbar = topToolbar,
+		leftToolbar = leftToolbar,
+		bottomToolbar = bottomToolbar,
+		rightToolbar = rightToolbar,
+		callToolbar = callToolbar,
+		callEntry = callEntry,
+		undoButton = undoButton,
+		redoButton = redoButton,
+		pageEntry = pageEntry,
+		pageScrollbar = pageScrollbar,
+		pageScrollBox = pageScrollBox,
+		timeEntry = timeEntry,
+		timeScrollbar = timeScrollbar,
+		timeScrollBox = timeScrollBox,
+		promptBox = promptBox,
+		promptLabel = promptLabel,
+		vbox = myVBox,
+		hbox = myHBox
+	)
+	playState$on.close <- on.close
+	playState$.args <- list(
+		top.tools = top.tools, 
+		left.tools = left.tools,
+		bottom.tools = bottom.tools,
+		right.tools = right.tools,
+		missing_top.tools = missing_top.tools,
+		missing_left.tools = missing_left.tools,
+		is.lattice = is.lattice,
+		data.points = data.points,
+		labels = labels,
+		title = title
 	)
 	# do the plot
 	invisible(playNewPlot(playState))
@@ -473,7 +467,7 @@ playReplot <- function(playState) {
 		# lattice plot
 		packets <- trellis.currentLayout(which="packet")
 		for (pn in packets[packets > 0]) {
-			space <- as.character(pn)
+			space <- paste("packet", pn)
 			playState$deviceToSpace[[space]] <- playDo(playState, 
 				call("deviceToUserCoordsFunction"), space=space)
 		}
@@ -488,7 +482,12 @@ playReplot <- function(playState) {
 		playState$baseViewports$figure <- current.vpPath()
 		pushViewport(vps$plot)
 		playState$baseViewports$plot <- current.vpPath()
-		upViewport(3)
+		pushViewport(viewport(
+			xscale=convertX(unit(0:1, "npc"), "native"),
+			yscale=convertY(unit(0:1, "npc"), "native"),
+			clip="off"))
+		playState$baseViewports$plot.clip.off <- current.vpPath()
+		upViewport(4)
 		playState$deviceToSpace[["plot"]] <- playDo(playState, 
 			call("deviceToUserCoordsFunction"), space="plot")
 	}
@@ -538,11 +537,17 @@ window.close_handler <- function(widget, event, playState) {
 }
 
 configure_handler <- function(widget, event, playState) {
-	playDevSet(playState)
-	# blank the plot to avoid slow redraws while resizing.
-	# user must explicitly reload the plot after resizing.
-	plot.new()
-	return(TRUE)
+	if (playState$plot.ready == FALSE) return(FALSE) # TRUE?
+	# TODO: if mouse button is pressed (drag in progress), clear the plot
+	#px00 <- da$window$getPointer()
+	#if (is.null(px00$retval)) break
+	#if ((as.flag(px00$mask) & GdkModifierType["button1-mask"]) == 0) {
+		# mouse button was released
+	#playDevSet(playState)
+	#plot.new()
+	#return(TRUE)
+	# otherwise, redraw as usual
+	return(FALSE)
 }
 
 devoff_handler <- function(widget, event, playState) {

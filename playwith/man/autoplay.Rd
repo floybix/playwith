@@ -6,7 +6,10 @@
 	Set \code{playwith} to run automatically with Lattice graphics and/or base graphics.
 }
 \usage{
-autoplay(on = NA, lattice.on = on, base.on = on, ask = FALSE)
+autoplay(on = NA, lattice.on = on, base.on = on, grid.on = on, ask = FALSE)
+
+## basic device mode (very different)
+options(device="autoplay")
 }
 \arguments{
 	\item{on}{ \code{TRUE} to set \code{\link{playwith}} to run automatically to display
@@ -14,6 +17,7 @@ autoplay(on = NA, lattice.on = on, base.on = on, ask = FALSE)
 		(\code{getOption("device")}). }
 	\item{lattice.on}{ run automatically to display Lattice graphics. }
 	\item{base.on}{ run automatically to display base graphics (\code{\link{plot}} etc). }
+	\item{grid.on}{ run automatically to display grid graphics (except Lattice). }
 	\item{ask}{ if \code{TRUE}, select the appropriate plot call from a list
 		(the call stack) when automatically starting a base graphics plot. }
 }
@@ -37,6 +41,9 @@ autoplay(on = NA, lattice.on = on, base.on = on, ask = FALSE)
 	\code{\link{playwith}} directly, since it does not allow to you specify any of the
 	optional arguments.
 	
+	Another possibility is \code{options(device="playwith")}.
+	This will act as a default device
+	but without interactivity. You can still draw annotations.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{ \code{\link{playwith}} }

@@ -76,10 +76,10 @@ quickTool <- function(
 	label = "", 
 	icon.name = NULL, 
 	tooltip = NULL, 
-	f, 
+	f = NULL, 
 	data = NULL, 
 	post.plot.action = NULL,
-	isToggle = F, 
+	isToggle = FALSE, 
 	show = TRUE)
 {
 	x <- if (isToggle) gtkToggleToolButton(show=show)
@@ -91,9 +91,11 @@ quickTool <- function(
 		if (inherits(result, "try-error"))
 			x$setTooltip(gtkTooltips(), tooltip) # deprecated
 	}
-	if (is.null(data)) data <- playState
-	else data$playState <- playState
-	gSignalConnect(x, "clicked", f, data=data)
+	if (!is.null(f)) {
+		if (is.null(data)) data <- playState
+		else data$playState <- playState
+		gSignalConnect(x, "clicked", f, data=data)
+	}
 	if (!is.null(post.plot.action))
 		gObjectSetData(x, "post.plot.action", data=post.plot.action)
 	x
@@ -102,6 +104,11 @@ quickTool <- function(
 ## SETTINGS
 
 toolConstructors$settings <- function(playState) {
+	callFun <- eval(playState$call[[1]])
+	if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
+		# call does not take arguments
+		return(NA)
+	}
 	quickTool(playState,
 		label = "Plot settings", 
 		icon = "gtk-preferences", 
@@ -328,7 +335,6 @@ data_handler <- function(widget, playState) {
 
 toolConstructors$theme <- function(playState) {
 	if (!playState$is.lattice) return(NA)
-	myButton <- gtkButton("Theme")
 	myMenu <- gtkMenu()
 	myLabel <- gtkMenuItem("Lattice theme:")
 	myLabel["sensitive"] <- FALSE
@@ -343,14 +349,17 @@ toolConstructors$theme <- function(playState) {
 		gSignalConnect(themeItems[[x]], "activate", theme_handler, 
 			data=list(playState=playState, theme=x))
 	}
+	widget <- quickTool(playState,
+		label = "Theme", 
+		icon = "gtk-select-color", 
+		tooltip = "Choose Lattice theme"
+	)
 	# attach the menu
-	gSignalConnect(myButton, "button_press_event", 
-		function(widget, event, menu) {
-			menu$popup(button=event[["button"]], activate.time=event[["time"]])
+	gSignalConnect(widget, "clicked", 
+		function(widget, menu) {
+			menu$popup(button=0, activate.time=gtkGetCurrentEventTime())
 		}, data=myMenu)
-	foo <- gtkToolItem()
-	foo$add(myButton)
-	foo
+	widget
 }
 
 theme_handler <- function(widget, user.data) {
@@ -379,24 +388,20 @@ toolConstructors$coords <- function(playState) {
 }
 
 coords_click_handler <- function(widget, event, playState) {
+	if (playState$.need.reconfig) generateSpaces(playState)
 	x <- event$x
 	y <- event$y
 	coordsTxt <- ""
 	space <- whichSpace(playState, x, y)
 	if (space != "page") {
 		xy <- deviceCoordsToSpace(playState, x, y, space=space)
-		#xy <- format(c(xy$x, xy$y), digits=3)
-		#xy$x <- signif(xy$x, 3)
-		#xy$y <- signif(xy$y, 3)
 		xyx <- format(xy$x, nsmall=4)
 		xyy <- format(xy$y, nsmall=4)
 		xyx <- substr(xyx, 1, 4)
 		xyy <- substr(xyy, 1, 4)
-		#xy <- format(c(xy$x, xy$y))#, digits=3)
 		coordsTxt <- paste("<tt>x ", xyx, "\ny ", xyy, "</tt>", sep="")
 	}
 	playState$widgets$coordsLabel$setMarkup(coordsTxt)
-	#playState$widgets$coordsLabel["label"] <- coordsTxt
 	return(FALSE)
 }
 
@@ -415,6 +420,14 @@ toolConstructors$time.mode <- function(playState) {
 		} # TODO else if (!is.null(playState$env$cur.time)) 
 		playState$env$cur.time <- playState$index.time[
 			playState$env$cur.index]
+	}
+	else {
+		# x-axis scrolling mode
+		callFun <- eval(playState$call[[1]])
+		if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
+			# call does not take arguments
+			return(NA)
+		}
 	}
 	quickTool(playState,
 		label = "Time mode", 
@@ -544,7 +557,7 @@ toolConstructors$options <- function(playState) {
 	# OPTIONS: set label style
 	labelStyleItem <- gtkMenuItem("Set label style...")
 	myMenu$append(labelStyleItem)
-	gSignalConnect(labelStyleItem, "activate", identify.setstyle_handler,
+	gSignalConnect(labelStyleItem, "activate", set.label.style_handler,
 		data=playState)
 	myMenu$append(gtkSeparatorMenuItem())
 	
@@ -553,10 +566,12 @@ toolConstructors$options <- function(playState) {
 	myLabel["sensitive"] <- FALSE
 	myMenu$append(myLabel)
 	annModeItems <- list(
-		figure=gtkCheckMenuItem(label="Place on figure (absolute)"),
-		plot=gtkCheckMenuItem(label="Place on plot (relative)")
+		plot=gtkCheckMenuItem(label="Place on plot (relative)"),
+		page=gtkCheckMenuItem(label="Place on page (absolute)")
 	)
-	annModeItems$figure["active"] <- TRUE
+	pageAnnotation <- (identical(playState$annotation.mode, "page"))
+	annModeItems$plot["active"] <- !pageAnnotation
+	annModeItems$page["active"] <- pageAnnotation
 	annotationModeHandler <- function(widget, user.data) {
 		if (widget["active"] == FALSE) return()
 		playState <- user.data$playState
@@ -571,6 +586,14 @@ toolConstructors$options <- function(playState) {
 		gSignalConnect(annModeItems[[x]], "activate", annotationModeHandler, 
 			data=list(playState=playState, mode=x))
 	}
+	myMenu$append(gtkSeparatorMenuItem())
+	
+	# OPTIONS: clip annotations
+	clipItem <- gtkCheckMenuItem("Clip annotations")
+	clipItem["active"] <- !identical(playState$clip.annotations, FALSE)
+	myMenu$append(clipItem)
+	gSignalConnect(clipItem, "activate", function(widget, playState)
+	playState$clip.annotations <- widget["active"], data=playState)
 	myMenu$append(gtkSeparatorMenuItem())
 	
 	# OPTIONS: toolbar style
@@ -619,8 +642,12 @@ toolConstructors$options <- function(playState) {
 	foo
 }
 
-identify.setstyle_handler <- function(widget, playState) {
-	argsCall <- as.call(c(quote(list), playState$label.style))
+set.label.style_handler <- function(widget, playState) {
+	argsCall <- playState$label.style
+	# TODO: default case
+	if (is.null(playState$label.style)) {
+		
+	}
 	callTxt <- deparseOneLine(argsCall)
 	
 	# panel.text: cex, col, alpha, font, fontfamily, fontface, srt
@@ -637,7 +664,6 @@ identify.setstyle_handler <- function(widget, playState) {
 			gmessage.error(conditionMessage(tmp))
 		} else {
 			playState$label.style <- eval(tmp)
-			playReplot(playState)
 			break
 		}
 	}
@@ -649,7 +675,7 @@ identify.setstyle_handler <- function(widget, playState) {
 toolConstructors$expand <- function(playState) {
 	if (!playState$is.lattice) return(NA)
 	quickTool(playState,
-		label = "Expand panel", 
+		label = "Panel", 
 		icon = "gtk-fullscreen", 
 		tooltip = "Choose a panel to expand and focus (for further interaction)", 
 		f = expand_handler, 
@@ -663,7 +689,7 @@ expand_handler <- function(widget, playState) {
 	# check new expanded setting
 	if (widget["active"]) {
 		playPrompt(playState, 
-			"Click on a panel to expand (for further interaction)")
+			"Click on a panel to expand. (Right-click to cancel)")
 		on.exit(playPrompt(playState, NULL))
 		newFocus <- trellis.focus()
 		if (!any(newFocus)) {
@@ -691,6 +717,13 @@ expand_postplot_action <- function(widget, playState) {
 ## IDENTIFY
 
 toolConstructors$identify <- function(playState) {
+	if (is.null(playState$data.points)) {
+		callFun <- eval(playState$call[[1]])
+		if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
+			# call does not take arguments
+			return(NA)
+		}
+	}
 	plot.call <- playState$call
 	callName <- deparseOneLine(plot.call[[1]])
 	if (playState$is.lattice &&
@@ -808,17 +841,15 @@ drawLabels <- function(playState, which, space="plot", pos=1) {
 		annots[[i]] <- call("grid.text", labels[i], x=ux, y=uy, 
 			just=adj, gp=myStyle)
 	}
-	playDo(playState, annots, space=space, clip.off=TRUE)
+	playDo(playState, annots, space=space, 
+		clip.off=identical(playState$clip.annotations, FALSE))
 }
 
 identify_handler <- function(widget, playState) {
-	playDevSet(playState)
-	on.exit(playPrompt(playState, NULL))
-	playPrompt(playState,
-			"Click or drag to identify points. Right-click to end.")
 	# TODO qqmath? - or just pass in data.points
 	repeat {
-		foo <- playSelectData(playState)
+		foo <- playSelectData(playState, 
+			"Click or drag to identify points. Right-click to end.")
 		if (is.null(foo)) break
 		if (length(foo$which) == 0) next
 		with(foo, {
@@ -857,21 +888,26 @@ toolConstructors$annotate <- function(playState) {
 
 annotate_handler <- function(widget, playState) {
 	pageAnnotation <- identical(playState$annotation.mode, "page")
-	foo <- playRectInput(playState, prompt="Click (or drag) to place text. (Right-click to cancel)")
+	foo <- playRectInput(playState, prompt=
+		"Click or drag to place text. (Right-click to cancel)")
 	if (is.null(foo)) return()
 	if (is.null(foo$coords)) pageAnnotation <- TRUE
 	space <- foo$space
 	if (pageAnnotation) space <- "page"
 	myLabel <- placeLabelDialog()
 	if (is.null(myLabel)) return()
+	if (!foo$is.click) {
+		# justification is flipped -- inside rect rather than at point
+		myLabel$align <- 1 - myLabel$align
+	}
 	myJust <- switch(as.character(myLabel$align[1]),
 		`0`="left", `0.5`="centre", `1`="right")
 	myJust[2] <- switch(as.character(myLabel$align[2]),
 		`0`="bottom", `0.5`="centre", `1`="top")
 	myXY <- if (space == "page") foo$ndc else foo$coords
 	if (foo$is.click) {
-		myX <- myXY$x[1]
-		myY <- myXY$y[1]
+		myX <- mean(myXY$x)
+		myY <- mean(myXY$y)
 	} else {
 		# it was a drag
 		# figure out which coordinates are top/bottom, left/right
@@ -905,9 +941,12 @@ annotate_handler <- function(widget, playState) {
 	# store it
 	playState$annotations[[space]] <- 
 		c(playState$annotations[[space]], annot)
+	# update other tool states
 	with(playState$tools, {
-		if (!is.null(edit.annotations)) edit.annotations["visible"] <- TRUE
-		if (!is.null(clear)) clear["visible"] <- TRUE
+		if (exists("edit.annotations", inherits=F))
+			edit.annotations["visible"] <- TRUE
+		if (exists("clear", inherits=F)) 
+			clear["visible"] <- TRUE
 	})
 }
 
@@ -931,7 +970,7 @@ placeLabelDialog <- function(text="", title="New label", prompt="", width.chars=
 	editEntry['width-chars'] <- width.chars
 	editBox[["vbox"]]$packStart(editEntry, pad=10)
 	alignHBox <- gtkHBox()
-	alignHBox$packStart(gtkLabel("Position relative to point: "))
+	alignHBox$packStart(gtkLabel("Position relative to point, or inside rect: "))
 	alignTable <- gtkTable(rows=3, columns=3)
 	alignRadios <- list(list(),list(),list())
 	myGroup <- NULL
@@ -961,8 +1000,8 @@ placeLabelDialog <- function(text="", title="New label", prompt="", width.chars=
 annotate_postplot_action <- function(widget, playState) {
 	# draw annotations
 	for (space in names(playState$annotations)) {
-		playDo(playState, playState$annotations[[space]], 
-			space=space, clip.off=TRUE)
+		playDo(playState, playState$annotations[[space]], space=space, 
+			clip.off=identical(playState$clip.annotations, FALSE))
 	}
 }
 
@@ -980,7 +1019,8 @@ toolConstructors$arrow <- function(playState) {
 
 arrow_handler <- function(widget, playState) {
 	pageAnnotation <- identical(playState$annotation.mode, "page")
-	foo <- playLineInput(playState, prompt="Click and drag to draw an arrow. (Right-click to cancel)")
+	foo <- playLineInput(playState, prompt=
+		"Click and drag to draw an arrow. (Right-click to cancel)")
 	if (is.null(foo)) return()
 	if (is.null(foo$coords)) pageAnnotation <- TRUE
 	if (foo$is.click) return()
@@ -1001,9 +1041,12 @@ arrow_handler <- function(widget, playState) {
 	# store it
 	playState$annotations[[space]] <- 
 		c(playState$annotations[[space]], annot)
+	# update other tool states
 	with(playState$tools, {
-		if (!is.null(edit.annotations)) edit.annotations["visible"] <- TRUE
-		if (!is.null(clear)) clear["visible"] <- TRUE
+		if (exists("edit.annotations", inherits=F))
+			edit.annotations["visible"] <- TRUE
+		if (exists("clear", inherits=F)) 
+			clear["visible"] <- TRUE
 	})
 }
 
@@ -1057,6 +1100,11 @@ edit.annotations_handler <- function(widget, playState) {
 ## CLEAR
 
 toolConstructors$clear <- function(playState) {
+	if ((length(playState$call) == 1) && 
+		identical(playState$call[[1]], quote(`{`))) {
+		# do not know the call; it cannot be redrawn
+		return(NA)
+	}
 	types <- c(
 		if (length(playState$ids) > 0) "ids",
 		if (length(playState$annotations) > 0) "annotations",
@@ -1266,7 +1314,9 @@ toolConstructors$help <- function(playState) {
 }
 
 help_handler <- function(widget, playState) {
-	if (!is.symbol(playState$call[[1]])) {
+	callFun <- eval(playState$call[[1]])
+	if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
+		# call does not take arguments
 		gmessage.error("Do not know the name of the plot function.")
 		return()
 	}

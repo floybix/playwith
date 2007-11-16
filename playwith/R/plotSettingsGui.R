@@ -402,4 +402,6 @@ makeLayersMenuButton <- function() {
 	plotAndPlayUpdate()
 }
 
+toIndexStr <- function(x) paste('[[', x ,']]', sep='', collapse='')
+
 

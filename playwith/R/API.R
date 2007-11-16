@@ -459,9 +459,9 @@ handleClickOrDrag <- function(da, x0, y0, shape=c("rect", "line")) {
 	# was it a click or a drag? (threshold 3 pixels) - TODO: better to use timing
 	is.click <- ((abs(diff(dc$x)) <= 3) && (abs(diff(dc$y)) <= 3))
 	if (is.click) {
-		# coords are +/- 20 pixels
-		dc$x <- dc$x[1] + c(-20, 20)
-		dc$y <- dc$y[1] + c(-20, 20)
+		# coords are +/- 10 pixels
+		dc$x <- dc$x[1] + c(-10, 10)
+		dc$y <- dc$y[1] + c(-10, 10)
 	}
 	ndc <- list(x=dc$x / da.w, y=(da.h - dc$y) / da.h)
 	list(dc=dc, ndc=ndc, is.click=is.click)

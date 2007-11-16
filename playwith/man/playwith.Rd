@@ -9,7 +9,7 @@
 \title{An interactive plot GUI}
 \description{
   Open a graphical user interface for viewing and interacting with a plot.
-  It tries to work out what kind of plot it is, and how you might want to interact with it.
+  It tries to work out the structure of the plot, in order to interact with it.
   The built-in features include: navigating the data space, identifying data points,
   editing and annotating the plot, and saving to a file. New tools can be defined.
 }
@@ -28,7 +28,7 @@ playwith(expr,
 	bottom.tools = list(),
 	right.tools = list(), 
 	show.call = TRUE,
-	win.size = c(640, 480), 
+	win.size = c(640, 500), 
 	modal = FALSE,
 	on.close = NULL, 
 	eval.args = NA, 
@@ -41,7 +41,7 @@ playwith(expr,
   \item{expr}{ an expression to create a plot, like \code{plot(mydata)}. 
   	Note, this can have lots of arguments, just like a normal plot call (see examples).
   	Can also be a chunk of code in \code{\{}braces\code{\}}, but that form does not allow interaction. }
-  \item{new}{ if \code{TRUE} open in a new window, otherwise replace the current window. }
+  \item{new}{ if \code{TRUE} open in a new window, otherwise replace the current window (if one exists). }
   \item{title}{ optional window title. If a plot window exists with the same title, 
   	the new plot will appear in that window, replacing the old plot. }
   \item{time.mode}{ whether the plot is to start in "time mode", with navigation along the x-axis. }
@@ -88,18 +88,21 @@ playwith(expr,
 			output from \code{\link{arrow}}, specifying the type of arrows to draw.
 			e.g. \code{arrow(ends="both", type="closed")}.
 		}
-		\item{\code{annotation.mode}}{
-			\code{"page"} or \code{"plot"} (the default).
-		}
-		\item{\code{keep}, \code{stay.on.top}}{
-			sets the corresponding window state; these should not be needed.
+		\item{\code{annotation.mode}, \code{clip.annotations}, 
+			\code{keep}, \code{stay.on.top}}{
+			set the corresponding window options.
+			All are logical except \code{annotation.mode} which can be 
+			either \code{"page"} or \code{"plot"} (the default).
 		}
 	}
   }
   \item{top.tools, left.tools, bottom.tools, right.tools}{
 	each a list of tools for toolbars at the top, left, bottom or right sides of the window.
-	Each list element should be the name of one of the pre-defined tools (\code{names(toolConstructors)},
-	or a function to construct a \code{\link[RGtk2]{gtkToolItem}}. See \code{\link{quickTool}} for details. }
+	Each list element should be the name of one of the pre-defined tools,
+	or a function to construct a \code{\link[RGtk2]{gtkToolItem}}. 
+  	See \link{playTools} for a description of the pre-defined tools,
+	and \link{playwith.API} for help on defining new tools. 
+  }
   \item{show.call}{ set to \code{FALSE} to hide the plot call text-box ("address bar") and associated buttons.}
   \item{win.size}{ default initial size of the plot window (width, height) in pixels. }
   \item{modal}{ whether the window is modal: if \code{TRUE}, the session will freeze until the window is closed. }
@@ -120,89 +123,79 @@ playwith(expr,
 	There is a call toolbar (similar to the "address bar" of a web browser) at the top,
 	showing the current plot call, which can also be edited in-place. 
 	Then there are up to four toolbars, one on each side of the plot.
-	The tools to be placed in these four toolbars can be specified as arguments.
-	However, the default set of tools should be adequate in most cases.
+	The tools to be placed in these four toolbars can be specified 
+	if necessary.
 	
-	See X for a description of the pre-defined tools.
-	Note that different sets of tools will be used be default for calls to 
+	With the \code{\link{autoplay}} facility, \code{playwith} can function 
+	as a default graphics device (although it is not technically a 
+	graphics device itself, it is a wrapper around one).
+	
+	The pre-defined tools can be listed with \code{names(toolConstructors)}.
+	See \link{playTools} for a description of the pre-defined tools,
+	and \link{playwith.API} for help on defining new tools.
+	Note that different sets of tools will be used by default for calls to 
 	\code{\link[lattice]{splom}}, \code{\link[lattice]{cloud}} and \code{\link[lattice]{wireframe}}.
-	
-	It is important to be aware that \code{playwith} makes a lot of guesses 
-	about the plot, the data, and how to interact with them.
-	Most interaction is based on evaluating and changing arguments to the plot call.
-	This is designed to work in common cases, but could never work for all types
-	of plots. For basic interaction, ensure that the call accepts \code{xlim}
-	and \code{ylim} arguments.
-	Generally, it can be expected to work best with Lattice plots.
 	
 	Three types of plots are handled slightly differently: 
 	\itemize{
 		\item Lattice graphics: a plot will be recognised as a Lattice plot if 
 			the call is to one of the standard high-level functions.
 			Otherwise you may need \code{is.lattice=TRUE}.
-		\item base graphics: this is the default case. If the call has the same
-			name as a high-level Lattice function, you may need \code{is.lattice=FALSE}.
+		\item base graphics: this is the default case. (If the call has the same
+			name as a high-level Lattice function, you may need \code{is.lattice=FALSE}).
 		\item grid graphics (not Lattice): you must give the \code{viewport}
 			argument to enable interaction. This has not been well tested.
 	}
 	
+	It is important to be aware that \code{playwith} makes a lot of guesses 
+	about the plot, the data, and how to interact with them.
+	Some interaction is based on evaluating and changing arguments to the plot call.
+	This is designed to work in common cases, but could never work for all 
+	plots. For basic interaction, ensure that the call accepts \code{xlim}
+	and \code{ylim} arguments.
+	Generally, it can be expected to work best with Lattice plots.
+	
+	The locations and type of data points will be guessed from the plot call.
+	An attempt will also be made to construct labels to identify the data points.
+	These guesses may be wrong in complex cases, in which case 
+	you can pass the correct values in as \code{data.points} and/or \code{labels}.
+	Please also contact the maintainer to help improve the guesses.
   
-  
-
-  
-  
-  
-  
-  
-  
-  In order for the plot to be modified, its supporting data needs to be stored.
-  By default, all non-global data is copied into an attached environment and stored.
-  More on this below.
-  
-  This function will also try to guess labels for data points. 
-  It does this by evaluating the \code{x} argument (\code{data} argument for Lattice plots), 
-  or part of the formula. To suppress this evaluation, give \code{labels} explicitly 
-  (may be \code{labels=NA}).
-  
-  Each element of \code{buttons} should be a call to generate a \code{\link[RGtk2]{gtkToolItem}} 
-  (typically a \code{\link[RGtk2]{gtkToolButton}}),
-  or text, in which case it is taken from the pre-defined set.
-  Type \code{str(plotAndPlayButtons)} to see the pre-defined set of button handlers.
-  However, you can usually ignore this, as most buttons will be automatically added to the toolbar for relevant plots. 
-  
-  
-  
-  See \code{\link{plotAndPlayButtons}} if you want to define new buttons.
-  
-  The interaction features require that all variables appearing in the plot call remain accessible:
-  
-  The default setting \code{eval.args=NA} causes variables appearing in the plot call to be 
-  \link[=eval]{evaluated} and stored, except if they are defined in the global environment (i.e. user workspace). 
-  This method should work in most cases, but:
-  Functions appearing in the plot call will be evaluated each time the plot is updated -- 
-  so random data as in \code{plot(rnorm(100))} will keep changing, with confusing consequences!
-  You should therefore generate random data prior to the plot call.
-  Changes to variables in the global environment will also cause inconsistencies in previously generated plots 
-  (e.g. \code{labels} on data points may be wrong).
-  
-  If \code{eval.args=T} then variables appearing in the plot call will be evaluated and stored
-  even if they are defined in the global environment. 
-  Use this if the global variables might change (or be removed) before the plot is destroyed.
-  
-  If a regular expression is given for \code{eval.args} then only variables whose names match it will be evaluated,
-  and this includes global variables, as with \code{eval.args=T}. 
-  In this case you can set \code{invert.match=T} to evaluate variables that are not matched.
-  For example \code{eval.args="^tmp"} will evaluate variables whose names begin with "tmp";
-  \code{eval.args="^foo$", invert=T} will evaluate everything except \code{foo}.
-  
-  If \code{eval.args=F} then the plot call will be left alone (not evaluated until plot time).
+	In order to interact with a plot, its supporting data needs to be stored:
+	i.e. all variables appearing in the plot call must remain accessible.
+	By default, all non-global data is copied into an attached environment and stored.
+	
+	The default setting \code{eval.args=NA} causes variables appearing in the 
+	plot call to be evaluated and stored, except if they are defined in the 
+	global environment (i.e. user workspace). This method should work in most 
+	cases, but: Functions appearing in the plot call will be evaluated each 
+	time the plot is updated -- so random data as in \code{plot(rnorm(100))} 
+	will keep changing, with confusing consequences! You should therefore 
+	generate random data prior to the plot call. Changes to variables in the 
+	global environment will also cause inconsistencies in previously generated 
+	plots (e.g. labels on data points may be wrong).
+	
+	If \code{eval.args=T} then variables appearing in the plot call will be 
+	evaluated and stored even if they are defined in the global environment. 
+	Use this if the global variables might change (or be removed) before the 
+	plot is destroyed.
+	
+	If a regular expression is given for \code{eval.args} then only variables 
+	whose names match it will be evaluated, and this includes global variables, 
+	as with \code{eval.args=T}. In this case you can set \code{invert.match=T} 
+	to evaluate variables that are not matched.
+	For example \code{eval.args="^tmp"} will evaluate variables whose names 
+	begin with "tmp"; \code{eval.args="^foo$", invert=T} will evaluate 
+	everything except \code{foo}.
+	
+	If \code{eval.args=F} then the plot call will be left alone 
+	(not evaluated until plot time).
 }
 \value{
 	\code{playwith} invisibly returns the value from the plot call.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
-\seealso{ \code{\link{autoplay}}, \code{\link{playState}}, \code{\link{quickTool}},
-	\link[lattice]{Lattice} }
+\seealso{ \code{\link{autoplay}}, \link{playTools}, \link{playwith.API} }
 \examples{
 \dontrun{
 
@@ -286,4 +279,5 @@ playwith({
 
 \keyword{ iplot }
 \keyword{ dynamic }
+\keyword{ device }
 

@@ -1,35 +1,12 @@
-\name{playwith_API}
-\alias{playwith_API}
-\alias{playState}
-\alias{playDevCur}
-\alias{playDevList}
-\alias{playDevSet}
-\alias{playDevOff}
-\alias{playNewPlot}
-\alias{playReplot}
-\alias{callArg}
-\alias{rawXLim}
-\alias{rawYLim}
-\alias{xyCoords}
-\alias{xyData}
-\alias{playDo}
-\alias{playSelectData}
-\alias{playPointInput}
-\alias{playLineInput}
-\alias{playRectInput}
-\alias{whichSpace}
-\alias{deviceCoordsToSpace}
-\alias{playPrompt}
-\alias{playFreezeGUI}
-\alias{playThawGUI}
-\alias{blockRedraws}
-\alias{gmessage.error}
+\name{playwith.API}
+\alias{playwith.API}
 \title{The playwith API}
 \description{
   The \code{\link{playwith}} Application Programming Interface.
 }
-\usage{
-playDevCur()
+\details{
+
+\code{\link{playDevCur}}()
 playDevList()
 playDevSet(playState)
 playDevOff(playState = playDevCur())
@@ -62,71 +39,15 @@ playPrompt(playState, text = NULL)
 playFreezeGUI(playState)
 playThawGUI(playState)
 blockRedraws(expr, playState = playDevCur())
-}
-\arguments{
-  \item{playState}{  }
-  \item{arg}{  }
-  \item{name}{  }
-  \item{value}{  }
-  \item{stuff}{  }
-  \item{space}{  }
-  \item{clip.off}{  }
-  \item{prompt}{  }
-  \item{x.device}{  }
-  \item{y.device}{  }
-  \item{text}{  }
-  \item{expr}{  }
-}
-\details{
-  \code{plotAndPlayButtons} and \code{plotAndPlayBasicButtons} are lists of calls to generate \code{\link[RGtk2]{gtkToolItem}}s.
-  These are used as buttons in a \code{\link{plotAndPlay}} plot window.
-  
-  New buttons can be defined: see the \code{Examples} section of this page.
-  
-  \code{quickTool} is a convenience function to create a \code{\link[RGtk2]{gtkToolButton}} with the given label, icon, tooltip and click handler.
-  For example, one element of \code{plotAndPlayButtons} is
-  \code{zoomout=quickTool("Zoom out", "gtk-zoom-out", f=.plotAndPlay_zoomout_event)}.
   
   \code{plotAndPlayGetState} can be used by callback functions to get access to the plot window and plot state. 
   It returns a list (see below for details), or one of its elements (\code{item}), 
   which can be modified and passed back to \code{plotAndPlaySetState}.
   
-  \code{plotAndPlayUpdate} re-generates the current plot display (e.g. after updating the call).
-  
-  \code{plotAndPlayDoFocus} brings one lattice panel into focus. 
-  If there is only one panel it is chosen automatically and without highlighting.
-  Otherwise the user is prompted to choose one. 
-  It returns the new focus (see \code{focus} item below) or NULL if the user cancelled.
-  
-  The \code{\link{playwith}} window can show a simple prompt to the user.
-  This must be initialised with \code{plotAndPlayMakePrompt}, then set with \code{plotAndPlaySetPrompt}, 
-  and finally removed with \code{plotAndPlayUnmakePrompt}.
-  
-  \code{plotAndPlayGetToolbar} returns the \code{gtkToolbar}, 
-  and \code{plotAndPlayGetDA} returns the \code{gtkDrawingArea}.
-  
   \code{plotAndPlaySetRawXLim} converts a numeric range, in the raw native plot coordinates, to values suitable for 
-  the plot \code{xlim} argument: it may convert back from log-transformed scales, convert to factor levels,
-  and convert to a date/time format. It then updates the current plot call with the new value.
-  Note: this function requires a panel to be in focus, since it uses \code{trellis.panelArgs()}. 
+  the plot \code{xlim} argument: it may convert back from log-transformed scales, and convert to factor levels if necessary. 
+  It then updates the current plot call with the new value.
   
-  \code{unlogX} just converts back from log-transformed scales if necessary.
-}
-\value{
-  \code{plotAndPlayGetState()} returns a list containing at least:
-  \item{win}{a \code{gtkWindow} (the plot window).}
-  \item{dev}{the plot device number.}
-  \item{call}{the current plot call.}
-  \item{env}{local environment used to store evaluated plot call arguments.}
-  \item{id.call}{the call to \code{\link{identify}} or similar, used to label data points.}
-  \item{label.args}{style arguments for labelling points.}
-  \item{nav.scales}{see \code{\link{plotAndPlay}}.}
-  \item{trans.scales}{see \code{\link{plotAndPlay}}.}
-  \item{ids}{a list, each item contains a vector of subscripts for the points currently labelled in the named lattice packet. For non-lattice plots, there is only one item \code{"all"}.}
-  \item{brushed}{a list, each item contains a vector of subscripts for the points currently brushed in the named lattice packet. }
-  \item{is.lattice}{logical: is it a lattice plot?}
-  \item{focus}{a list with items \code{col} and \code{row} for a lattice panel if one is in focus. Otherwise it is \code{list(col=0, row=0)}.}
-  \item{page}{current lattice page number.}
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
 \seealso{ \code{\link{playwith}} }

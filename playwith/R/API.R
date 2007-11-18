@@ -270,8 +270,8 @@ playDo <- function(playState, stuff, space="plot", clip.off=FALSE) {
 	}
 	if (!is.null(cur.vp)) on.exit(downViewport(cur.vp), add=TRUE)
 	# do the stuff and return the result
-	if (is.list(stuff)) lapply(stuff, eval, playState$env, parent.frame())
-	else eval(stuff, playState$env, parent.frame())
+	if (is.list(stuff)) lapply(stuff, eval, parent.frame(), playState$env)
+	else eval(stuff, parent.frame(), playState$env)
 }
 
 playSelectData <- function(playState, prompt="Click or drag to select data points.") {

@@ -4,8 +4,8 @@
 ## GPL version 2 or newer
 
 settings_handler <- function(widget, playState) {
-	playState$tools$settings["sensitive"] <- FALSE
-	on.exit(playState$tools$settings["sensitive"] <- TRUE)
+	widget["sensitive"] <- FALSE
+	on.exit(widget["sensitive"] <- TRUE)
 	wingroup <- ggroup(horizontal=FALSE)
 	wid <- list()
 	
@@ -79,6 +79,7 @@ settings_handler <- function(widget, playState) {
 	wid$abline_h <- gcheckbox("horizontal", checked=F)
 	wid$abline_v <- gcheckbox("vertical", checked=F)
 	wid$abline_d <- gcheckbox("diagonal", checked=F)
+	# x/y: min/max/mean/median/std/mad
 	add(linegroup, glabel("Reference line (origin):"))
 	add(linegroup, wid$abline_h)
 	add(linegroup, wid$abline_v)
@@ -100,8 +101,6 @@ settings_handler <- function(widget, playState) {
 	# STYLE
 	stylegroup <- gframe("Style", horizontal=FALSE, container=wingroup)
 	enabled(stylegroup) <- FALSE
-	# lattice theme
-	# TODO color (white bg) / color (dark bg) / greyscale
 	# type
 	arg_type <- callArg(playState, type)
 	hasPoints <- (is.null(arg_type) || any(c("p","b","o") %in% arg_type))
@@ -186,7 +185,6 @@ settings_handler <- function(widget, playState) {
 	gbasicdialog("Plot settings", widget=wingroup, action=playState, 
 	handler=function(h, ...) {
 		playState <- h$action
-		playDevSet(playState)
 		
 		# TITLES
 		argExpr <- function(wid, expr.wid) {

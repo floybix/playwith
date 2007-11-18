@@ -489,8 +489,9 @@ playReplot <- function(playState) {
 }
 
 playRefresh <- function(playState) {
+	replayPlot(recordPlot())
 	# TODO: no, should be a configure event? grid.refresh?
-	playState$widgets$drawingArea$window$invalidateRect()
+	#playState$widgets$drawingArea$window$invalidateRect(invalidate.children=FALSE)
 }
 
 generateSpaces <- function(playState) {
@@ -524,6 +525,8 @@ generateSpaces <- function(playState) {
 		playState$baseViewports$inner <- current.vpPath()
 		pushViewport(vps$figure)
 		playState$baseViewports$figure <- current.vpPath()
+		# set clipping
+		vps$plot$clip <- TRUE
 		pushViewport(vps$plot)
 		playState$baseViewports$plot <- current.vpPath()
 		pushViewport(viewport(
@@ -572,10 +575,10 @@ window.close_handler <- function(widget, event, playState) {
 }
 
 configure_handler <- function(widget, event, playState) {
-	oldsize <- playState$.device.size
-	playState$.device.size <- c(event$width, event$height)
-	if (is.null(oldsize) || all(oldsize == playState$.device.size))
-		return(FALSE)
+	#oldsize <- playState$.device.size
+	#playState$.device.size <- c(event$width, event$height)
+	#if (is.null(oldsize) || all(oldsize == playState$.device.size))
+	#	return(FALSE)
 	playState$.need.reconfig <- TRUE
 	return(FALSE)
 }
@@ -591,8 +594,8 @@ auto.reconfig_handler <- function(widget, event, playState) {
 devoff_handler <- function(widget, event, playState) {
 	# this handles dev.off()
 	# destroy the window, but store a flag to avoid destroying twice
-	####(test)### if (any(playState$devoff)) return(FALSE)
-	####(test)### playState$devoff <- TRUE
+	if (any(playState$devoff)) return(FALSE)
+	playState$devoff <- TRUE
 	widget$destroy()
 	playDevOff(playState)
 	return(FALSE)

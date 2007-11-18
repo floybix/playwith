@@ -110,9 +110,9 @@ toolConstructors$settings <- function(playState) {
 		return(NA)
 	}
 	quickTool(playState,
-		label = "Plot settings", 
+		label = "Plot settings",  # or "Edit plot"?
 		icon = "gtk-preferences", 
-		tooltip = "Change the plot type and options",
+		tooltip = "Change the plot type and settings",
 		f = settings_handler)
 }
 # note: settings_handler can be found in plotSettingsGui.R
@@ -202,11 +202,12 @@ save_handler <- function(widget, user.data) {
 	}
 	# save plot to file
 	playDevSet(playState)
-	# TODO: baseViewports will be corrupted if device size changes
-	# -- so do a playReplot rather than dev.copy?
+	# note: baseViewports will be corrupted if device size changes
+	# so need to keep the same size with dev.copy()...
 	da <- playState$widgets$drawingArea
 	w.px <- da$getAllocation()$width
 	h.px <- da$getAllocation()$height
+	# assuming 96 d.p.i. in both dimensions
 	w.in <- w.px / 96
 	h.in <- h.px / 96
 	if (ext %in% "pdf") {
@@ -889,11 +890,258 @@ toolConstructors$annotate <- function(playState) {
 annotate_handler <- function(widget, playState) {
 	pageAnnotation <- identical(playState$annotation.mode, "page")
 	foo <- playRectInput(playState, prompt=
-		"Click or drag to place text. (Right-click to cancel)")
+		"Click or drag to place an annotation. (Right-click to cancel)")
 	if (is.null(foo)) return()
 	if (is.null(foo$coords)) pageAnnotation <- TRUE
 	space <- foo$space
 	if (pageAnnotation) space <- "page"
+	myXY <- if (space == "page") foo$ndc else foo$coords
+	if (foo$is.click) {
+		myX <- mean(myXY$x)
+		myY <- mean(myXY$y)
+	}
+	
+	playFreezeGUI(playState)
+	on.exit(playThawGUI(playState))
+	
+	# pop up dialog to create label
+	dialog <- gwindow(title="New annotation")
+	wingroup <- ggroup(horizontal=FALSE, container=dialog)
+	wid <- list()
+	
+	# TEXT AND JUST
+	labgroup <- gframe("<b>Label text</b>", markup=TRUE,
+		horizontal=FALSE, container=wingroup)
+	lay <- glayout(container=labgroup, spacing=2)
+	wid$label <- gtext(width=200, height=50)
+	wid$label.expr <- gcheckbox("plotmath")
+	lay[1,1:2] <- wid$label
+	lay[2,1] <- wid$label.expr
+	lay[3,1] <- if (foo$is.click) "Position of text \nrelative to point:"
+		else "Justification of \ntext inside box:"
+	justgroup <- ggroup(horizontal=FALSE)
+	wid$hjust <- gradio(c("left", "centre", "right"), selected=2, horizontal=TRUE)
+	wid$vjust <- gradio(c("top", "centre", "bottom"), selected=2, horizontal=TRUE)
+	add(justgroup, wid$hjust)
+	add(justgroup, wid$vjust)
+	lay[3,2] <- justgroup
+	lay[4,1] <- if (foo$is.click) "Offset from point (chars):"
+		else "Offset from box edge"
+	wid$offset <- gedit("0", width=5, coerce.with=as.numeric)
+	lay[4,2] <- wid$offset
+	 if (!foo$is.click) {
+		# it was a drag, defining a rectangle
+		# TODO: fit to box?
+		# option to draw box border
+		wid$drawbox <- gcheckbox("Draw box")
+		lay[5,1:2] <- wid$drawbox
+	}
+	visible(lay) <- TRUE
+	focus(wid$label) <- TRUE
+	
+	# STYLE
+	stylegroup <- gframe("<b>Style</b>", markup=TRUE,
+		horizontal=FALSE, container=wingroup)
+	lay <- glayout(container=stylegroup, spacing=2)
+	refStyle <- playState$label.style
+	if (is.null(playState$label.style)) {
+		# default style is taken from lattice settings
+		refStyle <- do.call(gpar, trellis.par.get("add.text"))
+	}
+	# TODO: set defaults
+	# cex
+	wid$cex <- gedit("1.0", width=5, coerce.with=as.numeric)
+	lay[1,1] <- "Expansion factor:"
+	lay[1,2] <- wid$cex
+	# TODO: fontsize (points)
+	# col
+	colList <- palette()
+	colList <- c(colList, trellis.par.get("superpose.symbol")$col)
+	wid$col <- gdroplist(colList, selected=0, editable=TRUE)
+	wid$alpha <- gspinbutton(value=1, from=0, to=1, by=0.05, digits=1)
+	lay[3,1] <- "Text color:"
+	lay[3,2] <- wid$col
+	lay[4,1] <- "Alpha (opacity):"
+	lay[4,2] <- wid$alpha
+	# fontfamily, fontface
+	familyList <- c("serif", "sans", "mono", "symbol",
+		"HersheySerif", "HersheySans", "HersheyScript",
+		"HersheyGothicEnglish", "HersheyGothicGerman", "HersheyGothicItalian",
+		"HersheySymbol", "HersheySansSymbol")
+	faceList <- c("plain", "bold", "italic", "bold.italic",
+		"cyrillic", "cyrillic.oblique", "EUC")
+	wid$fontfamily <- gdroplist(familyList, selected=0)
+	wid$fontface <- gdroplist(faceList, selected=0)
+	lay[5,1] <- "Font family:"
+	lay[5,2] <- wid$fontfamily
+	lay[6,1] <- "Font face:"
+	lay[6,2] <- wid$fontface
+	# lineheight (as multiple of text height)
+	wid$lineheight <- gedit("1.2", width=5, coerce.with=as.numeric)
+	lay[7,1] <- "Line height (factor):"
+	lay[7,2] <- wid$lineheight
+	# rot (rotation angle)
+	wid$rot <- gdroplist(c("-90","-45","-30","0","30","45","90"), selected=4,
+		editable=TRUE, coerce.with=as.numeric)
+	lay[8,1] <- "Rotation angle:"
+	lay[8,2] <- wid$rot
+	visible(lay) <- TRUE
+	
+	# OPTIONS
+	#optionsgroup <- gframe("Options", horizontal=FALSE, container=wingroup)
+	# set as default style?
+	
+	annot_handler <- function(h, ...) {
+		# note: playState is accessed from the function environment!
+		
+		# TEXT AND JUST
+		argExpr <- function(wid, expr.wid) {
+			newVal <- svalue(wid)
+			if (newVal == "") return(NULL)
+			if (svalue(expr.wid)) 
+				newVal <- parse(text=newVal, srcfile=NULL)
+			newVal
+		}
+		isExpr <- svalue(wid$label.expr)
+		labelVal <- argExpr(wid$label, wid$label.expr)
+		if (!isExpr) {
+			labelVal <- gsub("\\", "\\\\", labelVal, fixed=TRUE)
+		}
+		just <- c(svalue(wid$hjust), svalue(wid$vjust))
+		
+		# COORDINATES
+		if (foo$is.click) {
+			# justification flipped -- at point rather than inside rect
+			just[1] <- switch(just[1], 
+				left="right", right="left", centre="centre")
+			just[2] <- switch(just[2], 
+				top="bottom", bottom="top", centre="centre")
+		}
+		else {
+			# it was a drag, defining a rectangle
+			# choose side of rect to align to
+			x.leftright <- sort(myXY$x)
+			if (is.unsorted(rawXLim(playState, space=space)))
+				x.leftright <- rev(x.leftright)
+			y.bottop <- sort(myXY$y)
+			if (is.unsorted(rawYLim(playState, space=space)))
+				y.bottop <- rev(y.bottop)
+			myX <- switch(just[1],
+				left=x.leftright[1],
+				right=x.leftright[2],
+				centre=mean(x.leftright))
+			myY <- switch(just[2],
+				bottom=y.bottop[1],
+				top=y.bottop[2],
+				centre=mean(y.bottop))
+		}
+		myX <- signif(myX, 4)
+		myY <- signif(myY, 4)
+		if ((svalue(wid$offset) != 0) && any(just != "centre")) {
+			if (just[1] != "centre") {
+				myPad <- svalue(wid$offset)
+				if (just[1] == "right") myPad <- 0 - myPad
+				myX <- substitute(unit(x, "native") + unit(pad, "char"),
+					list(x=myX, pad=myPad))
+			}
+			if (just[2] != "centre") {
+				myPad <- svalue(wid$offset)
+				if (just[2] == "top") myPad <- 0 - myPad
+				myY <- substitute(unit(y, "native") + unit(pad, "char"),
+					list(y=myY, pad=myPad))
+			}
+		}
+		
+		# STYLE
+		#print("cex")
+		#str(svalue(wid$cex))
+		#print("col")
+		#str(svalue(wid$col))
+		#print("family")
+		#str(svalue(wid$fontfamily))
+		#str(svalue(wid$fontfamily, index=TRUE))
+		hasCex <- (svalue(wid$cex) != 1.0)
+		hasCol <- (svalue(wid$col) != "")
+		hasAlpha <- (svalue(wid$alpha) != 1)
+		hasFamily <- !is.null(svalue(wid$fontfamily)) && !isExpr
+		hasFace <- !is.null(svalue(wid$fontface)) && !isExpr
+		hasHeight <- (svalue(wid$lineheight) != 1.2)
+		hasRot <- (svalue(wid$rot) != 0)
+		gpc <- refStyle
+		if (inherits(gpc, "gpar"))
+			gpc <- as.call(c(quote(gpar), gpc))
+		if (hasCex) gpc$cex <- svalue(wid$cex)
+		if (hasCol) gpc$col <- svalue(wid$col)
+		if (hasAlpha) gpc$alpha <- svalue(wid$alpha)
+		if (hasFamily) gpc$fontfamily <- svalue(wid$fontfamily)
+		if (hasFace) gpc$fontface <- svalue(wid$fontface)
+		if (hasHeight) gpc$lineheight <- svalue(wid$lineheight)
+		
+		# CREATE THE CALL
+		annot <- call("grid.text", labelVal, x=myX, y=myY, just=just)
+		if (space != "page") annot$default.units <- "native"
+		annot$gp <- if (length(gpc) > 1) gpc
+		if (hasRot) annot$rot <- svalue(wid$rot)
+		
+		# add box?
+		if (!foo$is.click && svalue(wid$drawbox)) {
+			dobox <- call("grid.rect", x=mean(myXY$x), y=mean(myXY$y),
+				width=abs(diff(myXY$x)), height=abs(diff(myXY$y)))
+			if (space != "page") dobox$default.units <- "native"
+			annot <- c(dobox, annot) #as.expression(
+		}
+		
+		if (h$action == "preview") {
+			# preview only (refresh, grid.draw)
+			annot$name <- "tmp.preview"
+			# refresh to remove any old preview
+			#grid.refresh()
+			#playRefresh(playState)
+			playReplot(playState)
+			# draw it
+			# engine.display.list / grid.display.list
+			#foo <- grid.grabExpr(eval(annot))
+			#foo2 <- quote(grid.draw(foo, recording=FALSE))
+			#foo2 <- quote(grid:::drawGrob(foo))
+			playDo(playState, annot, space=space)
+			# and remove without redraw
+			#grid.gremove("tmp.preview", redraw=FALSE)
+			return()
+		}
+		# OK: save in playState
+		# draw it
+		playDo(playState, annot, space=space)
+		# store it
+		playState$annotations[[space]] <- 
+			c(playState$annotations[[space]], annot)
+		# update other tool states
+		with(playState$tools, {
+			if (exists("edit.annotations", inherits=F))
+				edit.annotations["visible"] <- TRUE
+			if (exists("clear", inherits=F)) 
+				clear["visible"] <- TRUE
+		})
+		
+		dispose(h$obj)
+		playState$win$present()
+	}
+	
+	# TODO: show generated call in text box
+	
+	#add(wingroup, gseparator())
+	buttgroup <- ggroup(container=wingroup)
+	addSpring(buttgroup)
+	okbutt <- gbutton("OK", handler=annot_handler, 
+		action="ok", container=buttgroup)
+	prebutt <- gbutton("Preview", handler=annot_handler, 
+		action="preview", container=buttgroup)
+	canbutt <- gbutton("Cancel", handler=function(...) dispose(dialog), 
+		container=buttgroup)
+	size(okbutt) <- size(prebutt) <- size(canbutt) <- c(80, 30)
+	return()
+	
+	
+	# TODO: delete this
 	myLabel <- placeLabelDialog()
 	if (is.null(myLabel)) return()
 	if (!foo$is.click) {
@@ -950,10 +1198,14 @@ annotate_handler <- function(widget, playState) {
 	})
 }
 
-placeLabelDialog2 <- function() {
+placeLabelDialog2 <- function(widget, is.click ) {
 	# TODO (use gWidgets)
-	# position relative to point
-	# style? cex, font, col...
+	
+	widget["sensitive"] <- FALSE
+	on.exit(widget["sensitive"] <- TRUE)
+	
+	
+	
 }
 
 placeLabelDialog <- function(text="", title="New label", prompt="", width.chars=-1) {
@@ -1230,7 +1482,7 @@ toolConstructors$zoomfit <- function(playState) {
 
 zoomfit_handler <- function(widget, playState) {
 	nav.x <- TRUE
-	nav.y <- !(playState$time.mode)
+	nav.y <- TRUE #!(playState$time.mode)
 	# update scales
 	if (nav.x) callArg(playState, xlim) <- NULL
 	if (nav.y) callArg(playState, ylim) <- NULL

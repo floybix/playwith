@@ -1,15 +1,15 @@
-\title{playDo}
+\name{playDo}
 \alias{playDo}
-\title{The playwith API}
+\title{Do something in a specified plot space}
 \description{
-  The \code{\link{playwith}} Application Programming Interface.
+  Part of the \code{\link{playwith}} Application Programming Interface.
 }
 \usage{
-playDo(playState, stuff, space = "plot", clip.off = FALSE)
+playDo(playState, expr, space = "plot", clip.off = FALSE)
 }
 \arguments{
   \item{playState}{ a \code{\link{playState}} object representing the plot, window and device. }
-  \item{stuff}{  }
+  \item{expr}{  }
   \item{space}{  }
   \item{clip.off}{  }
 }

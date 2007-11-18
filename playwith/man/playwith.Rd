@@ -1,11 +1,6 @@
 \name{playwith}
 \alias{playwith}
 \alias{plotAndPlay}
-\alias{toolConstructors}
-\alias{playApplicationTools}
-\alias{playInteractionTools}
-\alias{play3DTools}
-\alias{playSplomTools}
 \title{An interactive plot GUI}
 \description{
   Open a graphical user interface for viewing and interacting with a plot.
@@ -22,11 +17,11 @@ playwith(expr,
 	data.points = NULL, 
 	is.lattice = NA, 
 	viewport = NULL, 
-	...,
 	top.tools = playApplicationTools, 
 	left.tools = playInteractionTools, 
 	bottom.tools = list(),
 	right.tools = list(), 
+	...,
 	show.call = TRUE,
 	win.size = c(640, 500), 
 	modal = FALSE,
@@ -54,6 +49,13 @@ playwith(expr,
   \item{viewport}{ name or \code{\link[grid]{vpPath}} of the \code{\link[grid]{viewport}}
 	representing the data space. This allows interaction with grid graphics plots 
 	(but ignore this for Lattice plots). }
+  \item{top.tools, left.tools, bottom.tools, right.tools}{
+	each a list of tools for toolbars at the top, left, bottom or right sides of the window.
+	Each list element should be the name of one of the pre-defined tools,
+	or a function to construct a \code{\link[RGtk2]{gtkToolItem}}. 
+  	See \link{playTools} for a description of the pre-defined tools,
+	and \link{playwith.API} for help on defining new tools. 
+  }
   \item{\dots}{ extra arguments are stored in the \code{\link{playState}} object.
   	These can then be accessed by user-defined tools. The default tools will recognise the following
 	extra arguments:
@@ -95,13 +97,6 @@ playwith(expr,
 			either \code{"page"} or \code{"plot"} (the default).
 		}
 	}
-  }
-  \item{top.tools, left.tools, bottom.tools, right.tools}{
-	each a list of tools for toolbars at the top, left, bottom or right sides of the window.
-	Each list element should be the name of one of the pre-defined tools,
-	or a function to construct a \code{\link[RGtk2]{gtkToolItem}}. 
-  	See \link{playTools} for a description of the pre-defined tools,
-	and \link{playwith.API} for help on defining new tools. 
   }
   \item{show.call}{ set to \code{FALSE} to hide the plot call text-box ("address bar") and associated buttons.}
   \item{win.size}{ default initial size of the plot window (width, height) in pixels. }

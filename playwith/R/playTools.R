@@ -510,6 +510,7 @@ time.mode_scrollbar_handler <- function(widget, playState) {
 	if (widget["adjustment"]["page-size"] == 0) stop()
 	#oldLim <- rawXLim(playState)
 	#if (min(oldLim) == min(newLim)) return()
+	newLim <- signif(newLim, 4)
 	rawXLim(playState) <- newLim
 	playReplot(playState)
 }
@@ -842,7 +843,7 @@ drawLabels <- function(playState, which, space="plot", pos=1) {
 		annots[[i]] <- call("grid.text", labels[i], x=ux, y=uy, 
 			just=adj, gp=myStyle)
 	}
-	playDo(playState, annots, space=space, 
+	playDo(playState, eval(annots), space=space, 
 		clip.off=identical(playState$clip.annotations, FALSE))
 }
 
@@ -1103,14 +1104,14 @@ annotate_handler <- function(widget, playState) {
 			#foo <- grid.grabExpr(eval(annot))
 			#foo2 <- quote(grid.draw(foo, recording=FALSE))
 			#foo2 <- quote(grid:::drawGrob(foo))
-			playDo(playState, annot, space=space)
+			playDo(playState, eval(annot), space=space)
 			# and remove without redraw
 			#grid.gremove("tmp.preview", redraw=FALSE)
 			return()
 		}
 		# OK: save in playState
 		# draw it
-		playDo(playState, annot, space=space)
+		playDo(playState, eval(annot), space=space)
 		# store it
 		playState$annotations[[space]] <- 
 			c(playState$annotations[[space]], annot)
@@ -1185,7 +1186,7 @@ annotate_handler <- function(widget, playState) {
 		annot$gp <- quote(do.call(gpar, trellis.par.get("add.text")))
 	}
 	# draw it
-	playDo(playState, annot, space=space)
+	playDo(playState, eval(annot), space=space)
 	# store it
 	playState$annotations[[space]] <- 
 		c(playState$annotations[[space]], annot)
@@ -1252,7 +1253,7 @@ placeLabelDialog <- function(text="", title="New label", prompt="", width.chars=
 annotate_postplot_action <- function(widget, playState) {
 	# draw annotations
 	for (space in names(playState$annotations)) {
-		playDo(playState, playState$annotations[[space]], space=space, 
+		playDo(playState, eval(playState$annotations[[space]]), space=space, 
 			clip.off=identical(playState$clip.annotations, FALSE))
 	}
 }
@@ -1289,7 +1290,7 @@ arrow_handler <- function(widget, playState) {
 		annot$gp <- quote(do.call(gpar, trellis.par.get("add.line")))
 	}
 	# draw it
-	playDo(playState, annot, space=space)
+	playDo(playState, eval(annot), space=space)
 	# store it
 	playState$annotations[[space]] <- 
 		c(playState$annotations[[space]], annot)

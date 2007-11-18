@@ -41,11 +41,11 @@ playwith <- function(
 	data.points = NULL, 
 	is.lattice = NA, 
 	viewport = NULL, 
-	...,
 	top.tools = playApplicationTools, 
 	left.tools = playInteractionTools, 
 	bottom.tools = list(),
 	right.tools = list(), 
+	...,
 	show.call = TRUE,
 	win.size = c(640, 500), 
 	modal = FALSE,
@@ -126,6 +126,9 @@ playwith <- function(
 	widg <- list()
 	myVBox <- gtkVBox()
 	myWin$add(myVBox)
+	# call toolbar: shares space with the prompt (used for interaction)
+	toolbarPromptHBox <- gtkHBox()
+	myVBox$packStart(toolbarPromptHBox, expand=FALSE)
 	# create the call toolbar (similar to web browser address bar)
 	callToolbar <- gtkToolbar(show=show.call)
 	callToolbar["toolbar-style"] <- GtkToolbarStyle["icons"]
@@ -179,15 +182,7 @@ playwith <- function(
 	item <- gtkToolItem()
 	item$add(callEditButton)
 	callToolbar$insert(item, -1)
-	myVBox$packStart(callToolbar, expand=FALSE)
-	# top toolbar: shares space with the prompt (used for interaction)
-	# TODO: move prompt to call toolbar
-	toolbarPromptHBox <- gtkHBox()
-	myVBox$packStart(toolbarPromptHBox, expand=FALSE)
-	# create the top toolbar
-	topToolbar <- gtkToolbar()
-	topToolbar["toolbar-style"] <- GtkToolbarStyle["both"]
-	toolbarPromptHBox$packStart(topToolbar)
+	toolbarPromptHBox$packStart(callToolbar)
 	# create the prompt
 	promptBox <- gtkEventBox(show=FALSE)
 	promptLabel <- gtkLabel()
@@ -195,6 +190,10 @@ playwith <- function(
 	promptBox$modifyBg(GtkStateType["normal"], "yellow")
 	promptLabel$modifyFg(GtkStateType["normal"], "black")
 	toolbarPromptHBox$packStart(promptBox)
+	# create the top toolbar
+	topToolbar <- gtkToolbar()
+	topToolbar["toolbar-style"] <- GtkToolbarStyle["both"]
+	myVBox$packStart(topToolbar)
 	# create the plot area and side toolbars
 	myHBox <- gtkHBox()
 	myVBox$packStart(myHBox)
@@ -385,11 +384,13 @@ playNewPlot <- function(playState) {
 		for (i in seq_along(tools)) {
 			myName <- names(tools)[i]
 			if (!any(nchar(myName))) myName <- NA
-			toolFun <- tools[[i]]
+			toolFun <- eval(tools[[i]])
 			if (is.character(toolFun)) {
-				myName <- tools[[i]]
+				myName <- toolFun
 				toolFun <- toolConstructors[[myName]]
 			}
+			if (is.na(myName)) myName <- 
+				paste(deparse(substitute(tools)), i, sep="_")
 			if (!is.function(toolFun)) {
 				warning("constructor for ", myName, " is not a function")
 				next
@@ -403,7 +404,7 @@ playNewPlot <- function(playState) {
 			if (identical(newTool, NA)) next
 			result <- try(toolbar$insert(newTool, -1))
 			if (inherits(result, "try-error")) next
-			if (any(nchar(myName))) playState$tools[[myName]] <- newTool
+			playState$tools[[myName]] <- newTool
 		}
 	}
 	# set up the toolbars
@@ -500,7 +501,7 @@ generateSpaces <- function(playState) {
 		# grid graphics plot
 		for (space in names(playState$viewport)) {
 			playState$deviceToSpace[[space]] <- playDo(playState, 
-				call("deviceToUserCoordsFunction"), space=space)
+				deviceToUserCoordsFunction(), space=space)
 		}
 	}
 	else if (playState$is.lattice) {
@@ -509,7 +510,7 @@ generateSpaces <- function(playState) {
 		for (pn in packets[packets > 0]) {
 			space <- paste("packet", pn)
 			playState$deviceToSpace[[space]] <- playDo(playState, 
-				call("deviceToUserCoordsFunction"), space=space)
+				deviceToUserCoordsFunction(), space=space)
 		}
 	}
 	else {
@@ -536,7 +537,7 @@ generateSpaces <- function(playState) {
 		playState$baseViewports$plot.clip.off <- current.vpPath()
 		upViewport(4)
 		playState$deviceToSpace[["plot"]] <- playDo(playState, 
-			call("deviceToUserCoordsFunction"), space="plot")
+			deviceToUserCoordsFunction(), space="plot")
 	}
 	# check if we are working as options(device="playwith")
 	if ((length(playState$call) == 1) && 

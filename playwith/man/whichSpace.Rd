@@ -1,9 +1,9 @@
-\title{whichSpace}
+\name{whichSpace}
 \alias{whichSpace}
 \alias{deviceCoordsToSpace}
-\title{The playwith API}
+\title{Convert device coordinates to plot space}
 \description{
-  The \code{\link{playwith}} Application Programming Interface.
+  Part of the \code{\link{playwith}} Application Programming Interface.
 }
 \usage{
 whichSpace(playState, x.device, y.device)

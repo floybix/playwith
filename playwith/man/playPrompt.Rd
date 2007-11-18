@@ -1,11 +1,11 @@
-\title{playPrompt}
+\name{playPrompt}
 \alias{playPrompt}
 \alias{playFreezeGUI}
 \alias{playThawGUI}
 \alias{blockRedraws}
-\title{The playwith API}
+\title{Show a message to the playwith user}
 \description{
-  The \code{\link{playwith}} Application Programming Interface.
+  Part of the \code{\link{playwith}} Application Programming Interface.
 }
 \usage{
 playPrompt(playState, text = NULL)

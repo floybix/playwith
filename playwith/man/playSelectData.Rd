@@ -1,10 +1,11 @@
-\title{playSelectData}
+\name{playSelectData}
 \alias{playSelectData}
 \alias{playPointInput}
 \alias{playLineInput}
-\alias{playRectInput}\title{The playwith API}
+\alias{playRectInput}
+\title{Get input from the playwith user}
 \description{
-  The \code{\link{playwith}} Application Programming Interface.
+  Part of the \code{\link{playwith}} Application Programming Interface.
 }
 \usage{
 playSelectData(playState, prompt = "Click or drag to select data points.")

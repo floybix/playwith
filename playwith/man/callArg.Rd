@@ -1,8 +1,8 @@
-\title{callArg}
+\name{callArg}
 \alias{callArg}
-\title{The playwith API}
+\title{Work with plot call arguments}
 \description{
-  The \code{\link{playwith}} Application Programming Interface.
+  Part of the \code{\link{playwith}} Application Programming Interface.
 }
 \usage{
 callArg(playState, arg, name = NULL)

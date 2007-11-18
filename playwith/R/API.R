@@ -110,18 +110,18 @@ playPrompt <- function(playState, text=NULL) {
 	with(playState$widgets, {
 		if (is.null(text)) {
 			# remove the prompt widget
-			topToolbar$show()
+			promptLabel$setMarkup("")
+			callToolbar$show()
 			promptBox$hide()
 			playThawGUI(playState)
 			return()
 		}
 		if (promptBox["visible"] == FALSE) {
 			# create the prompt widget
-			mySize <- topToolbar$getAllocation()
-			if (mySize$height > 1)
-				promptBox["height-request"] <- mySize$height
+			promptBox["height-request"] <- 
+				callToolbar$getAllocation()$height
 			promptBox$show()
-			topToolbar$hide()
+			callToolbar$hide()
 			playFreezeGUI(playState)
 		}
 		# set the prompt text
@@ -149,11 +149,9 @@ rawXYLim <- function(playState, space="plot") {
 		}
 		space <- paste("packet", space)
 	}
-	return(playDo(playState, alist(
+	playDo(playState, space=space, list(
 		x=convertX(unit(0:1, "npc"), "native", valueOnly=TRUE),
-		y=convertY(unit(0:1, "npc"), "native", valueOnly=TRUE)
-		), space=space)
-	)
+		y=convertY(unit(0:1, "npc"), "native", valueOnly=TRUE)))
 }
 
 "rawXLim<-" <- function(playState, value) {
@@ -222,7 +220,7 @@ yClass <- function(playState) {
 }
 
 # note space="page" means the root viewport
-playDo <- function(playState, stuff, space="plot", clip.off=FALSE) {
+playDo <- function(playState, expr, space="plot", clip.off=FALSE) {
 	playDevSet(playState)
 	cur.vp <- current.vpPath()
 	upViewport(0) # go to root viewport
@@ -270,8 +268,9 @@ playDo <- function(playState, stuff, space="plot", clip.off=FALSE) {
 	}
 	if (!is.null(cur.vp)) on.exit(downViewport(cur.vp), add=TRUE)
 	# do the stuff and return the result
-	if (is.list(stuff)) lapply(stuff, eval, parent.frame(), playState$env)
-	else eval(stuff, parent.frame(), playState$env)
+	#if (is.list(stuff)) lapply(stuff, eval, parent.frame(), playState$env)
+	#else eval(stuff, parent.frame(), playState$env)
+	eval(substitute(expr), parent.frame(), playState$env)
 }
 
 playSelectData <- function(playState, prompt="Click or drag to select data points.") {

@@ -1,9 +1,9 @@
-\title{xyCoords}
+\name{xyCoords}
 \alias{xyCoords}
 \alias{xyData}
-\title{The playwith API}
+\title{Get playwith plot data points}
 \description{
-  The \code{\link{playwith}} Application Programming Interface.
+  Part of the \code{\link{playwith}} Application Programming Interface.
 }
 \usage{
 xyCoords(playState, space = "plot")

@@ -1165,7 +1165,9 @@ annotate_handler <- function(widget, playState) {
 annotate_postplot_action <- function(widget, playState) {
 	# draw annotations
 	for (space in names(playState$annotations)) {
-		playDo(playState, eval(playState$annotations[[space]]), space=space, 
+		playDo(playState, 
+			lapply(playState$annotations[[space]], eval), 
+			space=space, 
 			clip.off=identical(playState$clip.annotations, FALSE))
 	}
 }

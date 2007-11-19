@@ -1113,6 +1113,16 @@ annotate_handler <- function(widget, playState) {
 			annot <- call("{", dobox, annot)
 		}
 		
+		if (showingPreview) {
+			# handle basic device mode: can't replot
+			if ((length(playState$call) == 1) && 
+				identical(playState$call[[1]], quote(`{`))) {
+				# do not know the call; it cannot be redrawn
+				playRefresh(playState)
+			}
+			else playReplot(playState)
+		}
+				
 		if (h$action == "preview") {
 			print(annot)
 			# preview only (refresh, grid.draw)
@@ -1120,21 +1130,21 @@ annotate_handler <- function(widget, playState) {
 			# refresh to remove any old preview
 			#grid.refresh()
 			#playRefresh(playState)
-			if (showingPreview)
-				playReplot(playState)
 			# draw it
 			# engine.display.list / grid.display.list
 			#foo <- grid.grabExpr(eval(annot))
 			#foo2 <- quote(grid.draw(foo, recording=FALSE))
 			#foo2 <- quote(grid:::drawGrob(foo))
-			playDo(playState, eval(annot), space=space)
+			playDo(playState, eval(annot), space=space,
+				clip.off=identical(playState$clip.annotations, FALSE))
 			# and remove without redraw
 			#grid.gremove("tmp.preview", redraw=FALSE)
 			showingPreview <<- TRUE
 			return()
 		}
 		# draw it
-		playDo(playState, eval(annot), space=space)
+		playDo(playState, eval(annot), space=space,
+			clip.off=identical(playState$clip.annotations, FALSE))
 		# store it
 		playState$annotations[[space]] <- 
 			c(playState$annotations[[space]], annot)
@@ -1156,7 +1166,8 @@ annotate_handler <- function(widget, playState) {
 		action="ok", container=buttgroup)
 	prebutt <- gbutton("Preview", handler=annot_handler, 
 		action="preview", container=buttgroup)
-	canbutt <- gbutton("Cancel", handler=function(...) dispose(dialog), 
+	canbutt <- gbutton("Cancel", handler=function(h, ...) {
+		if (showingPreview) playReplot(playState); dispose(h$obj) }, 
 		container=buttgroup)
 	size(okbutt) <- size(prebutt) <- size(canbutt) <- c(80, 30)
 	return()
@@ -1208,7 +1219,8 @@ arrow_handler <- function(widget, playState) {
 	}
 	if (!is.null(style)) annot$gp <- style
 	# draw it
-	playDo(playState, eval(annot), space=space)
+	playDo(playState, eval(annot), space=space,
+		clip.off=identical(playState$clip.annotations, FALSE))
 	# store it
 	playState$annotations[[space]] <- 
 		c(playState$annotations[[space]], annot)

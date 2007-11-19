@@ -278,6 +278,7 @@ playwith <- function(
 	# TODO: toolbar style? = "both"
 	playState$page <- 1
 	playState$pages <- 1
+	playState$clip.annotations <- FALSE
 	# store extra arguments (...) in the state object (playState)
 	dots <- list(...)
 	for (arg in names(dots)) {

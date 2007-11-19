@@ -65,7 +65,7 @@ playwith(expr,
 		}
 		\item{\code{time.index}}{
 			a vector defining discrete times, as numeric, 
-			\code{\link{Date}} or \code{\link[DateTimeClasses]{POSIXt}}. 
+			\code{\link{Date}} or \code{\link[=DateTimeClasses]{POSIXt}}. 
 			It must be sorted, increasing.
 			If given, then the "time mode" is used to navigate
 			along these discrete times, rather than along the continuous x-axis.
@@ -79,15 +79,15 @@ playwith(expr,
 			If \code{time.index} is given, this will set the initial time step.
 		}
 		\item{\code{label.style}}{
-			output from \code{\link{gpar}}, specifying the style of labels.
+			output from \code{\link[grid]{gpar}}, specifying the style of labels.
 			e.g. \code{gpar(cex=1.5, fontface="italic", fontfamily="serif")}.
 		}
 		\item{\code{arrow.style}}{
-			output from \code{\link{gpar}}, specifying the style of arrows. 
+			output from \code{\link[grid]{gpar}}, specifying the style of arrows. 
 			e.g. \code{gpar(lwd=2, col="red", alpha=0.5)}.
 		}
 		\item{\code{arrow.arrow}}{
-			output from \code{\link{arrow}}, specifying the type of arrows to draw.
+			output from \code{\link[grid]{arrow}}, specifying the type of arrows to draw.
 			e.g. \code{arrow(ends="both", type="closed")}.
 		}
 		\item{\code{annotation.mode}, \code{clip.annotations}, 

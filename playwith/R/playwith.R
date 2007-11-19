@@ -774,8 +774,7 @@ copyArgsIntoEnv <- function(the.call, envir=parent.frame(), newEnv, inherits=F, 
 		if (is.call(this.arg) && this.arg[[1]] == as.symbol("$"))
 			this.arg <- this.arg[[2]]
 		
-		#if (mode(this.arg) %in% c("call", "(", "list", "expression")) {
-		if (is.recursive(this.arg)) {
+		if (mode(this.arg) %in% c("call", "(", "list", "expression")) {
 			# call recursively...
 			copyArgsIntoEnv(this.arg, envir=envir, newEnv=newEnv,
 				inherits=inherits, pattern=pattern, 

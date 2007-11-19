@@ -130,7 +130,7 @@ playwith <- function(
 	toolbarPromptHBox <- gtkHBox()
 	myVBox$packStart(toolbarPromptHBox, expand=FALSE)
 	# create the call toolbar (similar to web browser address bar)
-	callToolbar <- gtkToolbar(show=show.call)
+	callToolbar <- gtkToolbar()
 	callToolbar["toolbar-style"] <- GtkToolbarStyle["icons"]
 	callToolbar["show-arrow"] <- FALSE
 	undoButton <- quickTool(playState, "Back", 
@@ -185,11 +185,18 @@ playwith <- function(
 	toolbarPromptHBox$packStart(callToolbar)
 	# create the prompt
 	promptBox <- gtkEventBox(show=FALSE)
+	promptBox["sensitive"] <- FALSE
 	promptLabel <- gtkLabel()
 	promptBox$add(promptLabel)
 	promptBox$modifyBg(GtkStateType["normal"], "yellow")
 	promptLabel$modifyFg(GtkStateType["normal"], "black")
 	toolbarPromptHBox$packStart(promptBox)
+	promptBox["height-request"] <- 
+		callToolbar$getAllocation()$height
+	if (show.call == FALSE) {
+		promptBox$show()
+		callToolbar$hide()
+	}
 	# create the top toolbar
 	topToolbar <- gtkToolbar()
 	topToolbar["toolbar-style"] <- GtkToolbarStyle["both"]
@@ -297,6 +304,7 @@ playwith <- function(
 	playState$data.points <- data.points
 	playState$is.lattice <- is.lattice
 	playState$viewport <- viewport
+	playState$show.call <- show.call
 	playState$ids <- list()
 	playState$brushed <- list()
 	playState$annotations <- list()
@@ -545,8 +553,8 @@ generateSpaces <- function(playState) {
 		identical(playState$call[[1]], quote(`{`))) {
 		# do not know when the plot is updated
 		# so need to keep regenerating data space
-		playState$.need.reconfig <- TRUE
-		return()
+		##playState$.need.reconfig <- TRUE
+		##return()
 	}
 	playState$.need.reconfig <- FALSE
 }

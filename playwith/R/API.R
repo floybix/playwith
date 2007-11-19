@@ -109,21 +109,23 @@ blockRedraws <- function(expr, playState = playDevCur()) {
 playPrompt <- function(playState, text=NULL) {
 	with(playState$widgets, {
 		if (is.null(text)) {
-			# remove the prompt widget
+			# hide the prompt widget
 			promptLabel$setMarkup("")
-			callToolbar$show()
-			promptBox$hide()
+			promptBox["sensitive"] <- FALSE
+			if (playState$show.call) {
+				callToolbar$show()
+				promptBox$hide()
+			}
 			playThawGUI(playState)
 			return()
 		}
-		if (promptBox["visible"] == FALSE) {
-			# create the prompt widget
-			promptBox["height-request"] <- 
-				callToolbar$getAllocation()$height
+		# show the prompt widget
+		promptBox["sensitive"] <- TRUE
+		if (playState$show.call) {
 			promptBox$show()
 			callToolbar$hide()
-			playFreezeGUI(playState)
 		}
+		playFreezeGUI(playState)
 		# set the prompt text
 		promptLabel$setMarkup(paste("<big><b>", 
 			toString(text), "</b></big>"))
@@ -696,6 +698,16 @@ deviceToUserCoordsFunction <- function(is.grid = TRUE) {
 			list(x=x, y=y, inside=inside)
 		}
 	}
+}
+
+isBasicDeviceMode <- function(playState) {
+	if ((length(playState$call) == 1) && 
+		identical(playState$call[[1]], quote(`{`))) {
+		# basic device mode
+		# (do not know the call)
+		return(TRUE)
+	}
+	FALSE
 }
 
 gmessage.error <- function(message, title="Error", icon="error", ...)

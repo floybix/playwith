@@ -51,8 +51,7 @@ export(
 	"rawXLim<-",
 	"rawYLim<-",
 	xyCoords,
-	xyData,
-	gmessage.error
+	xyData
 )
 
 # misc

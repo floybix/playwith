@@ -1,6 +1,8 @@
 \name{rawXLim}
 \alias{rawXLim}
 \alias{rawYLim}
+\alias{"rawXLim<-"}
+\alias{"rawYLim<-"}
 \title{Get or set current plot limits}
 \description{
   Part of the \code{\link{playwith}} Application Programming Interface.

@@ -734,8 +734,8 @@ playwith.grid.newpage <- function(...) {
 
 ## General utility functions
 
-plotadd <- function(name, ..., add.stuff=expression()) {
-	eval.parent(call(deparse(substitute(name)), ...))
+plotadd <- function(FUN, ..., add.stuff=expression()) {
+	eval.parent(call(deparse(substitute(FUN)), ...))
 	for (x in add.stuff) eval.parent(x)
 }
 

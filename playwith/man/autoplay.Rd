@@ -7,14 +7,11 @@
 }
 \usage{
 autoplay(on = NA, lattice.on = on, base.on = on, grid.on = on, ask = FALSE)
-
-## basic device mode (very different)
-options(device="autoplay")
 }
 \arguments{
 	\item{on}{ \code{TRUE} to set \code{\link{playwith}} to run automatically to display
 		Lattice and base graphics. \code{FALSE} to revert to the default plot device
-		(\code{getOption("device")}). }
+		(i.e. \code{getOption("device")}). }
 	\item{lattice.on}{ run automatically to display Lattice graphics. }
 	\item{base.on}{ run automatically to display base graphics (\code{\link{plot}} etc). }
 	\item{grid.on}{ run automatically to display grid graphics (except Lattice). }

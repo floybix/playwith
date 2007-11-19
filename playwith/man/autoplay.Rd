@@ -40,7 +40,7 @@ autoplay(on = NA, lattice.on = on, base.on = on, grid.on = on, ask = FALSE)
 	
 	Another possibility is \code{options(device="playwith")}.
 	This will act as a default device
-	but without interactivity. You can still draw annotations.
+	but without interactivity. This is not well tested.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{ \code{\link{playwith}} }

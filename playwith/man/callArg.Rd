@@ -1,6 +1,6 @@
 \name{callArg}
 \alias{callArg}
-\alias{"callArg<-"}
+\alias{callArg<-}
 \title{Work with plot call arguments}
 \description{
   Part of the \code{\link{playwith}} Application Programming Interface.

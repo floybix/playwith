@@ -193,7 +193,7 @@ playwith <- function(
 	# create the top toolbar
 	topToolbar <- gtkToolbar()
 	topToolbar["toolbar-style"] <- GtkToolbarStyle["both"]
-	myVBox$packStart(topToolbar)
+	myVBox$packStart(topToolbar, expand=FALSE)
 	# create the plot area and side toolbars
 	myHBox <- gtkHBox()
 	myVBox$packStart(myHBox)
@@ -452,10 +452,10 @@ playReplot <- function(playState) {
 		# set back to this device, since may have switched during plot
 		playDevSet(playState)
 		# work out panels and pages
-		nPackets <- prod(dim(playState$trellis))
+		nPackets <- prod(dim(result))
 		nPanels <- nPackets
 		nPages <- 1
-		if (!is.null(myLayout <- playState$trellis$layout)) {
+		if (!is.null(myLayout <- result$layout)) {
 			nPanels <- myLayout[1] * myLayout[2]
 			if (myLayout[1] == 0) nPanels <- myLayout[2]
 			nPages <- ceiling(nPackets / nPanels)

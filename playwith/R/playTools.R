@@ -645,17 +645,22 @@ toolConstructors$options <- function(playState) {
 }
 
 set.label.style_handler <- function(widget, playState) {
-	argsCall <- playState$label.style
-	# TODO: default case
+	style <- playState$label.style
 	if (is.null(playState$label.style)) {
-		
+		style <- do.call(gpar, trellis.par.get("add.text"))
 	}
-	callTxt <- deparseOneLine(argsCall)
+	if (inherits(style, "gpar")) 
+		style <- as.call(c(quote(gpar), style))
 	
-	# panel.text: cex, col, alpha, font, fontfamily, fontface, srt
-	# text: cex, col, font, vfont, family, xpd, srt (90,180,270)
+	callTxt <- deparseOneLine(style)
+	
 	repeat {
-		newTxt <- ginput("Edit label style", text=callTxt, width=60)
+		newTxt <- NA#ginput("Edit label style", text=callTxt, width=60)
+		editbox <- gedit(callTxt, width=120, container=ggroup())
+		gbasicdialog("Edit label style", widget=editbox, action=environment(), 
+			handler=function(h, ...) {
+				h$action$newTxt <- svalue(editbox)
+			})
 		if (is.na(newTxt)) break
 		if (newTxt == "") break
 		if (identical(newTxt, callTxt)) break
@@ -812,12 +817,12 @@ drawLabels <- function(playState, which, space="plot", pos=1) {
 	if (playState$is.lattice && (length(labels) > length(xy$subscripts)))
 		labels <- labels[ xy$subscripts ]
 	labels <- labels[which]
-	myStyle <- eval(playState$label.style)
+	style <- eval(playState$label.style)
 	if (is.null(playState$label.style)) {
 		# default style is taken (at plot time) from lattice settings
-		myStyle <- do.call(gpar, trellis.par.get("add.text"))
+		style <- do.call(gpar, trellis.par.get("add.text"))
 	}
-	annots <- list()
+	annots <- expression()
 	pos <- rep(pos, length=length(labels))
 	# TODO: do this without a loop
 	for (i in seq_along(labels)) {
@@ -841,7 +846,7 @@ drawLabels <- function(playState, which, space="plot", pos=1) {
 		    adj <- c(0, 0.5)
 		}
 		annots[[i]] <- call("grid.text", labels[i], x=ux, y=uy, 
-			just=adj, gp=myStyle)
+			just=adj, gp=style)
 	}
 	playDo(playState, eval(annots), space=space, 
 		clip.off=identical(playState$clip.annotations, FALSE))
@@ -897,6 +902,8 @@ annotate_handler <- function(widget, playState) {
 	space <- foo$space
 	if (pageAnnotation) space <- "page"
 	myXY <- if (space == "page") foo$ndc else foo$coords
+	myXY$x <- signif(myXY$x, 4)
+	myXY$y <- signif(myXY$y, 4)
 	if (foo$is.click) {
 		myX <- mean(myXY$x)
 		myY <- mean(myXY$y)
@@ -918,7 +925,7 @@ annotate_handler <- function(widget, playState) {
 	wid$label.expr <- gcheckbox("plotmath")
 	lay[1,1:2] <- wid$label
 	lay[2,1] <- wid$label.expr
-	lay[3,1] <- if (foo$is.click) "Position of text \nrelative to point:"
+	lay[3,1] <- if (foo$is.click) "Position of text \nrelative to click:"
 		else "Justification of \ntext inside box:"
 	justgroup <- ggroup(horizontal=FALSE)
 	wid$hjust <- gradio(c("left", "centre", "right"), selected=2, horizontal=TRUE)
@@ -932,10 +939,10 @@ annotate_handler <- function(widget, playState) {
 	lay[4,2] <- wid$offset
 	 if (!foo$is.click) {
 		# it was a drag, defining a rectangle
-		# TODO: fit to box?
 		# option to draw box border
 		wid$drawbox <- gcheckbox("Draw box")
 		lay[5,1:2] <- wid$drawbox
+		# TODO: fit to box?
 	}
 	visible(lay) <- TRUE
 	focus(wid$label) <- TRUE
@@ -949,21 +956,26 @@ annotate_handler <- function(widget, playState) {
 		# default style is taken from lattice settings
 		refStyle <- do.call(gpar, trellis.par.get("add.text"))
 	}
-	# TODO: set defaults
-	# cex
-	wid$cex <- gedit("1.0", width=5, coerce.with=as.numeric)
-	lay[1,1] <- "Expansion factor:"
-	lay[1,2] <- wid$cex
-	# TODO: fontsize (points)
 	# col
 	colList <- palette()
 	colList <- c(colList, trellis.par.get("superpose.symbol")$col)
 	wid$col <- gdroplist(colList, selected=0, editable=TRUE)
-	wid$alpha <- gspinbutton(value=1, from=0, to=1, by=0.05, digits=1)
-	lay[3,1] <- "Text color:"
-	lay[3,2] <- wid$col
-	lay[4,1] <- "Alpha (opacity):"
-	lay[4,2] <- wid$alpha
+	wid$alpha <- gspinbutton(value=1, from=0, to=1, by=0.05, digits=2)
+	if (!is.null(refStyle$col)) svalue(wid$col) <- refStyle$col
+	if (!is.null(refStyle$alpha)) svalue(wid$alpha) <- refStyle$alpha
+	lay[1,1] <- "Text color:"
+	lay[1,2] <- wid$col
+	lay[2,1] <- "Alpha (opacity):"
+	lay[2,2] <- wid$alpha
+	# cex, fontsize
+	wid$cex <- gedit("1.0", width=5, coerce.with=as.numeric)
+	wid$fontsize <- gedit("", width=5, coerce.with=as.numeric)
+	if (!is.null(refStyle$cex)) svalue(wid$cex) <- refStyle$cex
+	if (!is.null(refStyle$fontsize)) svalue(wid$fontsize) <- refStyle$fontsize
+	lay[3,1] <- "Expansion factor:"
+	lay[3,2] <- wid$cex
+	lay[4,1] <- "Font size, points:"
+	lay[4,2] <- wid$fontsize
 	# fontfamily, fontface
 	familyList <- c("serif", "sans", "mono", "symbol",
 		"HersheySerif", "HersheySans", "HersheyScript",
@@ -973,13 +985,16 @@ annotate_handler <- function(widget, playState) {
 		"cyrillic", "cyrillic.oblique", "EUC")
 	wid$fontfamily <- gdroplist(familyList, selected=0)
 	wid$fontface <- gdroplist(faceList, selected=0)
+	if (!is.null(refStyle$fontfamily)) svalue(wid$fontfamily) <- refStyle$fontfamily
+	if (!is.null(refStyle$fontface)) svalue(wid$fontface) <- refStyle$fontface
 	lay[5,1] <- "Font family:"
 	lay[5,2] <- wid$fontfamily
 	lay[6,1] <- "Font face:"
 	lay[6,2] <- wid$fontface
 	# lineheight (as multiple of text height)
-	wid$lineheight <- gedit("1.2", width=5, coerce.with=as.numeric)
-	lay[7,1] <- "Line height (factor):"
+	wid$lineheight <- gedit("1.0", width=5, coerce.with=as.numeric)
+	if (!is.null(refStyle$lineheight)) svalue(wid$lineheight) <- refStyle$lineheight
+	lay[7,1] <- "Line height factor:"
 	lay[7,2] <- wid$lineheight
 	# rot (rotation angle)
 	wid$rot <- gdroplist(c("-90","-45","-30","0","30","45","90"), selected=4,
@@ -990,7 +1005,9 @@ annotate_handler <- function(widget, playState) {
 	
 	# OPTIONS
 	#optionsgroup <- gframe("Options", horizontal=FALSE, container=wingroup)
-	# set as default style?
+	# TODO: option to set as default style
+	
+	showingPreview <- FALSE
 	
 	annot_handler <- function(h, ...) {
 		# note: playState is accessed from the function environment!
@@ -1036,8 +1053,8 @@ annotate_handler <- function(widget, playState) {
 				top=y.bottop[2],
 				centre=mean(y.bottop))
 		}
-		myX <- signif(myX, 4)
-		myY <- signif(myY, 4)
+		#myX <- signif(myX, 4)
+		#myY <- signif(myY, 4)
 		if ((svalue(wid$offset) != 0) && any(just != "centre")) {
 			if (just[1] != "centre") {
 				myPad <- svalue(wid$offset)
@@ -1061,25 +1078,29 @@ annotate_handler <- function(widget, playState) {
 		#print("family")
 		#str(svalue(wid$fontfamily))
 		#str(svalue(wid$fontfamily, index=TRUE))
-		hasCex <- (svalue(wid$cex) != 1.0)
 		hasCol <- (svalue(wid$col) != "")
 		hasAlpha <- (svalue(wid$alpha) != 1)
+		hasCex <- (svalue(wid$cex) != 1.0)
+		hasSize <- (!is.na(svalue(wid$fontsize)))
 		hasFamily <- !is.null(svalue(wid$fontfamily)) && !isExpr
 		hasFace <- !is.null(svalue(wid$fontface)) && !isExpr
-		hasHeight <- (svalue(wid$lineheight) != 1.2)
+		hasHeight <- (svalue(wid$lineheight) != 1.0)
 		hasRot <- (svalue(wid$rot) != 0)
-		gpc <- refStyle
-		if (inherits(gpc, "gpar"))
-			gpc <- as.call(c(quote(gpar), gpc))
-		if (hasCex) gpc$cex <- svalue(wid$cex)
+		#gpc <- refStyle
+		#if (inherits(gpc, "gpar"))
+		#	gpc <- as.call(c(quote(gpar), gpc))
+		gpc <- call("gpar")
 		if (hasCol) gpc$col <- svalue(wid$col)
 		if (hasAlpha) gpc$alpha <- svalue(wid$alpha)
+		if (hasCex) gpc$cex <- svalue(wid$cex)
+		if (hasSize) gpc$fontsize <- svalue(wid$fontsize)
 		if (hasFamily) gpc$fontfamily <- svalue(wid$fontfamily)
 		if (hasFace) gpc$fontface <- svalue(wid$fontface)
 		if (hasHeight) gpc$lineheight <- svalue(wid$lineheight)
 		
 		# CREATE THE CALL
-		annot <- call("grid.text", labelVal, x=myX, y=myY, just=just)
+		annot <- call("grid.text", labelVal, x=myX, y=myY)
+		if (!all(just == "centre")) annot$just <- just
 		if (space != "page") annot$default.units <- "native"
 		annot$gp <- if (length(gpc) > 1) gpc
 		if (hasRot) annot$rot <- svalue(wid$rot)
@@ -1089,16 +1110,18 @@ annotate_handler <- function(widget, playState) {
 			dobox <- call("grid.rect", x=mean(myXY$x), y=mean(myXY$y),
 				width=abs(diff(myXY$x)), height=abs(diff(myXY$y)))
 			if (space != "page") dobox$default.units <- "native"
-			annot <- c(dobox, annot) #as.expression(
+			annot <- call("{", dobox, annot)
 		}
 		
 		if (h$action == "preview") {
+			print(annot)
 			# preview only (refresh, grid.draw)
-			annot$name <- "tmp.preview"
+			#annot$name <- "tmp.preview"
 			# refresh to remove any old preview
 			#grid.refresh()
 			#playRefresh(playState)
-			playReplot(playState)
+			if (showingPreview)
+				playReplot(playState)
 			# draw it
 			# engine.display.list / grid.display.list
 			#foo <- grid.grabExpr(eval(annot))
@@ -1107,9 +1130,9 @@ annotate_handler <- function(widget, playState) {
 			playDo(playState, eval(annot), space=space)
 			# and remove without redraw
 			#grid.gremove("tmp.preview", redraw=FALSE)
+			showingPreview <<- TRUE
 			return()
 		}
-		# OK: save in playState
 		# draw it
 		playDo(playState, eval(annot), space=space)
 		# store it
@@ -1127,9 +1150,6 @@ annotate_handler <- function(widget, playState) {
 		playState$win$present()
 	}
 	
-	# TODO: show generated call in text box
-	
-	#add(wingroup, gseparator())
 	buttgroup <- ggroup(container=wingroup)
 	addSpring(buttgroup)
 	okbutt <- gbutton("OK", handler=annot_handler, 
@@ -1140,114 +1160,6 @@ annotate_handler <- function(widget, playState) {
 		container=buttgroup)
 	size(okbutt) <- size(prebutt) <- size(canbutt) <- c(80, 30)
 	return()
-	
-	
-	# TODO: delete this
-	myLabel <- placeLabelDialog()
-	if (is.null(myLabel)) return()
-	if (!foo$is.click) {
-		# justification is flipped -- inside rect rather than at point
-		myLabel$align <- 1 - myLabel$align
-	}
-	myJust <- switch(as.character(myLabel$align[1]),
-		`0`="left", `0.5`="centre", `1`="right")
-	myJust[2] <- switch(as.character(myLabel$align[2]),
-		`0`="bottom", `0.5`="centre", `1`="top")
-	myXY <- if (space == "page") foo$ndc else foo$coords
-	if (foo$is.click) {
-		myX <- mean(myXY$x)
-		myY <- mean(myXY$y)
-	} else {
-		# it was a drag
-		# figure out which coordinates are top/bottom, left/right
-		x.leftright <- sort(myXY$x)
-		if (is.unsorted(rawXLim(playState, space=space)))
-			x.leftright <- rev(x.leftright)
-		y.bottop <- sort(myXY$y)
-		if (is.unsorted(rawYLim(playState, space=space)))
-			y.bottop <- rev(y.bottop)
-		myX <- switch(myJust[1],
-			left=x.leftright[1],
-			right=x.leftright[2],
-			centre=mean(x.leftright))
-		myY <- switch(myJust[2],
-			bottom=y.bottop[1],
-			top=y.bottop[2],
-			centre=mean(y.bottop))
-	}
-	myX <- signif(myX, 4)
-	myY <- signif(myY, 4)
-	annot <- call("grid.text", myLabel$text, x=myX, y=myY, just=myJust)
-	if (space != "page") annot$default.units <- "native"
-	# add user-specified style
-	annot$gp <- playState$label.style
-	if (is.null(playState$label.style)) {
-		# default style is taken (at plot time) from lattice settings
-		annot$gp <- quote(do.call(gpar, trellis.par.get("add.text")))
-	}
-	# draw it
-	playDo(playState, eval(annot), space=space)
-	# store it
-	playState$annotations[[space]] <- 
-		c(playState$annotations[[space]], annot)
-	# update other tool states
-	with(playState$tools, {
-		if (exists("edit.annotations", inherits=F))
-			edit.annotations["visible"] <- TRUE
-		if (exists("clear", inherits=F)) 
-			clear["visible"] <- TRUE
-	})
-}
-
-placeLabelDialog2 <- function(widget, is.click ) {
-	# TODO (use gWidgets)
-	
-	widget["sensitive"] <- FALSE
-	on.exit(widget["sensitive"] <- TRUE)
-	
-	
-	
-}
-
-placeLabelDialog <- function(text="", title="New label", prompt="", width.chars=-1) {
-	editBox <- gtkDialog(title=title, NULL, NULL,
-		"OK", GtkResponseType["ok"], "Cancel", GtkResponseType["cancel"],
-		show = F)
-	editBox$setDefaultResponse(GtkResponseType["ok"])
-	if (nchar(prompt) > 0) {
-		editBox[["vbox"]]$packStart(gtkLabel(prompt), expand=F, pad=2)
-	}
-	editEntry <- gtkEntry()
-	editEntry['activates-default'] <- T
-	editEntry['text'] <- text
-	editEntry['width-chars'] <- width.chars
-	editBox[["vbox"]]$packStart(editEntry, pad=10)
-	alignHBox <- gtkHBox()
-	alignHBox$packStart(gtkLabel("Position relative to point, or inside rect: "))
-	alignTable <- gtkTable(rows=3, columns=3)
-	alignRadios <- list(list(),list(),list())
-	myGroup <- NULL
-	for (col in 1:3) for (row in 1:3) {
-		thisRadio <- gtkRadioButtonNewFromWidget(group=myGroup)
-		if (is.null(myGroup)) myGroup <- thisRadio
-		alignRadios[[col]][[row]] <- thisRadio
-		alignTable$attachDefaults(thisRadio,
-			left=col-1, right=col, top=row-1, bot=row) # xpadding ypadding 
-	}
-	alignRadios[[2]][[2]]['active'] <- T
-	alignHBox$packStart(alignTable)
-	editBox[["vbox"]]$packStart(alignHBox)
-	editBox$showAll()
-	result <- editBox$run() # make it modal
-	newTxt <- editEntry['text']
-	newAlign <- c(0,0)
-	for (col in 1:3) for (row in 1:3) {
-		if (alignRadios[[col]][[row]]['active'])
-			newAlign <- c( (3-col)/2, (row-1)/2 )
-	}
-	editBox$destroy()
-	if (result != GtkResponseType["ok"]) return(invisible(NULL))
-	list(text=newTxt, align=newAlign)
 }
 
 annotate_postplot_action <- function(widget, playState) {
@@ -1282,13 +1194,17 @@ arrow_handler <- function(widget, playState) {
 	myXY <- if (space == "page") foo$ndc else foo$coords
 	myXY$x <- signif(myXY$x, 4)
 	myXY$y <- signif(myXY$y, 4)
-	annot <- call("grid.lines", x=myXY$x, y=myXY$y, arrow=playState$arrow.arrow)
+	annot <- call("grid.lines", x=myXY$x, y=myXY$y)
 	if (space != "page") annot$default.units <- "native"
-	annot$gp <- playState$arrow.style
+	annot$arrow <- playState$arrow.arrow
+	style <- eval(playState$arrow.style)
+	if (inherits(style, "gpar"))
+		style <- as.call(c(quote(gpar), style))
 	if (is.null(playState$arrow.style)) {
 		# default style is taken (at plot time) from lattice settings
-		annot$gp <- quote(do.call(gpar, trellis.par.get("add.line")))
+		style <- quote(do.call(gpar, trellis.par.get("add.line")))
 	}
+	if (!is.null(style)) annot$gp <- style
 	# draw it
 	playDo(playState, eval(annot), space=space)
 	# store it

@@ -3,8 +3,8 @@
 \alias{plotAndPlay}
 \title{An interactive plot GUI}
 \description{
-  Open a graphical user interface for viewing and interacting with a plot.
-  It tries to work out the structure of the plot, in order to interact with it.
+  Open a graphical user interface for viewing and interacting with R plots.
+  It tries to work out the structure of a plot, in order to interact with it.
   The built-in features include: navigating the data space, identifying data points,
   editing and annotating the plot, and saving to a file. New tools can be defined.
 }
@@ -170,20 +170,20 @@ playwith(expr,
 	global environment will also cause inconsistencies in previously generated 
 	plots (e.g. labels on data points may be wrong).
 	
-	If \code{eval.args=T} then variables appearing in the plot call will be 
+	If \code{eval.args=TRUE} then variables appearing in the plot call will be 
 	evaluated and stored even if they are defined in the global environment. 
 	Use this if the global variables might change (or be removed) before the 
 	plot is destroyed.
 	
 	If a regular expression is given for \code{eval.args} then only variables 
 	whose names match it will be evaluated, and this includes global variables, 
-	as with \code{eval.args=T}. In this case you can set \code{invert.match=T} 
+	as with \code{eval.args=TRUE}. In this case you can set \code{invert.match=TRUE} 
 	to evaluate variables that are not matched.
 	For example \code{eval.args="^tmp"} will evaluate variables whose names 
-	begin with "tmp"; \code{eval.args="^foo$", invert=T} will evaluate 
+	begin with "tmp"; \code{eval.args="^foo$", invert.match=TRUE} will evaluate 
 	everything except \code{foo}.
 	
-	If \code{eval.args=F} then the plot call will be left alone 
+	If \code{eval.args=FALSE} then the plot call will be left alone 
 	(not evaluated until plot time).
 }
 \value{
@@ -192,86 +192,8 @@ playwith(expr,
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{ \code{\link{autoplay}}, \link{playTools}, \link{playwith.API} }
 \examples{
-\dontrun{
-
-## `playwith` a base graphics plot: interaction and annotation
-## -- from example(plot.default)
-playwith(plot(cars$speed, cars$dist, xlab = "Speed", ylab = "Distance",
-         panel.first = lines(lowess(cars$speed, cars$dist), lty = "dashed"),
-         pch = 0, cex = 1.2, col = "blue"))
-
-# you might get an error "Plot margins too small"; make window bigger and repeat
-
-require(lattice)
-
-## multiple lattice panels; identify points with nice labels
-playwith(xyplot(Income ~ log(Population / Area) | state.region, 
-	data=data.frame(state.x77)))
-
-## same plot with 2 pages (2 panels per page); new plot window
-playwith(xyplot(Income ~ log(Population / Area) | state.region, 
-	data=data.frame(state.x77), layout=c(2,1)), name="other plot")
-
-## time series plot: navigate x-axis only, transform y-axis
-treering2 <- window(treering, start=1)
-playwith(plot(treering2), nav.scales="x", trans.scales="y", 
-	labels=paste(time(treering2),"CE"), 
-	extra.buttons=list("logscale"))
-
-## see what the current call is (for last focused plot window)
-plotAndPlayGetState()$call
-
-## example of evaluating and storing arguments in the plot call
-globalOne <- 1:10
-localStuff <- function() {
-	localOne <- 10:1
-	playwith(plot(localOne, globalOne))
-}
-localStuff()
-## see which objects have been copied and stored with the plot
-sapply(plotAndPlayGetState()$env, object.size)
-
-## brushing multivariate scatterplots, see help(panel.brush.splom)
-playwith(splom(environmental))
-
-## simple spin and zoom for 3D plots
-playwith(wireframe(volcano, drape=TRUE))
-
-## example of the 'layers' button with a panel function
-## -- from example(xyplot)
-EE <- equal.count(ethanol$E, number=9, overlap=1/4)
-playwith(xyplot(NOx ~ C | EE, data = ethanol,
-       prepanel = function(x, y) prepanel.loess(x, y, span = 1),
-       xlab = "Compression Ratio", ylab = "NOx (micrograms/J)",
-       panel = function(x, y) {
-           panel.grid(h=-1, v= 2)
-           panel.xyplot(x, y)
-           panel.loess(x,y, span=1)
-       },
-       aspect = "xy"))
-
-## a code chunk: no interaction, only annotation, saving, etc
-## -- from example(plot.default)
-x <- 0:12
-y <- sin(pi/5 * x)
-playwith({
-   op <- par(mfrow = c(3,3), mar = .1+ c(2,2,3,1))
-   for (tp in c("p","l","b",  "c","o","h",  "s","S","n")) {
-      plot(y ~ x, type = tp,
-   	main = paste("plot(*, type = \"",tp,"\")",sep=""))
-      if(tp == "S") {
-         lines(x,y, type = "s", col = "red", lty = 2)
-         mtext("lines(*, type = \"s\", ...)", col = "red", cex=.8)
-      }
-   }
-   par(op)
-})
-
-## see help(plotAndPlayButtons) for examples of defining new buttons!
 
 }
-}
-
 \keyword{ iplot }
 \keyword{ dynamic }
 \keyword{ device }

@@ -205,8 +205,9 @@ if (interactive()) {
 	library(lattice)
 	
 	playwith(xyplot(Income ~ log(Population / Area) | state.region, 
-		data = data.frame(state.x77)),
-		label.style = gpar(col="red", fontfamily="HersheySans"))
+		data = data.frame(state.x77)), 
+		label.style = gpar(col="red", fontfamily="HersheySans",
+		cex=0.7))
 	
 	xx <- rnorm(50)
 	playwith(plot(density(xx, bw = cur.time)),

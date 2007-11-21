@@ -94,7 +94,7 @@ hbox
 	}
 	
 	Miscellaneous elements include:
-	\code{page, pages, time.index, current.index, on.close, 
+	\code{page, pages, time.vector, cur.index, on.close, 
 	.args, deviceToSpace, baseViewports}.
 	
 	Other objects can be passed in through the \code{...} argument to 

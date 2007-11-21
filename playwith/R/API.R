@@ -98,8 +98,8 @@ blockRedraws <- function(expr, playState = playDevCur()) {
 	da$setSizeRequest(da$getAllocation()$width, da$getAllocation()$height)
 	#playState$win$setGeometryHints(da, list(max.width=myW, min.width=myW, 
 	#	max.height=myH, min.height=myH))
-	da$window$freezeUpdates()
-	eval.parent(substitute(expr))
+	da$window$freezeUpdates() # hmm
+	try(eval.parent(substitute(expr)))
 	da$window$thawUpdates()
 	#playState$win$setGeometryHints(da, list())
 	da$setSizeRequest(-1, -1)
@@ -186,7 +186,6 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y")) {
 			}
 		}
 	}
-	if (is.numeric(x)) x <- signif(x, 4)
 	if (x.or.y == "x") callArg(playState, xlim) <- x
 	if (x.or.y == "y") callArg(playState, ylim) <- x
 }
@@ -294,7 +293,7 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
 			pdists <- sqrt((data$x[ok] - x)^2 + (data$y[ok] - y)^2)
 			which <- which[which.min(pdists)]
 		}
-		# pos argument to text
+		# pos argument to text (also need to do in device coords)
 		if (length(which)) pos <- lattice:::getTextPosition(
 			x=(x - data$x[which]), y=(y - data$y[which]))
 	}

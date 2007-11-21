@@ -377,6 +377,7 @@ theme_handler <- function(widget, user.data) {
 
 toolConstructors$coords <- function(playState) {
 	coordsLabel <- gtkLabel()
+	coordsLabel$setMarkup("<tt>     </tt>")
 	playState$widgets$coordsLabel <- coordsLabel
 	if (is.null(playState$widgets$plotClickEventSig)) {
 		playState$widgets$plotClickEventSig <- 
@@ -392,15 +393,15 @@ coords_click_handler <- function(widget, event, playState) {
 	if (playState$.need.reconfig) generateSpaces(playState)
 	x <- event$x
 	y <- event$y
-	coordsTxt <- ""
+	coordsTxt <- "<tt>     </tt>"
 	space <- whichSpace(playState, x, y)
 	if (space != "page") {
 		xy <- deviceCoordsToSpace(playState, x, y, space=space)
 		xyx <- format(xy$x, nsmall=4)
 		xyy <- format(xy$y, nsmall=4)
-		xyx <- substr(xyx, 1, 4)
-		xyy <- substr(xyy, 1, 4)
-		coordsTxt <- paste("<tt>x ", xyx, "\ny ", xyy, "</tt>", sep="")
+		xyx <- substr(xyx, 1, 5)
+		xyy <- substr(xyy, 1, 5)
+		coordsTxt <- paste("<tt>", xyx, "\n", xyy, "</tt>", sep="")
 	}
 	playState$widgets$coordsLabel$setMarkup(coordsTxt)
 	return(FALSE)
@@ -413,16 +414,7 @@ toolConstructors$time.mode <- function(playState) {
 		timeScrollbar["sensitive"] <- playState$time.mode
 		timeEntry["sensitive"] <- playState$time.mode
 	})
-	if (!is.null(playState$index.time)) {
-		if (is.null(playState$env$cur.index)) {
-			playState$env$cur.index <- 
-				if (!is.null(playState$cur.index))
-					playState$cur.index else 1
-		} # TODO else if (!is.null(playState$env$cur.time)) 
-		playState$env$cur.time <- playState$index.time[
-			playState$env$cur.index]
-	}
-	else {
+	if (is.null(playState$time.vector)) {
 		# x-axis scrolling mode
 		callFun <- eval(playState$call[[1]])
 		if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
@@ -448,7 +440,7 @@ time.mode_handler <- function(widget, playState) {
 	}))
 	# store data range and class
 	if (playState$time.mode) {
-		if (is.null(playState$index.time)) {
+		if (is.null(playState$time.vector)) {
 			xy <- xyData(playState, space="page")
 			playState$time.mode.x.range <- extendrange(as.numeric(xy$x))
 			playState$time.mode.x.attr <- attributes(xy$x)
@@ -466,10 +458,11 @@ time.mode_postplot_action <- function(widget, playState) {
 	}
 	blockRedraws({
 		widg <- playState$widgets
-		if (!is.null(playState$index.time)) {
+		if (!is.null(playState$time.vector)) {
 			x.pos <- playState$env$cur.index
-			x.max <- length(playState$index.time)
-			x.jump <- round(log2(x.max))
+			x.max <- length(playState$time.vector)
+			x.jump <- playState$time.mode.page.incr
+			if (is.null(x.jump)) x.jump <- round(log2(x.max))
 			cur.time <- playState$env$cur.time
 			widg$timeEntry["text"] <- toString(cur.time)
 			widg$timeScrollbar["adjustment"] <- gtkAdjustment(
@@ -486,8 +479,13 @@ time.mode_postplot_action <- function(widget, playState) {
 		x.pos <- max(x.pos, min(x.range))
 		x.pos <- min(x.pos, max(x.range))
 		# format x limits for text box
-		xlim <- signif(x.lim, 4)
-		mostattributes(x.lim) <- playState$time.mode.x.attr
+		xlim <- signif(x.lim, 6)
+		class(x.lim) <- playState$time.mode.x.attr$class
+		if ("POSIXt" %in% class(x.lim)) 
+			attr(x.lim, "tz") <- playState$time.mode.x.attr$tz
+		if ("factor" %in% class(x.lim)) 
+			attr(x.lim, "levels") <- playState$time.mode.x.attr$levels
+		#mostattributes(x.lim) <- playState$time.mode.x.attr
 		widg$timeEntry["text"] <- paste(format(x.lim), collapse=" to ")
 		# set up scrollbar
 		widg$timeScrollbar["adjustment"] <- gtkAdjustment(
@@ -499,10 +497,10 @@ time.mode_postplot_action <- function(widget, playState) {
 
 time.mode_scrollbar_handler <- function(widget, playState) {
 	newLim <- widget$getValue()
-	if (!is.null(playState$index.time)) {
+	if (!is.null(playState$time.vector)) {
 		newLim <- round(newLim)
 		playState$env$cur.index <- newLim
-		playState$env$cur.time <- playState$index.time[newLim]
+		playState$env$cur.time <- playState$time.vector[newLim]
 		playReplot(playState)
 		return()
 	}
@@ -510,29 +508,29 @@ time.mode_scrollbar_handler <- function(widget, playState) {
 	if (widget["adjustment"]["page-size"] == 0) stop()
 	#oldLim <- rawXLim(playState)
 	#if (min(oldLim) == min(newLim)) return()
-	newLim <- signif(newLim, 4)
+	newLim <- signif(newLim, 8)
 	rawXLim(playState) <- newLim
 	playReplot(playState)
 }
 
 time.mode_entry_handler <- function(widget, playState) {
-	if (!is.null(playState$index.time)) {
+	if (!is.null(playState$time.vector)) {
 		newLim <- widget["text"]
-		index.time <- playState$index.time
-		max.x <- length(index.time)
-		cls <- class(index.time)
+		time.vector <- playState$time.vector
+		max.x <- length(time.vector)
+		cls <- class(time.vector)
 		if ("POSIXt" %in% cls) newLim <- try(as.POSIXct(newLim))
 		else if ("Date" %in% cls) newLim <- try(as.Date(newLim))
 		if (inherits(newLim, "try-error")) {
-			# treat it as an index into index.time
+			# treat it as an index into time.vector
 			cur.index <- as.integer(widget["text"])
 		} else {
 			newLim <- as.numeric(newLim)
-			cur.index <- findInterval(newLim, index.time)
+			cur.index <- findInterval(newLim, time.vector)
 		}
 		cur.index <- max(1, min(max.x, cur.index))
 		playState$env$cur.index <- cur.index
-		playState$env$cur.time <- index.time[cur.index]
+		playState$env$cur.time <- time.vector[cur.index]
 		playReplot(playState)
 		return()
 	}
@@ -871,6 +869,11 @@ identify_handler <- function(widget, playState) {
 			drawLabels(playState, which=which, space=space, pos=pos)
 		})
 	}
+	# update other tool states
+	with(playState$tools, {
+		if (exists("clear", inherits=F)) 
+			clear["visible"] <- TRUE
+	})
 }
 
 identify_postplot_action <- function(widget, playState) {
@@ -902,8 +905,8 @@ annotate_handler <- function(widget, playState) {
 	space <- foo$space
 	if (pageAnnotation) space <- "page"
 	myXY <- if (space == "page") foo$ndc else foo$coords
-	myXY$x <- signif(myXY$x, 4)
-	myXY$y <- signif(myXY$y, 4)
+	myXY$x <- signif(myXY$x, 8)
+	myXY$y <- signif(myXY$y, 8)
 	if (foo$is.click) {
 		myX <- mean(myXY$x)
 		myY <- mean(myXY$y)
@@ -1053,8 +1056,6 @@ annotate_handler <- function(widget, playState) {
 				top=y.bottop[2],
 				centre=mean(y.bottop))
 		}
-		#myX <- signif(myX, 4)
-		#myY <- signif(myY, 4)
 		if ((svalue(wid$offset) != 0) && any(just != "centre")) {
 			if (just[1] != "centre") {
 				myPad <- svalue(wid$offset)
@@ -1205,8 +1206,8 @@ arrow_handler <- function(widget, playState) {
 	space <- foo$space
 	if (pageAnnotation) space <- "page"
 	myXY <- if (space == "page") foo$ndc else foo$coords
-	myXY$x <- signif(myXY$x, 4)
-	myXY$y <- signif(myXY$y, 4)
+	myXY$x <- signif(myXY$x, 8)
+	myXY$y <- signif(myXY$y, 8)
 	annot <- call("grid.lines", x=myXY$x, y=myXY$y)
 	if (space != "page") annot$default.units <- "native"
 	annot$arrow <- playState$arrow.arrow
@@ -1343,7 +1344,7 @@ toolConstructors$zoom <- function(playState) {
 
 zoom_handler <- function(widget, playState) {
 	nav.x <- TRUE
-	nav.y <- !(playState$time.mode)
+	nav.y <- TRUE #!(playState$time.mode) -- TODO?
 	foo <- playRectInput(playState, prompt=
 		"Click and drag to define the new plot region. (Right-click to cancel)")
 	if (is.null(foo)) return()

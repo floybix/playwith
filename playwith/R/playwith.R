@@ -51,7 +51,7 @@ playwith <- function(
 	modal = FALSE,
 	on.close = NULL, 
 	eval.args = NA, 
-	invert.match = F, 
+	invert.match = FALSE, 
 	envir = parent.frame(), 
 	playState = if (!new) playDevCur(),
 	plot.call)
@@ -292,8 +292,19 @@ playwith <- function(
 		if (arg == "") next
 		playState[[arg]] <- dots[[arg]]
 	}
-	if (!is.null(playState$time.index) && missing(time.mode))
-		time.mode <- TRUE
+	if (!is.null(playState$time.vector)) {
+		if (missing(time.mode)) time.mode <- TRUE
+		# set current state variables
+		env$cur.index <- 
+			if (!is.null(playState$cur.index)) {
+				playState$cur.index
+			} else if (!is.null(playState$cur.time)) {
+				max(1, findInterval(playState$cur.time, 
+					playState$time.vector))
+			} else 1
+		env$cur.time <- playState$time.vector[env$cur.index]
+		env$time.vector <- playState$time.vector
+	}
 	# construct the state object (playState)
 	playState$win <- myWin
 	playState$dev <- dev.cur()

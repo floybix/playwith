@@ -27,7 +27,7 @@ playwith(expr,
 	modal = FALSE,
 	on.close = NULL, 
 	eval.args = NA, 
-	invert.match = F, 
+	invert.match = FALSE, 
 	envir = parent.frame(), 
 	playState = if (!new) playDevCur(),
 	plot.call)
@@ -63,7 +63,7 @@ playwith(expr,
 		\item{\code{page}}{
 			In multi-page Lattice plots, this will set the initial page to display.
 		}
-		\item{\code{time.index}}{
+		\item{\code{time.vector}}{
 			a vector defining discrete times, as numeric, 
 			\code{\link{Date}} or \code{\link[=DateTimeClasses]{POSIXt}}. 
 			It must be sorted, increasing.
@@ -71,12 +71,15 @@ playwith(expr,
 			along these discrete times, rather than along the continuous x-axis.
 			Special objects \code{cur.index} and \code{cur.time} will be provided in the
 			plot environment, so the plot call can refer to these.
-			\code{cur.index} is the current time step, between \code{1} and \code{length(time.index)}, 
-			and \code{cur.time} is \code{time.index[cur.index]}.
+			\code{cur.index} is the current time step, between \code{1} and \code{length(time.vector)}, 
+			and \code{cur.time} is \code{time.vector[cur.index]}.
 			In this case \code{time.mode} will be on by default.
 		}
-		\item{\code{current.index}, \code{current.time}}{
-			If \code{time.index} is given, this will set the initial time step.
+		\item{\code{cur.index}, \code{cur.time}, \code{time.mode.page.incr}}{
+			If \code{time.vector} is given, either of \code{cur.index}
+			or \code{cur.time} will set the initial time step.
+			\code{time.mode.page.incr} sets the number of steps to jump
+			if the user clicks on the scroll bar.
 		}
 		\item{\code{label.style}}{
 			output from \code{\link[grid]{gpar}}, specifying the style of labels.
@@ -192,7 +195,24 @@ playwith(expr,
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{ \code{\link{autoplay}}, \link{playTools}, \link{playwith.API} }
 \examples{
-
+if (interactive()) {
+	
+	treering2 <- window(treering, start=1)
+	playwith(plot(treering2, xlim=c(0,300)), 
+		time.mode = TRUE,
+		labels = paste(time(treering2), "CE"))
+	
+	library(lattice)
+	
+	playwith(xyplot(Income ~ log(Population / Area) | state.region, 
+		data = data.frame(state.x77)),
+		label.style = gpar(col="red", fontfamily="HersheySans"))
+	
+	xx <- rnorm(50)
+	playwith(plot(density(xx, bw = cur.time)),
+		time.vector = seq(0.1, 1, by=0.05))
+	
+}
 }
 \keyword{ iplot }
 \keyword{ dynamic }

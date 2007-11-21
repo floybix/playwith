@@ -7,6 +7,7 @@ import(grDevices)
 import(RGtk2)
 import(cairoDevice)
 import(gWidgets)
+import(gWidgetsRGtk2)
 # note cairoDevice::asCairoDevice calls require(RGtk2)
 
 # the main function

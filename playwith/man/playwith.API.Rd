@@ -15,36 +15,36 @@
 	convenience function \code{quickTool}, which is just a quick way to
 	make a \code{\link[RGtk2]{gtkToolButton}}.
 
-	\preformatted{
-	helloTool <- function(playState) {
-		quickTool(playState,
-			label = "Greeting",
-			icon = "gtk-yes", 
-			tooltip = "Draw 'Hello world' text",
-			f = hello_handler,
-			post.plot.action = hello_postplot_action,
-			isToggle = TRUE)
-	}
-	
-	## this is called when the button is clicked
-	hello_handler <- function(widget, playState) {
-		## re-draw plot, which will call the post.plot.action
-		playReplot(playState)
-	}
-	
-	## this is called after the plot is drawn (or re-drawn)
-	hello_postplot_action <- function(widget, playState) {
-		if (widget["active"]) {
-			annot <- expression(grid.text("Hello world", gp=gpar(cex=2)))
-			playDo(playState, annot, space="page")
-		}
-	}
-	}
+\preformatted{
+helloTool <- function(playState) {
+	quickTool(playState,
+		label = "Greeting",
+		icon = "gtk-yes", 
+		tooltip = "Draw 'Hello world' text",
+		f = hello_handler,
+		post.plot.action = hello_postplot_action,
+		isToggle = TRUE)
+}
+
+## this is called when the button is clicked
+hello_handler <- function(widget, playState) {
+	## need to re-draw plot to remove label
+	if (!widget["active"]) playReplot(playState)
+	else hello_postplot_action(widget, playState)
+}
+
+## this is called after the plot is drawn (or re-drawn)
+hello_postplot_action <- function(widget, playState) {
+	if (!widget["active"]) return()
+	annot <- expression(grid.text("Hello world", gp=gpar(cex=2)))
+	playDo(playState, eval(annot), space="page")
+}
+}
 	
 	The new button can then be added to a toolbar like this:
-	\preformatted{
-	playwith(plot(1:10), bottom=list(helloTool))
-	}
+\preformatted{
+playwith(plot(1:10), bottom=list(helloTool))
+}
 
 	Here is a table of the API functions that can be used by tools.
 	See the links to specific help pages for details.
@@ -57,31 +57,31 @@ playDevList()
 playDevSet(playState)
 playDevOff(playState = playDevCur())
 
-playNewPlot(playState)
+\link{playNewPlot}(playState)
 playReplot(playState)
 
-callArg(playState, arg, name = NULL)
+\link{callArg}(playState, arg, name = NULL)
 callArg(playState, arg, name = NULL) <- value
 
-playDo(playState, expr, space = "plot", clip.off = FALSE)
+\link{playDo}(playState, expr, space = "plot", clip.off = FALSE)
 
-xyCoords(playState, space = "plot")
+\link{xyCoords}(playState, space = "plot")
 xyData(playState, space = "plot")
 
-playSelectData(playState, prompt = "Click or drag to select data points.")
+\link{playSelectData}(playState, prompt = "Click or drag to select data points.")
 playPointInput(playState, prompt = "Click on the plot")
 playLineInput(playState, prompt = "Click and drag to define a line")
 playRectInput(playState, prompt = "Click and drag to define a rectangular region")
 
-rawXLim(playState, space = "plot")
+\link{rawXLim}(playState, space = "plot")
 rawYLim(playState, space = "plot")
 rawXLim(playState) <- value
 rawYLim(playState) <- value
 
-whichSpace(playState, x.device, y.device)
+\link{whichSpace}(playState, x.device, y.device)
 deviceCoordsToSpace(playState, x.device, y.device, space = "plot")
 
-playPrompt(playState, text = NULL)
+\link{playPrompt}(playState, text = NULL)
 playFreezeGUI(playState)
 playThawGUI(playState)
 blockRedraws(expr, playState = playDevCur())

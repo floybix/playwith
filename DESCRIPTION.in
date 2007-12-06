@@ -15,6 +15,6 @@ Description: A graphical user interface for viewing and interacting with R plots
   Note: the interaction features do not work with multiple-plot layouts. 
   This package is still under development and should not be considered stable.
   This package is based on RGtk2, and so requires the GTK+ libraries.
-License: GPL version 2 or newer
+License: GPL (>= 2)
 URL: http://playwith.googlecode.com/
 

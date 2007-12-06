@@ -523,7 +523,12 @@ time.mode_entry_handler <- function(widget, playState) {
 		else if ("Date" %in% cls) newLim <- try(as.Date(newLim))
 		if (inherits(newLim, "try-error")) {
 			# treat it as an index into time.vector
-			cur.index <- as.integer(widget["text"])
+			cur.index <- try(as.integer(widget["text"]), silent=TRUE)
+			if (inherits(cur.index, "try-error")) {
+				# give up
+				gmessage.error(conditionMessage(newLim))
+				return()
+			}
 		} else {
 			newLim <- as.numeric(newLim)
 			cur.index <- findInterval(newLim, time.vector)
@@ -654,7 +659,7 @@ set.label.style_handler <- function(widget, playState) {
 	
 	repeat {
 		newTxt <- NA#ginput("Edit label style", text=callTxt, width=60)
-		editbox <- gedit(callTxt, width=120, container=ggroup())
+		editbox <- gedit(callTxt, width=120)#, container=ggroup())
 		gbasicdialog("Edit label style", widget=editbox, action=environment(), 
 			handler=function(h, ...) {
 				h$action$newTxt <- svalue(editbox)
@@ -1344,9 +1349,11 @@ toolConstructors$zoom <- function(playState) {
 
 zoom_handler <- function(widget, playState) {
 	nav.x <- TRUE
-	nav.y <- TRUE #!(playState$time.mode) -- TODO?
-	foo <- playRectInput(playState, prompt=
-		"Click and drag to define the new plot region. (Right-click to cancel)")
+	nav.y <- !(playState$time.mode)
+	scales <- c( if (nav.x) "x", if (nav.y) "y" )
+	foo <- playRectInput(playState, prompt=paste(
+		"Click and drag to define the new plot region.",
+		"(Right-click to cancel)"), scales=scales)
 	if (is.null(foo)) return()
 	if (is.null(foo$coords)) return()
 	if (foo$is.click) return()
@@ -1423,7 +1430,7 @@ zoomfit_handler <- function(widget, playState) {
 
 zoomfit_postplot_action <- function(widget, playState) {
 	nav.x <- TRUE
-	nav.y <- !(playState$time.mode)
+	nav.y <- TRUE #!(playState$time.mode)
 	nonfit <- FALSE
 	if (nav.x && !is.null(callArg(playState, xlim))) nonfit <- TRUE
 	if (nav.y && !is.null(callArg(playState, ylim))) nonfit <- TRUE

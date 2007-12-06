@@ -362,7 +362,9 @@ playLineInput <- function(playState, prompt="Click and drag to define a line") {
 	playClickOrDrag(playState, x0=xy0$x, y=xy0$y, shape="line")
 }
 
-playRectInput <- function(playState, prompt="Click and drag to define a rectangular region") {
+playRectInput <- function(playState, prompt="Click and drag to define a rectangular region",
+	scales=c("x", "y")) {
+	scales <- match.arg(scales, several.ok=TRUE)
 	playDevSet(playState)
 	playPrompt(playState, prompt)
 	on.exit(playPrompt(playState, NULL))
@@ -373,15 +375,15 @@ playRectInput <- function(playState, prompt="Click and drag to define a rectangu
 	xy0 <- grid.locator()
 	if (is.null(xy0)) return(NULL)
 	xy0 <- lapply(xy0, as.numeric)
-	playClickOrDrag(playState, x0=xy0$x, y=xy0$y, shape="rect")
+	playClickOrDrag(playState, x0=xy0$x, y=xy0$y, shape="rect", scales=scales)
 }
 
 # assumes that the mouse button has already been pressed
 # converts into user coordinates
-playClickOrDrag <- function(playState, x0, y0, shape=c("rect", "line")) {
-	shape <- match.arg(shape)
-	da <- playState$widgets$drawingArea
-	foo <- handleClickOrDrag(da, x0=x0, y0=y0, shape=shape)
+playClickOrDrag <- function(playState, x0, y0, shape=c("rect", "line"),
+	scales=c("x", "y")) {
+	foo <- handleClickOrDrag(playState$widgets$drawingArea, 
+		x0=x0, y0=y0, shape=shape, scales=scales)
 	if (is.null(foo)) return(NULL)
 	dc <- foo$dc
 	coords <- NULL
@@ -402,8 +404,11 @@ playClickOrDrag <- function(playState, x0, y0, shape=c("rect", "line")) {
 }
 
 # assumes that the mouse button has already been pressed
-handleClickOrDrag <- function(da, x0, y0, shape=c("rect", "line")) {
+handleClickOrDrag <- function(da, x0, y0, shape=c("rect", "line"),
+	scales=c("x", "y")) {
 	shape <- match.arg(shape)
+	scales <- match.arg(scales, several.ok=TRUE)
+	# px0 is the original click location
 	px0 <- list(x=x0, y=y0)
 	da.w <- da$getAllocation()$width
 	da.h <- da$getAllocation()$height
@@ -431,6 +436,9 @@ handleClickOrDrag <- function(da, x0, y0, shape=c("rect", "line")) {
 			width=area$width, height=area$height)
 		xx <- range(c(env$px0$x, env$px00$x))
 		yy <- range(c(env$px0$y, env$px00$y))
+		# restrict rectangle to x or y scales, according to `scales`
+		if (!("x" %in% scales)) xx <- c(0, da.w)
+		if (!("y" %in% scales)) yy <- c(0, da.h)
 		wd <- xx[2] - xx[1]
 		ht <- yy[2] - yy[1]
 		switch(env$shape,
@@ -445,6 +453,7 @@ handleClickOrDrag <- function(da, x0, y0, shape=c("rect", "line")) {
 	tmpSigE <- gSignalConnect(da, "expose-event", expose_handler, data=environment())
 	tmpSigR <- gSignalConnect(da, "button-release-event", release_handler, data=environment())
 	repeat {
+		# px1 is the final drag location, set by event handler
 		if (exists("px1", inherits=FALSE)) break
 		px00.prev <- px00
 		px00 <- da$window$getPointer()
@@ -648,7 +657,7 @@ deviceToUserCoordsFunction <- function(is.grid = TRUE) {
 		diff(convertY(unit(0:1, "npc"), "native", valueOnly=TRUE))))
 	# pixels per inch
 	dpi <- convertX(unit(1, "inches"), "native", valueOnly=TRUE)
-	if (!is.null(vp)) downViewport(vp)
+	if (length(vp) > 0) downViewport(vp)
 	# device size in inches
 	din <- dpx / dpi
 	if (is.grid) {

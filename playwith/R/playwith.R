@@ -536,10 +536,12 @@ generateSpaces <- function(playState) {
 	else {
 		# base graphics plot
 		upViewport(0)
-		test <- try(downViewport(playState$baseViewports$plot.clip.off),
-			silent=TRUE)
-		if (!inherits(test, "try-error") && !is.null(current.vpPath()))
-			popViewport(0)
+		if (length(playState$baseViewports$plot.clip.off)) {
+			test <- try(downViewport(playState$baseViewports$plot.clip.off),
+				silent=TRUE)
+			if (!inherits(test, "try-error") && length(current.vpPath()))
+				popViewport(0)
+		}
 		vps <- baseViewports()
 		playState$baseViewports <- list()
 		pushViewport(vps$inner)

@@ -806,6 +806,8 @@ copyArgsIntoEnv <- function(the.call, envir=parent.frame(), newEnv, inherits=F, 
 			if (!isTRUE(pattern) && 
 				(any(grep(pattern, this.name))) != isMatch)
 				next
+			# TODO: this should stop at GlobalEnv, ignore loaded packages
+			# (`inherits=TRUE` matches packages too)
 			if (exists(this.name, envir=envir, inherits=inherits)
 			&& !exists(this.name, envir=newEnv, inherits=F)) {
 				assign(this.name, eval(this.arg, envir=envir),

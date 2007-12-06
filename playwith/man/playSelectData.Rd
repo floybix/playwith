@@ -11,11 +11,13 @@
 playSelectData(playState, prompt = "Click or drag to select data points.")
 playPointInput(playState, prompt = "Click on the plot")
 playLineInput(playState, prompt = "Click and drag to define a line")
-playRectInput(playState, prompt = "Click and drag to define a rectangular region")
+playRectInput(playState, prompt = "Click and drag to define a rectangular region",
+	scales = c("x", "y"))
 }
 \arguments{
   \item{playState}{ a \code{\link{playState}} object representing the plot, window and device. }
-  \item{prompt}{  }
+  \item{prompt}{ text to display in the prompt. }
+  \item{scales}{  }
 }
 \details{
   

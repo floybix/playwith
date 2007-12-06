@@ -280,6 +280,11 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
 	if (is.null(foo$coords)) return(NULL)
 	coords <- foo$coords
 	data <- xyCoords(playState, space=foo$space)
+	if (length(data$x) == 0) {
+		gmessage.error(paste("Sorry, can not guess the data point coordinates.",
+			"Please contact the maintainer with suggestions."))
+		return(NULL)
+	}
 	which <- NULL
 	pos <- NULL
 	if (foo$is.click) {
@@ -465,6 +470,9 @@ handleClickOrDrag <- function(da, x0, y0, shape=c("rect", "line"),
 		}
 		xx <- range(c(px0$x, px00$x, px00.prev$x))
 		yy <- range(c(px0$y, px00$y, px00.prev$y))
+		# restrict rectangle to x or y scales, according to `scales`
+		if (!("x" %in% scales)) xx <- c(0, da.w)
+		if (!("y" %in% scales)) yy <- c(0, da.h)
 		wd <- xx[2] - xx[1] + 2
 		ht <- yy[2] - yy[1] + 2
 		da$window$invalidateRect(list(x=xx[1], y=yy[1], width=wd, height=ht),
@@ -515,6 +523,10 @@ xyData <- function(playState, space="plot") {
 		}
 		packet <- as.numeric(sub("packet ", "", space))
 		foo <- trellis.panelArgs(playState$trellis, packet.number=packet)
+		if (is.null(foo$y) && !is.null(foo$distribution)) {
+			# probably `qqmath`
+			return(xy.coords.qqmath(panel.args=foo))
+		}
 		if (length(foo$x) != length(foo$y)) {
 			if ((nx <- length(foo$x)) < (ny <- length(foo$y))) 
 				foo$x <- rep(foo$x, length.out = ny)
@@ -585,6 +597,52 @@ xy.coords_with_class <- function(x, y=NULL, recycle=TRUE) {
 		} else stop("'x' and 'y' lengths differ")
 	}
 	list(x=x, y=y)
+}
+
+# copied from panel.identify.qqmath
+xy.coords.qqmath <-
+    function(x = panel.args$x,
+             distribution = panel.args$distribution,
+             groups = panel.args$groups, 
+             subscripts = panel.args$subscripts,
+             labels = subscripts, 
+             panel.args = trellis.panelArgs(),
+             ...)
+{
+    x <- as.numeric(x)
+    if (is.null(subscripts)) subscripts <- seq_along(x)
+    if (!is.null(panel.args$f.value)) warning("'f.value' not supported; ignoring")
+    distribution <-
+        if (is.function(distribution)) distribution 
+        else if (is.character(distribution)) get(distribution)
+        else eval(distribution)
+    ## compute quantiles corresponding to given vector, possibly
+    ## containing NA's.  The return value must correspond to the
+    ## original order
+    getq <- function(x)
+    {
+        ans <- x
+        id <- !is.na(x)
+        ord <- order(x[id])
+        if (any(id)) ans[id] <- distribution(ppoints(sum(id)))[order(ord)]
+        ans
+    }
+    if (is.null(groups))
+    {
+        return(list(x = getq(x), y = x, subscripts = subscripts))
+    }
+    else
+    {
+        allq <- rep(NA_real_, length(x))
+        subg <- groups[subscripts]
+        vals <- if (is.factor(groups)) levels(groups) else sort(unique(groups))
+        for (i in seq_along(vals))
+        {
+            ok <- !is.na(subg) & (subg == vals[i])
+            allq[ok] <- getq(x[ok])
+        }
+        return(list(x = allq, y = x, subscripts = subscripts))
+    }
 }
 
 unlogX <- function(x, the.call, is.lattice=T) {

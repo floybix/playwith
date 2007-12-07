@@ -55,6 +55,8 @@ export(
 	xyData
 )
 
+S3method(print, playState)
+
 # misc
 export(
 	plotadd

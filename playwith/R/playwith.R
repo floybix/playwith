@@ -77,7 +77,7 @@ playwith <- function(
 	# playState is the <environment> encapsulating the plot, window and device
 	cleanupStateEnv()
 	if (!is.null(playState)) {
-		stopifnot(is.environment(playState))
+		stopifnot(inherits(playState, "playState"))
 		if (is.null(title)) title <- playState$title
 	} else {
 		ID <- title
@@ -87,6 +87,7 @@ playwith <- function(
 	}
 	if (is.null(playState) || isTRUE(playState$keep)) {
 		playState <- new.env()
+		class(playState) <- c("playState", "environment")
 		ID <- basename(tempfile())
 		StateEnv[[ID]] <- playState
 	}

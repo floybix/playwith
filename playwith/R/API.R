@@ -14,6 +14,7 @@ playDevList <- function() {
 }
 
 playDevSet <- function(playState) {
+	stopifnot(inherits(playState, "playState"))
 	StateEnv$.current <- playState
 	playState$old.dev <- dev.cur()
 	dev.set(playState$dev)
@@ -25,8 +26,15 @@ playDevOff <- function(playState = playDevCur()) {
 	cleanupStateEnv()
 }
 
+print.playState <- function(x, ...) {
+	stopifnot(inherits(x, "playState"))
+	print(paste("<playState: ", 
+		toString(x$win["title"]), ">", sep=""))
+}
+
 cleanupStateEnv <- function() {
 	for (ID in ls(StateEnv)) {
+		if (!inherits(StateEnv[[ID]], "playState")) next
 		if (!inherits(StateEnv[[ID]]$win, "GtkWindow")) {
 			# window is defunct
 			rm(list=ID, envir=StateEnv)
@@ -442,8 +450,8 @@ handleClickOrDrag <- function(da, x0, y0, shape=c("rect", "line"),
 		xx <- range(c(env$px0$x, env$px00$x))
 		yy <- range(c(env$px0$y, env$px00$y))
 		# restrict rectangle to x or y scales, according to `scales`
-		if (!("x" %in% scales)) xx <- c(0, da.w)
-		if (!("y" %in% scales)) yy <- c(0, da.h)
+		if (!("x" %in% scales)) xx <- c(-1, da.w)
+		if (!("y" %in% scales)) yy <- c(-1, da.h)
 		wd <- xx[2] - xx[1]
 		ht <- yy[2] - yy[1]
 		switch(env$shape,
@@ -471,8 +479,8 @@ handleClickOrDrag <- function(da, x0, y0, shape=c("rect", "line"),
 		xx <- range(c(px0$x, px00$x, px00.prev$x))
 		yy <- range(c(px0$y, px00$y, px00.prev$y))
 		# restrict rectangle to x or y scales, according to `scales`
-		if (!("x" %in% scales)) xx <- c(0, da.w)
-		if (!("y" %in% scales)) yy <- c(0, da.h)
+		if (!("x" %in% scales)) xx <- c(-1, da.w)
+		if (!("y" %in% scales)) yy <- c(-1, da.h)
 		wd <- xx[2] - xx[1] + 2
 		ht <- yy[2] - yy[1] + 2
 		da$window$invalidateRect(list(x=xx[1], y=yy[1], width=wd, height=ht),

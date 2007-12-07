@@ -1,5 +1,6 @@
 \name{playState}
 \alias{playState}
+\alias{print.playState}
 \title{Object representing the plot, window and device.}
 \description{
   This object is used by \code{\link{playwith}} to 
@@ -7,6 +8,13 @@
   The playState object is central to the \link{playwith.API}.
   However, it may also be seen by users controlling the "device" with
   \code{\link{playDevCur}}, \code{\link{playDevList}} etc.
+}
+\usage{
+	\method{print}{playState}(x, ...)
+}
+\arguments{
+  \item{x}{ a \code{playState} object. }
+  \item{\dots}{ ignored. }
 }
 \details{
 A playState object is actually an \code{\link{environment}} containing many other objects.

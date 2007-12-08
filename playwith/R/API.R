@@ -28,8 +28,8 @@ playDevOff <- function(playState = playDevCur()) {
 
 print.playState <- function(x, ...) {
 	stopifnot(inherits(x, "playState"))
-	print(paste("<playState: ", 
-		toString(x$win["title"]), ">", sep=""))
+	cat(paste("<playState: ", 
+		toString(x$win["title"]), ">\n", sep=""))
 }
 
 cleanupStateEnv <- function() {

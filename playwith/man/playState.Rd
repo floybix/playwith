@@ -10,7 +10,7 @@
   \code{\link{playDevCur}}, \code{\link{playDevList}} etc.
 }
 \usage{
-	\method{print}{playState}(x, ...)
+\method{print}{playState}(x, ...)
 }
 \arguments{
   \item{x}{ a \code{playState} object. }

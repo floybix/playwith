@@ -264,6 +264,8 @@ playDo <- function(playState, expr, space="plot", clip.off=FALSE) {
 			myVp <- trellis.vpname("panel", myCol, myRow, clip.off=clip.off)
 			depth <- downViewport(myVp)
 			on.exit(upViewport(depth), add=TRUE)
+			# TODO: should focus panel or just go to viewport?
+			# (if focus, will destroy any previous focus)
 			#trellis.focus("panel", myCol, myRow, highlight=FALSE)
 			#on.exit(trellis.unfocus())
 		}

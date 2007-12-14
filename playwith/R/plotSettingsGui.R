@@ -73,17 +73,7 @@ settings_handler <- function(widget, playState) {
 	
 	# DECORATIONS
 	decogroup <- gframe("Decorations", horizontal=FALSE, container=wingroup)
-	enabled(decogroup) <- FALSE
-	# reference lines
-	linegroup <- ggroup(container=decogroup)
-	wid$abline_h <- gcheckbox("horizontal", checked=F)
-	wid$abline_v <- gcheckbox("vertical", checked=F)
-	wid$abline_d <- gcheckbox("diagonal", checked=F)
-	# x/y: min/max/mean/median/std/mad
-	add(linegroup, glabel("Reference line (origin):"))
-	add(linegroup, wid$abline_h)
-	add(linegroup, wid$abline_v)
-	add(linegroup, wid$abline_d)
+##	enabled(decogroup) <- FALSE
 	# grid
 	gridgroup <- ggroup(container=decogroup)
 	wid$grid_h <- gcheckbox("horizontal", checked=F)
@@ -91,6 +81,34 @@ settings_handler <- function(widget, playState) {
 	add(gridgroup, glabel("Grid:"))
 	add(gridgroup, wid$grid_h)
 	add(gridgroup, wid$grid_v)
+	# reference lines
+	linegroup <- ggroup(container=decogroup)
+	wid$abline_h <- gcheckbox("horizontal", checked=F)
+	wid$abline_v <- gcheckbox("vertical", checked=F)
+	wid$abline_d <- gcheckbox("diagonal", checked=F)
+	add(linegroup, glabel("Line through origin:"))
+	add(linegroup, wid$abline_h)
+	add(linegroup, wid$abline_v)
+	add(linegroup, wid$abline_d)
+	# stats: min / max / median / quartiles / mean
+	statgroup <- ggroup(container=decogroup)
+	wid$stat_min <- gcheckbox("min", checked=F)
+	wid$stat_max <- gcheckbox("max", checked=F)
+	wid$stat_median <- gcheckbox("median", checked=F)
+	wid$stat_quart <- gcheckbox("quart", checked=F)
+	wid$stat_mean <- gcheckbox("mean", checked=F)
+	add(statgroup, wid$stat_min)
+	add(statgroup, wid$stat_max)
+	add(statgroup, wid$stat_median)
+	add(statgroup, wid$stat_quart)
+	add(statgroup, wid$stat_mean)
+	# loess
+	loessgroup <- ggroup(container=decogroup)
+	wid$loess <- gcheckbox("Loess smoother", checked=F)
+	wid$loess_span <- gedit("0.75", width=5, coerce.with=as.numeric)
+	add(loessgroup, wid$loess)
+	add(loessgroup, glabel("span:"))
+	add(loessgroup, wid$loess_span)
 	# rug
 	wid$rug <- gcheckbox("Rug (marginal distribution)", checked=F)
 	add(decogroup, wid$rug)
@@ -100,7 +118,7 @@ settings_handler <- function(widget, playState) {
 	
 	# STYLE
 	stylegroup <- gframe("Style", horizontal=FALSE, container=wingroup)
-	enabled(stylegroup) <- FALSE
+##	enabled(stylegroup) <- FALSE
 	# type
 	arg_type <- callArg(playState, type)
 	hasPoints <- (is.null(arg_type) || any(c("p","b","o") %in% arg_type))
@@ -227,13 +245,21 @@ settings_handler <- function(widget, playState) {
 		}
 		
 		# DECORATIONS
+		wid$grid_h
+		wid$grid_v
 		wid$abline_h
 		wid$abline_v
 		wid$abline_d
-		wid$grid_h
-		wid$grid_v
 		wid$rug
-		
+		wid$loess
+		wid$loess_span
+
+		wid$stat_min
+		wid$stat_max
+		wid$stat_median
+		wid$stat_quart
+		wid$stat_mean
+
 		# dispose(h$obj)
 		playReplot(playState)
 	})

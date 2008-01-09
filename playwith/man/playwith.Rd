@@ -219,7 +219,7 @@ playwith(xyplot(Income ~ log(Population / Area) | state.region,
 
 ## scrollbar controlling a smoothing parameter
 xx <- rnorm(50)
-playwith(plot(density(xx, bw = cur.time)),
+playwith(plot(density(xx, bw = cur.time), panel.last = rug(xx)),
 	time.vector = seq(0.1, 1, by=0.05))
 
 ## brushing multivariate scatterplots

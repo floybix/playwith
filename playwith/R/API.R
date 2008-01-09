@@ -324,8 +324,7 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
 			& (min(coords$y) <= data$y) & (data$y <= max(coords$y)))
 		which <- which(ok)
 	}
-	c(list(which=which, space=foo$space, 
-		x=data$x[which], y=data$y[which], 
+	c(list(which=which, x=data$x[which], y=data$y[which], 
 		pos=pos, is.click=foo$is.click),
 		foo)
 }

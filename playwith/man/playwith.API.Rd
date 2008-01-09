@@ -130,9 +130,9 @@ drawSubsetBox <- function(playState, foo) {
 			gp=gpar(alpha=0.3), clip="off"))
 		grid.rect(gp=gpar(fill="yellow"))
 		## draw sample size text
-		grid.text(paste("n =", length(x)), 
-			x=unit(0.95, "npc"), y=unit(0.95, "npc"),
-			just=c("top", "right"), gp=gpar(cex=1.5))
+		grid.text(paste("n=", length(x), sep=""), 
+			x=unit(0.98, "npc"), y=unit(0.98, "npc"),
+			just=c("right", "top"), gp=gpar(cex=1.5))
 		## histogram of x values, outside x-axis
 		h <- hist(x, plot=FALSE)
 		hval <- unit(4 * h$counts / length(x), "cm")

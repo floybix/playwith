@@ -13,7 +13,6 @@ Description: A graphical user interface for viewing and interacting with R plots
   The built-in features include: navigating the data space, identifying data points,
   editing and annotating the plot, and saving to a file. New tools can be defined.
   Note: the interaction features do not work with multiple-plot layouts. 
-  This package is still under development and should not be considered stable.
   This package is based on RGtk2, and so requires the GTK+ libraries.
 License: GPL (>= 2)
 URL: http://playwith.googlecode.com/

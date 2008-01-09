@@ -779,8 +779,9 @@ toolConstructors$identify <- function(playState) {
 							playState$env)
 						labels <- makeLabels(xObj, orSeq=T)
 					} else {
-						if (is.null(row.names(x)) && is.list(x) 
-							&& all(c("x","y") %in% names(x)))
+						if (is.null(row.names(tmp.x)) &&
+							is.list(tmp.x) &&
+							all(c("x","y") %in% names(tmp.x)))
 							tmp.x <- tmp.x$x
 						labels <- makeLabels(tmp.x, orSeq=T)
 					}
@@ -788,7 +789,12 @@ toolConstructors$identify <- function(playState) {
 			}
 		} else {
 			# data.points were supplied
-			labels <- makeLabels(playState$data.points, orSeq=T)
+			tmp.x <- playState$data.points
+			if (is.null(row.names(tmp.x)) &&
+				is.list(tmp.x) &&
+				all(c("x","y") %in% names(tmp.x)))
+				tmp.x <- tmp.x$x
+			labels <- makeLabels(tmp.x, orSeq=T)
 		}
 	}
 	playState$labels <- labels

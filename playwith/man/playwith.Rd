@@ -42,7 +42,7 @@ playwith(expr,
   \item{time.mode}{ whether the plot is to start in "time mode", with navigation along the x-axis. }
   \item{labels}{ a character vector of labels for data points, for use in \code{\link{identify}}. 
   	If missing, it will be guessed from the plot call arguments. }
-  \item{data.points}{ a list with elements "x" and "y" (or other suitable plotting structure)
+  \item{data.points}{ a data frame with elements "x" and "y" (or other suitable plotting structure)
 	giving locations of data points, in case these can not be guessed from the plot call arguments. }
   \item{is.lattice}{ whether the plot is a \link[lattice]{Lattice} plot, i.e. returns a trellis object.
   	If \code{NA}, the call name is matched against known Lattice function names. }

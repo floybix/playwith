@@ -27,7 +27,7 @@ playDo(playState, expr, space = "plot", clip.off = FALSE)
   
   Using \code{space="page"} will apply to the whole device space (root viewport).
   
-  Other functions such as \code{\link{playSelectData} and \code{\link{playPointInput}
+  Other functions such as \code{\link{playSelectData}} and \code{\link{playPointInput}}
   return values that can be used directly for the \code{space} argument.
   
 }

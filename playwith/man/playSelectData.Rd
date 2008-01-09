@@ -50,11 +50,11 @@ playSelectData(playState, prompt = "Click or drag to select data points.")
 \seealso{ \code{\link{playRectInput}}, \code{\link{playwith.API}} }
 \examples{
 if (interactive()) {
-	
-	library(lattice)
-	playwith(xyplot(Sepal.Width ~ Petal.Width | Species, data = iris))
-	playSelectData(playDevCur())
-	
+
+library(lattice)
+playwith(xyplot(Sepal.Width ~ Petal.Width | Species, data = iris))
+playSelectData(playDevCur())
+
 }
 }
 \keyword{ programming }

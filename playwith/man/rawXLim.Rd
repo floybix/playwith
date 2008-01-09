@@ -43,15 +43,15 @@ rawYLim(playState) <- value
 \seealso{ \code{\link{playwith.API}} }
 \examples{
 if (interactive()) {
-	
-	playwith(plot(1:10, log="x"))
-	playState <- playDevCur()
-	rawXLim(playState)  # -0.04  1.04
-	rawXLim(playState) <- c(0, 2)
-	playReplot(playState)
-	## now xlim=c(1, 100)
-	rawXLim(playState)  # -0.08  2.08
-	
+
+playwith(plot(1:10, log="x"))
+playState <- playDevCur()
+rawXLim(playState)  # -0.04  1.04
+rawXLim(playState) <- c(0, 2)
+playReplot(playState)
+## now xlim=c(1, 100)
+rawXLim(playState)  # -0.08  2.08
+
 }
 }
 \keyword{ programming }

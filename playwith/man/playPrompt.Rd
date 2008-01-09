@@ -38,12 +38,12 @@ blockRedraws(expr, playState = playDevCur())
 \seealso{ \code{\link{playwith.API}} }
 \examples{
 if (interactive()) {
-	
-	playwith(plot(1:10))
-	playPrompt(playDevCur(), "Click to place a new point.")
-	points(locator(n=1), col=2)
-	playPrompt(playDevCur())
-	
+
+playwith(plot(1:10))
+playPrompt(playDevCur(), "Click to place a new point.")
+points(locator(n=1), col=2)
+playPrompt(playDevCur(), NULL)
+
 }
 }
 \keyword{ programming }

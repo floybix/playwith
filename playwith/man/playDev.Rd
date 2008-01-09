@@ -33,24 +33,24 @@ playDevOff(playState = playDevCur())
 \seealso{ \code{\link{playwith.API}} }
 \examples{
 if (interactive()) {
-	
-	playwith(plot(1:10))
-	play.first <- playDevCur()
-	
-	playwith(plot(20:1), new=TRUE)
-	
-	# show the first window again
-	playDevSet(play.first)
-	playDevCur()
-	
-	# replace it
-	playwith(plot(1:100))
-	
-	playDevList()
-	
-	# clean up
-	playDevOff()
-	invisible(lapply(playDevList(), playDevOff))
+
+playwith(plot(1:10))
+play.first <- playDevCur()
+playwith(plot(20:1), new=TRUE)
+
+## show the first window again
+playDevSet(play.first)
+playDevCur()
+
+## replace it
+playwith(plot(1:100))
+
+playDevList()
+
+## clean up
+playDevOff()
+invisible(lapply(playDevList(), playDevOff))
+
 }
 }
 \keyword{ programming }

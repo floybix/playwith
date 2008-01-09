@@ -37,16 +37,16 @@ xyData(playState, space = "plot")
 \seealso{ \code{\link{playwith.API}} }
 \examples{
 if (interactive()) {
-	
-	library(lattice)
-	x <- as.Date("1990-01-01") + 1:20 - 1
-	ab <- rep(c("a", "b"), each=10)
-	playwith(xyplot(1:20 ~ x | ab))
-	playState <- playDevCur()
-	xyCoords(playState, space="packet 2")
-	xyData(playState, space="packet 2")
-	xyData(playState, space="page")
-	
+
+library(lattice)
+x <- as.Date("1990-01-01") + 1:20 - 1
+ab <- rep(c("a", "b"), each=10)
+playwith(xyplot(1:20 ~ x | ab))
+playState <- playDevCur()
+xyCoords(playState, space="packet 2")
+xyData(playState, space="packet 2")
+xyData(playState, space="page")
+
 }
 }
 \keyword{ programming }

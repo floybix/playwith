@@ -27,18 +27,18 @@ playReplot(playState)
   
 }
 \value{
-	\code{NULL}.
+	the result of the plot call.
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
 \seealso{ \code{\link{playwith.API}} }
 \examples{
 if (interactive()) {
-	
-	playwith(plot(1:10))
-	playState <- playDevCur()
-	playState$call <- quote(plot(c(10:1, 1:10)))
-	playNewPlot(playState)
-	
+
+playwith(plot(1:10))
+playState <- playDevCur()
+playState$call <- quote(plot(c(10:1, 1:10)))
+playNewPlot(playState)
+
 }
 }
 \keyword{ programming }

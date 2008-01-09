@@ -45,9 +45,9 @@ quickTool(
 \author{ Felix Andrews \email{felix@nfrac.org}  }
 \seealso{ \code{\link{playwith.API}}, \code{\link{playwith}} }
 \examples{
-	##
-	## see the examples in help(playwith.API).
-	##
+##
+## see the examples in help(playwith.API).
+##
 }
 \keyword{ iplot }
 \keyword{ programming }

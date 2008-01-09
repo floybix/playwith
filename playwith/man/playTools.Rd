@@ -116,13 +116,13 @@
 \seealso{ \code{\link{playwith}}, \link{playwith.API} }
 \examples{
 if (interactive()) {
-	
-	toolSet <- c(list("stayontop", "keep", "save"), 
-		playInteractionTools)
-	unlist(toolSet)
-	
-	playwith(plot(1:10), top=toolSet, left=NULL)
-	
+
+toolSet <- c(list("stayontop", "keep", "save"), 
+	playInteractionTools)
+unlist(toolSet)
+
+playwith(plot(1:10), top=toolSet, left=NULL)
+
 }
 }
 \keyword{ iplot }

@@ -48,7 +48,7 @@ autoplay(on = NA, lattice.on = on, base.on = on, grid.on = on, ask = FALSE)
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{ \code{\link{playwith}} }
 \examples{
-\dontrun{
+if (interactive()) {
 
 ## lattice graphics in the playwith interface:
 autoplay(lattice=T)

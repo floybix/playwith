@@ -40,30 +40,30 @@ playDo(playState, expr, space = "plot", clip.off = FALSE)
 	\code{\link{whichSpace}} }
 \examples{
 if (interactive()) {
-	
-	library(lattice)
-	library(grid)
-	
-	packs <- paste("packet", rep(1:4, each=4))
-	playwith(xyplot(1:16 ~ 1:16 | packs))
-	myGp <- gpar(fill="red", col="black", alpha=0.5)
-	
-	# draw in a specific packet
-	playDo(playDevCur(), grid.circle(gp=myGp), space="packet 2")
-	
-	# draw in default space="plot" after focussing on one panel
-	trellis.focus("panel", 1, 1)
-	packet.number()  # 1, same as space="packet 1"
-	playDo(playDevCur(), grid.circle(gp=myGp))
-	trellis.unfocus()
-	
-	# space="plot" does not work in a multi-panel plot
-	# unless one panel is in focus
-	try(playDo(playDevCur(), grid.circle(gp=myGp)))
-	
-	# draw on the whole page
-	playDo(playDevCur(), grid.circle(gp=myGp), space="page")
-	
+
+library(lattice)
+library(grid)
+
+packs <- paste("packet", rep(1:4, each=4))
+playwith(xyplot(1:16 ~ 1:16 | packs))
+myGp <- gpar(fill="red", col="black", alpha=0.5)
+
+## draw in a specific packet
+playDo(playDevCur(), grid.circle(gp=myGp), space="packet 2")
+
+## draw in default space="plot" after focussing on one panel
+trellis.focus("panel", 1, 1)
+packet.number()  # 1, same as space="packet 1"
+playDo(playDevCur(), grid.circle(gp=myGp))
+trellis.unfocus()
+
+## space="plot" does not work in a multi-panel plot
+## unless one panel is in focus
+try(playDo(playDevCur(), grid.circle(gp=myGp)))
+
+## draw on the whole page
+playDo(playDevCur(), grid.circle(gp=myGp), space="page")
+
 }
 }
 \keyword{ programming }

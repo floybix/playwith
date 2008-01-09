@@ -40,20 +40,20 @@ callArg(playState, arg, name = NULL) <- value
 \seealso{ \code{\link{playwith.API}} }
 \examples{
 if (interactive()) {
-	
-	library(lattice)
-	playwith(xyplot(1:10 ~ 1:10))
-	playState <- playDevCur()
-	
-	callArg(playState, pch)  # NULL
-	callArg(playState, pch) <- "$"
-	playReplot(playState)
-	
-	callArg(playState, pch)         # "$"
-	callArg(playState, name="pch")  # "$"
-	
-	callArg(playState, scales$x$cex) <- 2
-	playReplot(playState)
+
+library(lattice)
+playwith(xyplot(1:10 ~ 1:10))
+playState <- playDevCur()
+
+callArg(playState, pch)  # NULL
+callArg(playState, pch) <- "$"
+playReplot(playState)
+
+callArg(playState, pch)         # "$"
+callArg(playState, name="pch")  # "$"
+
+callArg(playState, scales$x$cex) <- 2
+playReplot(playState)
 
 }
 }

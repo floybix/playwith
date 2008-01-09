@@ -67,12 +67,12 @@ playRectInput(playState, prompt = "Click and drag to define a rectangular region
 \seealso{ \code{\link{playSelectData}}, \code{\link{playwith.API}} }
 \examples{
 if (interactive()) {
-	
-	library(lattice)
-	playwith(xyplot(Sepal.Width ~ Petal.Width | Species, data = iris))
-	playPointInput(playDevCur())
-	playRectInput(playDevCur())
-	
+
+library(lattice)
+playwith(xyplot(Sepal.Width ~ Petal.Width | Species, data = iris))
+playPointInput(playDevCur())
+playRectInput(playDevCur())
+
 }
 }
 \keyword{ programming }

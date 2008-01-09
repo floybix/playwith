@@ -524,7 +524,7 @@ xyCoords <- function(playState, space="plot") {
 
 xyData <- function(playState, space="plot") {
 	if (!is.null(playState$data.points)) {
-		return(xy.coords_with_class(playState$data.points))
+		return(xy.coords_with_class(playState, playState$data.points))
 	}
 	if (playState$is.lattice) {
 		if (space == "page") {
@@ -557,11 +557,11 @@ xyData <- function(playState, space="plot") {
 	}
 	x <- callArg(playState, 1)
 	y <- callArg(playState, name="y")
-	xy.coords_with_class(x, y)
+	xy.coords_with_class(playState, x, y)
 }
 
 # adapted from grDevices::xy.coords
-xy.coords_with_class <- function(x, y=NULL, recycle=TRUE) {
+xy.coords_with_class <- function(playState, x, y=NULL, recycle=TRUE) {
 	if (is.null(y)) {
 		if (is.language(x)) {
 			if (inherits(x, "formula") && length(x) == 3) {

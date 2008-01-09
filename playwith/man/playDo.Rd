@@ -36,7 +36,7 @@ playDo(playState, expr, space = "plot", clip.off = FALSE)
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
 \seealso{ \code{\link{playwith.API}}, 
-	\code{\link{playSelectData}, \code{\link{playPointInput},
+	\code{\link{playSelectData}}, \code{\link{playPointInput}},
 	\code{\link{whichSpace}} }
 \examples{
 if (interactive()) {

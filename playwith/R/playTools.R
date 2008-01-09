@@ -54,8 +54,8 @@ playSplomTools <- list(
 	"annotate",
 	"arrow",
 	"edit.annotations",
-	"brush"
-	"clear",
+	"brush",
+	"clear"
 )
 
 toolConstructors <- list(

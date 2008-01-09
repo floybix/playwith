@@ -93,7 +93,7 @@ if (interactive()) {
 	playwith(plot(1:10), bottom=list(helloTool))
 	
 	
-	## 2. Draw a box in the plot and show basic statistics.
+	## 2. Select subset of data and show marginal histograms.
 	##    It stores state info in the local environment.
 	
 	## constructor function
@@ -116,7 +116,7 @@ if (interactive()) {
 		drawSubsetBox(playState, foo)
 	}
 	
-	## draw one subset box and report basic statistics
+	## draw one subset box with marginal histograms
 	drawSubsetBox <- function(playState, foo) {
 		xy <- xyCoords(playState, space=foo$space)
 		playDo(playState, with(foo, {
@@ -124,24 +124,30 @@ if (interactive()) {
 			yc <- mean(coords$y)
 			wd <- abs(diff(coords$x))
 			ht <- abs(diff(coords$y))
-			grid.rect(x=xc, y=yc, w=wd, h=ht,
-				default.units="native",
-				gp=gpar(fill="yellow", alpha=0.3))
-			pushViewport(viewport(x=xc, y=yc, w=wd, h=ht,
-				default.units="native",
-				xscale=range(coords$x), yscale=0:1))
-			grid.rect(gp=gpar(fill="yellow", alpha=0.3))
-			panel.histogram(x)
+			pushViewport(viewport(default.units="native",
+				x=xc, y=yc, width=wd, height=ht,
+				xscale=range(coords$x), yscale=range(coords$y),
+				gp=gpar(alpha=0.3), clip="off"))
+			grid.rect(gp=gpar(fill="yellow"))
+			## draw sample size text
+			grid.text(paste("n =", length(x)), 
+				x=unit(0.95, "npc"), y=unit(0.95, "npc"),
+				just=c("top", "right"), gp=gpar(cex=1.5))
+			## histogram of x values, outside x-axis
+			h <- hist(x, plot=FALSE)
+			hval <- unit(4 * h$counts / length(x), "cm")
+			grid.rect(x=h$breaks[-1], y=unit(0, "npc"), 
+				height=hval, width=diff(h$breaks), 
+				just=c("right", "top"), default.units="native",
+				gp=gpar(fill="purple"))
+			## histogram of y values, outside y-axis
+			h <- hist(y, plot=FALSE)
+			hval <- unit(4 * h$counts / length(x), "cm")
+			grid.rect(y=h$breaks[-1], x=unit(0, "npc"), 
+				height=diff(h$breaks), width=hval, 
+				just=c("right", "top"), default.units="native",
+				gp=gpar(fill="purple"))
 			popViewport()
-			pushViewport(viewport(x=xc, y=yc, w=ht, h=wd,
-				default.units="native", angle=-90, 
-				xscale=0:1, yscale=range(coords$y)))
-			panel.histogram(y)
-			popViewport()
-			#statText <- paste(
-			#	"N =", length(which), "=", 
-			#grid.text(statText, x=xc, y=yc, w=wd, h=ht,
-			#	default.units="native")
 		}), space=foo$space)
 	}
 	
@@ -177,8 +183,8 @@ if (interactive()) {
 					xy$y[foo$which] <- NA
 				} else {
 					## add data point at click location
-					xy$x <- c(xy$x, foo$coords$x)
-					xy$y <- c(xy$y, foo$coords$y)
+					xy$x <- c(xy$x, foo$coords$x[1])
+					xy$y <- c(xy$y, foo$coords$y[1])
 				}
 				## store in local environment
 				playState$env$localxy <- xy

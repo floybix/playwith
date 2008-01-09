@@ -259,7 +259,7 @@ if (interactive()) {
 		win.size=c(360, 360), show.call=FALSE, 
 		top=NULL, left=subTools)
 	
-	## see help(playwith.API) for examples of new tools
+	## see help(playwith.API) for examples of new tools.
 }
 }
 \keyword{ iplot }

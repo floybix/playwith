@@ -26,7 +26,7 @@ callArg(playState, arg, name = NULL) <- value
   these API functions help by:
   \itemize{
 	\item automatically evaluating variables that have been stored in a local environment
-	(\code{\link{playState$env}}).
+	(\code{playState$env}).
 	\item converting lists to language objects so that the call can be deparsed elegantly.
 	\item enforcing exact matching of argument names \code{exact=TRUE} (see \code{\link{[[}}).
   }
@@ -34,7 +34,7 @@ callArg(playState, arg, name = NULL) <- value
 \value{
 	returns the value of the specified argument, 
 	as if using the \code{$} or \code{[[} extractor functions, but
-	evaluated in a local environment (\code{\link{playState$env}}).
+	evaluated in a local environment (\code{playState$env}).
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
 \seealso{ \code{\link{playwith.API}} }

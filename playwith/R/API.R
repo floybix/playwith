@@ -107,11 +107,12 @@ blockRedraws <- function(expr, playState = playDevCur()) {
 	#playState$win$setGeometryHints(da, list(max.width=myW, min.width=myW, 
 	#	max.height=myH, min.height=myH))
 	da$window$freezeUpdates() # hmm
-	try(eval.parent(substitute(expr)))
+	foo <- try(eval.parent(substitute(expr)))
 	da$window$thawUpdates()
 	#playState$win$setGeometryHints(da, list())
 	da$setSizeRequest(-1, -1)
 	playState$skip.redraws <- oval
+	foo
 }
 
 playPrompt <- function(playState, text=NULL) {
@@ -125,7 +126,7 @@ playPrompt <- function(playState, text=NULL) {
 				promptBox$hide()
 			}
 			playThawGUI(playState)
-			return()
+			return(invisible())
 		}
 		# show the prompt widget
 		promptBox["sensitive"] <- TRUE
@@ -138,6 +139,7 @@ playPrompt <- function(playState, text=NULL) {
 		promptLabel$setMarkup(paste("<big><b>", 
 			toString(text), "</b></big>"))
 	})
+	invisible()
 }
 
 rawXLim <- function(playState, space="plot") {
@@ -298,8 +300,8 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
 	which <- NULL
 	pos <- NULL
 	if (foo$is.click) {
-		x <- mean(coords$x)
-		y <- mean(coords$y)
+		x <- coords$x[1]
+		y <- coords$y[1]
 		ppxy <- playDo(playState, list(
 				lx=convertX(unit(x, "native"), "points", TRUE),
 				ly=convertY(unit(y, "native"), "points", TRUE),
@@ -322,9 +324,10 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
 			& (min(coords$y) <= data$y) & (data$y <= max(coords$y)))
 		which <- which(ok)
 	}
-	list(which=which, space=foo$space, 
+	c(list(which=which, space=foo$space, 
 		x=data$x[which], y=data$y[which], 
-		pos=pos, is.click=foo$is.click)
+		pos=pos, is.click=foo$is.click),
+		foo)
 }
 
 playPointInput <- function(playState, prompt="Click on the plot") {
@@ -336,6 +339,12 @@ playPointInput <- function(playState, prompt="Click on the plot") {
 	if (!is.null(cur.vp)) on.exit(downViewport(cur.vp), add=TRUE)
 	dc <- grid.locator()
 	if (is.null(dc)) return(NULL)
+	# check for modifier keys
+	ptrInfo <- playState$widgets$drawingArea$window$getPointer()
+	modifiers <- as.flag(0)
+	if (!is.null(ptrInfo$retval))
+		modifiers <- as.flag(ptrInfo$mask)
+	# convert coordinates
 	ndc <- list(x=convertX(dc$x, "npc"), y=convertY(dc$y, "npc"))
 	dc <- lapply(dc, as.numeric)
 	ndc <- lapply(ndc, as.numeric)
@@ -344,7 +353,7 @@ playPointInput <- function(playState, prompt="Click on the plot") {
 	if (space != "page") {
 		coords <- deviceCoordsToSpace(playState, dc$x, dc$y, space=space)
 	}
-	list(coords=coords, space=space, dc=dc, ndc=ndc)
+	list(coords=coords, space=space, dc=dc, ndc=ndc, modifiers=modifiers)
 }
 
 playPolyInput <- function(playState, prompt="Click points to define a region; right-click to end") {
@@ -490,18 +499,20 @@ handleClickOrDrag <- function(da, x0, y0, shape=c("rect", "line"),
 	}
 	gSignalHandlerDisconnect(da, tmpSigR)
 	gSignalHandlerDisconnect(da, tmpSigE)
+	# check for modifier keys
+	ptrInfo <- da$window$getPointer()
+	modifiers <- as.flag(0)
+	if (!is.null(ptrInfo$retval))
+		modifiers <- as.flag(ptrInfo$mask)
+	# clean up
 	da$window$invalidateRect(invalidate.children=FALSE)
 	if (!exists("px1", inherits=FALSE)) return(NULL)
 	dc <- list(x=c(px0$x, px1$x), y=c(px0$y, px1$y))
-	# was it a click or a drag? (threshold 3 pixels) - TODO: better to use timing
+	# was it a click or a drag? (threshold 3 pixels)
+	# TODO: better to use timing
 	is.click <- ((abs(diff(dc$x)) <= 3) && (abs(diff(dc$y)) <= 3))
-	if (is.click) {
-		# coords are +/- 10 pixels
-		dc$x <- dc$x[1] + c(-10, 10)
-		dc$y <- dc$y[1] + c(-10, 10)
-	}
 	ndc <- list(x=dc$x / da.w, y=(da.h - dc$y) / da.h)
-	list(dc=dc, ndc=ndc, is.click=is.click)
+	list(dc=dc, ndc=ndc, is.click=is.click, modifiers=modifiers)
 }
 
 xyCoords <- function(playState, space="plot") {

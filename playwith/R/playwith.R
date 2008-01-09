@@ -543,7 +543,8 @@ generateSpaces <- function(playState) {
 			if (!inherits(test, "try-error") && length(current.vpPath()))
 				popViewport(0)
 		}
-		vps <- baseViewports()
+		# suppressWarnings about log scale
+		vps <- suppressWarnings(baseViewports())
 		playState$baseViewports <- list()
 		pushViewport(vps$inner)
 		playState$baseViewports$inner <- current.vpPath()
@@ -758,8 +759,14 @@ playwith.grid.newpage <- function(...) {
 ## General utility functions
 
 plotadd <- function(FUN, ..., add.stuff=expression()) {
-	eval.parent(call(deparse(substitute(FUN)), ...))
+	force(FUN)
+	foo <- sys.call()
+	foo[[1]] <- foo[[2]]
+	foo <- foo[-2]
+	foo$add.stuff <- NULL
+	retval <- eval.parent(foo)
 	for (x in add.stuff) eval.parent(x)
+	retval
 }
 
 deparseOneLine <- function(expr, width.cutoff=500, ...) {

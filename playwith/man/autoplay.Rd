@@ -34,6 +34,9 @@ autoplay(on = NA, lattice.on = on, base.on = on, grid.on = on, ask = FALSE)
 	For similar reasons, multiple-figure plots may not be redrawn correctly.
 	The high-level plot will be called twice initially, due to constraints of the mechanism.
 	
+	The \code{grid.on} argument is analogous to \code{base.on} for grid graphics, 
+	using a hook in \code{\link[grid]{grid.newpage}}.
+	
 	Note that this automatic behaviour is not a full replacement for calling
 	\code{\link{playwith}} directly, since it does not allow to you specify any of the
 	optional arguments.

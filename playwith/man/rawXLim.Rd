@@ -15,8 +15,12 @@ rawYLim(playState) <- value
 }
 \arguments{
   \item{playState}{ a \code{\link{playState}} object representing the plot, window and device. }
-  \item{space}{  }
-  \item{value}{  }
+  \item{space}{ character, the plot space for which to get or set limits.
+  See the \code{space} argument to \code{\link{playDo}};
+  however, in this case, \code{space="plot"} will always return a value: if 
+  it is a Lattice plot with multiple panels, one will be chosen arbitrarily.}
+  \item{value}{ numeric length 2, the new nominal x or y limits 
+  	(for \code{xlim} or \code{ylim} plot arguments). }
 }
 \details{
   
@@ -33,11 +37,22 @@ rawYLim(playState) <- value
   It then updates the current plot call with the new value.
 }
 \value{
-	
+	the extractor form returns the x or y plot limits as numeric length 2.
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
 \seealso{ \code{\link{playwith.API}} }
 \examples{
+if (interactive()) {
+	
+	playwith(plot(1:10, log="x"))
+	playState <- playDevCur()
+	rawXLim(playState)  # -0.04  1.04
+	rawXLim(playState) <- c(0, 2)
+	playReplot(playState)
+	## now xlim=c(1, 100)
+	rawXLim(playState)  # -0.08  2.08
+	
+}
 }
 \keyword{ programming }
 

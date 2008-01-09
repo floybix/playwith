@@ -17,8 +17,8 @@
   \item{\dots}{ ignored. }
 }
 \details{
-A playState object is actually an \code{\link{environment}} containing many other objects.
-It will always contain:
+  A playState object is actually an \code{\link{environment}} (of class \code{"playState"})
+  containing many other objects. It will always contain:
 	\describe{
 		\item{\code{win}}{
 			the plot window (\code{\link[RGtk2]{gtkWindow}}).

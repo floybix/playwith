@@ -779,6 +779,9 @@ toolConstructors$identify <- function(playState) {
 							playState$env)
 						labels <- makeLabels(xObj, orSeq=T)
 					} else {
+						if (is.null(row.names(x)) && is.list(x) 
+							&& all(c("x","y") %in% names(x)))
+							tmp.x <- tmp.x$x
 						labels <- makeLabels(tmp.x, orSeq=T)
 					}
 				}
@@ -826,25 +829,30 @@ drawLabels <- function(playState, which, space="plot", pos=1) {
 	}
 	annots <- expression()
 	pos <- rep(pos, length=length(labels))
+	offset <- unit(0.5, "char")
+	if (!is.null(playState$label.offset)) {
+		offset <- playState$label.offset
+		if (!inherits(offset, "unit"))
+			offset <- unit(offset, "char")
+	}
 	# TODO: do this without a loop
 	for (i in seq_along(labels)) {
 		ux <- unit(x[i], "native")
 		uy <- unit(y[i], "native")
-		offset <- 0.5
 		if (pos[i] == 1) {
-		    uy <- uy - unit(offset, "char")
+		    uy <- uy - offset
 		    adj <- c(0.5, 1)
 		}
 		else if (pos[i] == 2) {
-		    ux <- ux - unit(offset, "char")
+		    ux <- ux - offset
 		    adj <- c(1, 0.5)
 		}
 		else if (pos[i] == 3) {
-		    uy <- uy + unit(offset, "char")
+		    uy <- uy + offset
 		    adj <- c(0.5, 0)
 		}
 		else if (pos[i] == 4) {
-		    ux <- ux + unit(offset, "char")
+		    ux <- ux + offset
 		    adj <- c(0, 0.5)
 		}
 		annots[[i]] <- call("grid.text", labels[i], x=ux, y=uy, 
@@ -912,8 +920,8 @@ annotate_handler <- function(widget, playState) {
 	myXY$x <- signif(myXY$x, 8)
 	myXY$y <- signif(myXY$y, 8)
 	if (foo$is.click) {
-		myX <- mean(myXY$x)
-		myY <- mean(myXY$y)
+		myX <- myXY$x[1]
+		myY <- myXY$y[1]
 	}
 	
 	playFreezeGUI(playState)
@@ -1592,7 +1600,13 @@ brush_handler <- function(widget, playState) {
 			"Click the right mouse button to finish."))
 		if (is.null(foo)) return()
 		if (is.null(foo$coords)) return()
-		#if (foo$is.click) TODO
+		if (foo$is.click) {
+			# make it a 15x15 pixel box
+			foo$dc$x <- foo$dc$x[1] + c(-7, 7)
+			foo$dc$y <- foo$dc$y[1] + c(-7, 7)
+			foo$coords <- with(foo, deviceCoordsToSpace(playState, 
+				dc$x, dc$y, space=space))
+		}
 		space <- foo$space
 		x.npc <- playDo(playState, 
 			convertX(unit(foo$coords$x, "native"), "npc", valueOnly=TRUE),
@@ -1603,7 +1617,6 @@ brush_handler <- function(widget, playState) {
 		pdata <- xyCoords(playState, space=space)
 		nvars <- length(pdata$z)
 		## which subpanel
-		# TODO: if is.click coords should be coords of click!
 		colpos <- ceiling(x.npc[1] * nvars)
 		rowpos <- ceiling(y.npc[1] * nvars)
 		if ((rowpos == colpos) ||

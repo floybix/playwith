@@ -2,7 +2,7 @@
 \alias{quickTool}
 \title{Create new playwith tools}
 \description{
-  Make new tools for a \code{\link{playwith}} plot window.
+  Part of the \code{\link{playwith}} Application Programming Interface.
 }
 \usage{
 ## Note: this is only to be called inside a tool constructor function.
@@ -18,7 +18,7 @@ quickTool(
 	show = TRUE)
 }
 \arguments{
-  \item{playState}{  }
+  \item{playState}{ a \code{playState} object, as passed in to the constructor function. }
   \item{label}{ the button label. }
   \item{icon.name}{ name of the GTK icon to use, starting with "gtk-". 
   See \url{http://developer.gnome.org/doc/API/2.0/gtk/gtk-Stock-Items.html\#GTK-STOCK-ABOUT:CAPS} for a list. }
@@ -34,15 +34,20 @@ quickTool(
   \item{show}{ sets the initial visibility. }
 }
 \details{
-  
+  This is just a convenient way to make a \code{\link[RGtk2]{gtkToolButton}}. 
+  The \code{post.plot.action} is attached to the returned object as a GObject with
+  key "post.plot.action".
 }
 \value{
 	\code{quickTool} returns a \code{\link[RGtk2]{gtkToolButton}}.
+	Any \code{post.plot.action} is attached to the gObject with key "post.plot.action".
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
-\seealso{ \code{\link{playwith}} }
+\seealso{ \code{\link{playwith.API}}, \code{\link{playwith}} }
 \examples{
-
+	##
+	## see the examples in help(playwith.API).
+	##
 }
 \keyword{ iplot }
 \keyword{ programming }

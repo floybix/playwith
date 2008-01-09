@@ -259,6 +259,17 @@ settings_handler <- function(widget, playState) {
 		wid$stat_median
 		wid$stat_quart
 		wid$stat_mean
+		
+		# STYLE
+		wid$points
+		wid$lines
+		wid$droplines
+		
+		wid$cex
+		wid$pch
+		wid$col
+		wid$lty
+		#...
 
 		# dispose(h$obj)
 		playReplot(playState)

@@ -54,7 +54,7 @@
 	Tools in the set \code{playInteractionTools}, by default on the left toolbar:
 	\describe{
 		\item{\code{expand}}{
-			show only one selected lattice panel.
+			choose only one lattice panel to show.
 		}
 		\item{\code{identify}}{
 			identify points by adding labels to them.
@@ -107,7 +107,7 @@
 	Tools in the set \code{playSplomTools}:
 	\describe{
 		\item{\code{brush}}{
-			TODO.
+			brush data points, similar to \code{\link[lattice]{panel.brush.splom}}.
 		}
 	}
 
@@ -115,7 +115,15 @@
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{ \code{\link{playwith}}, \link{playwith.API} }
 \examples{
+if (interactive()) {
 	
+	toolSet <- c(list("stayontop", "keep", "save"), 
+		playInteractionTools)
+	unlist(toolSet)
+	
+	playwith(plot(1:10), top=toolSet, left=NULL)
+	
+}
 }
 \keyword{ iplot }
 \keyword{ dynamic }

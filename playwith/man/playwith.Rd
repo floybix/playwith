@@ -15,7 +15,6 @@ playwith(expr,
 	time.mode = FALSE,
 	labels = NULL, 
 	data.points = NULL, 
-	is.lattice = NA, 
 	viewport = NULL, 
 	top.tools = playApplicationTools, 
 	left.tools = playInteractionTools, 
@@ -44,8 +43,6 @@ playwith(expr,
   	If missing, it will be guessed from the plot call arguments. }
   \item{data.points}{ a data frame with elements "x" and "y" (or other suitable plotting structure)
 	giving locations of data points, in case these can not be guessed from the plot call arguments. }
-  \item{is.lattice}{ whether the plot is a \link[lattice]{Lattice} plot, i.e. returns a trellis object.
-  	If \code{NA}, the call name is matched against known Lattice function names. }
   \item{viewport}{ name or \code{\link[grid]{vpPath}} of the \code{\link[grid]{viewport}}
 	representing the data space. This allows interaction with grid graphics plots 
 	(but ignore this for Lattice plots). }
@@ -140,15 +137,14 @@ playwith(expr,
 	Note that different sets of tools will be used by default for calls to 
 	\code{\link[lattice]{splom}}, \code{\link[lattice]{cloud}} and \code{\link[lattice]{wireframe}}.
 	
-	Three types of plots are handled slightly differently: 
+	Four types of plots are handled slightly differently: 
 	\itemize{
-		\item Lattice graphics: a plot will be recognised as a Lattice plot if 
-			the call is to one of the standard high-level functions.
-			(Otherwise you may need \code{is.lattice=TRUE}).
-		\item base graphics: this is the default case. (If the call has the same
-			name as a high-level Lattice function, you may need \code{is.lattice=FALSE}).
-		\item grid graphics (not Lattice): you must give the \code{viewport}
-			argument to enable interaction. (This has not been well tested).
+		\item Lattice graphics: recognised by returning an object of class \code{trellis}.
+		\item ggplot graphics: recognised by returning an object of class \code{ggplot}.
+			This case is poorly supported.
+		\item other grid graphics: you must give the \code{viewport}
+			argument to enable interaction.
+		\item base graphics: this is the default case.
 	}
 	
 	It is important to be aware that \code{playwith} makes a lot of guesses 
@@ -211,7 +207,7 @@ playwith(plot(treering2, xlim=c(0,300)),
 
 library(lattice)
 
-## multi-panel lattice plots
+## multi-panel lattice plot
 playwith(xyplot(Income ~ log(Population / Area) | state.region, 
 	data = data.frame(state.x77)), 
 	label.style = gpar(col="red", fontfamily="HersheySans",
@@ -222,10 +218,10 @@ xx <- rnorm(50)
 playwith(plot(density(xx, bw = cur.time), panel.last = rug(xx)),
 	time.vector = seq(0.1, 1, by=0.05))
 
-## brushing multivariate scatterplots
+## brushing a multivariate scatterplot
 playwith(splom(environmental))
 
-## simple spin and zoom for 3D plots
+## simple spin and zoom for a 3D plot
 playwith(wireframe(volcano, drape=TRUE))
 
 ## a minimalist grid plot
@@ -240,6 +236,7 @@ gridPlot <- function(x, y, xlim = NULL, ylim = NULL) {
 	grid.points(x, y)
 	grid.xaxis()
 	grid.yaxis()
+	upViewport(0)
 }
 playwith(gridPlot(1:10, 11:20), viewport="theData")
 

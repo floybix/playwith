@@ -35,6 +35,9 @@
 		\item{\code{is.lattice}}{
 			whether the current plot is a Lattice plot.
 		}
+		\item{\code{is.ggplot}}{
+			whether the current plot is a ggplot plot.
+		}
 		\item{\code{viewport}}{
 			a named list of viewport paths (or names).
 			One of these must be named "plot".
@@ -91,6 +94,9 @@ promptLabel
 vbox
 hbox
 			}
+		}
+		\item{\code{accepts.arguments}}{
+			whether the called function accepts arguments.
 		}
 		\item{\code{plot.ready}}{
 			whether the plot has been drawn and is ready for interaction.

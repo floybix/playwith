@@ -106,9 +106,9 @@ blockRedraws <- function(expr, playState = playDevCur()) {
 	da$setSizeRequest(da$getAllocation()$width, da$getAllocation()$height)
 	#playState$win$setGeometryHints(da, list(max.width=myW, min.width=myW, 
 	#	max.height=myH, min.height=myH))
-	da$window$freezeUpdates() # hmm
+	##da$window$freezeUpdates() # hmm
 	foo <- try(eval.parent(substitute(expr)))
-	da$window$thawUpdates()
+	##da$window$thawUpdates()
 	#playState$win$setGeometryHints(da, list())
 	da$setSizeRequest(-1, -1)
 	playState$skip.redraws <- oval
@@ -180,7 +180,9 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y")) {
 	playDevSet(playState)
 	x.or.y <- match.arg(x.or.y)
 	# convert back from log scale if required
-	x <- unlogXY(x, playState$call, playState$is.lattice, x.or.y=x.or.y)
+	x <- playUnLogXY(playState, x, x.or.y=x.or.y)
+	# round digits conservatively
+	x <- round(x, digits=6)
 	if (playState$is.lattice) {
 		# TODO: this really sucks
 		x.panel <- xyData(playState, space="page")[[x.or.y]]
@@ -198,36 +200,6 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y")) {
 	}
 	if (x.or.y == "x") callArg(playState, xlim) <- x
 	if (x.or.y == "y") callArg(playState, ylim) <- x
-}
-
-# deprecated: use class(xyData()$x)
-xClass <- function(playState) {
-	if (playState$is.lattice && is.null(playState$data.points)) {
-		foo <- playState$trellis$x.limits
-	} else {
-		foo <- xyCoordsWithClass(playState)$x
-	}
-	if (inherits(foo, "AsIs")) {
-		cls <- setdiff(class(foo), "AsIs")
-		if (length(cls)) return(cls)
-		else return(class(unclass(foo)))
-	}
-	class(foo)
-}
-
-# deprecated: use class(xyData()$y)
-yClass <- function(playState) {
-	if (playState$is.lattice && is.null(playState$data.points)) {
-		foo <- playState$trellis$y.limits
-	} else {
-		foo <- xyCoordsWithClass(playState)$y
-	}
-	if (inherits(foo, "AsIs")) {
-		cls <- setdiff(class(foo), "AsIs")
-		if (length(cls)) return(cls)
-		else return(class(unclass(foo)))
-	}
-	class(foo)
 }
 
 # note space="page" means the root viewport
@@ -291,6 +263,9 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
 	if (is.null(foo)) return(NULL)
 	if (is.null(foo$coords)) return(NULL)
 	coords <- foo$coords
+	# convert from log scale if necessary
+	coords$x <- playUnLogX(playState, coords$x)
+	coords$y <- playUnLogY(playState, coords$y)
 	data <- xyCoords(playState, space=foo$space)
 	if (length(data$x) == 0) {
 		gmessage.error(paste("Sorry, can not guess the data point coordinates.",
@@ -554,6 +529,14 @@ xyData <- function(playState, space="plot") {
 		}
 		return(foo)
 	}
+	callName <- deparseOneLine(playState$call[[1]])
+	if (callName %in% c("qqnorm", "qqplot")) {
+		## these return plotted coordinates in a list
+		modCall <- playState$call
+		modCall$plot <- FALSE
+		foo <- eval(modCall, playState$env)
+		return(foo)
+	}
 	x <- callArg(playState, 1)
 	y <- callArg(playState, name="y")
 	xy.coords_with_class(playState, x, y)
@@ -665,28 +648,54 @@ xy.coords.qqmath <-
     }
 }
 
-unlogX <- function(x, the.call, is.lattice=T) {
-	unlogXY(x, the.call, is.lattice, x.or.y="x")
+playUnLogX <- function(playState, x) {
+	playUnLogXY(playState, x, x.or.y="x")
 }
 
-unlogY <- function(x, the.call, is.lattice=T) {
-	unlogXY(x, the.call, is.lattice, x.or.y="y")
+playUnLogY <- function(playState, x) {
+	playUnLogXY(playState, x, x.or.y="y")
 }
 
-unlogXY <- function(x, the.call, is.lattice=T, x.or.y=c("x", "y")) {
+playReLogX <- function(playState, x) {
+	playReLogXY(playState, x, x.or.y="x")
+}
+
+playReLogY <- function(playState, x) {
+	playReLogXY(playState, x, x.or.y="y")
+}
+
+playUnLogXY <- function(playState, x, x.or.y=c("x", "y")) {
 	x.or.y <- match.arg(x.or.y)
-	scalesArg <- the.call$scales
-	if (is.lattice) {
+	if (playState$is.lattice) {
+		scalesArg <- playState$call$scales
 		if (!is.null(scalesArg[[x.or.y]]$log)) {
 			logBase <- latticeLogBase(scalesArg[[x.or.y]]$log)
-			if (!is.null(logBase)) x <- logBase ^ x
+			if (!is.null(logBase)) return(logBase ^ x)
 		} else {
 			logBase <- latticeLogBase(scalesArg$log)
-			if (!is.null(logBase)) x <- logBase ^ x
+			if (!is.null(logBase)) return(logBase ^ x)
 		}
 	} else {
 		# traditional graphics plot
-		if (par(paste(x.or.y, "log", sep=""))) x <- 10 ^ x
+		if (par(paste(x.or.y, "log", sep=""))) return(10 ^ x)
+	}
+	x
+}
+
+playReLogXY <- function(playState, x, x.or.y=c("x", "y")) {
+	x.or.y <- match.arg(x.or.y)
+	if (playState$is.lattice) {
+		scalesArg <- playState$call$scales
+		if (!is.null(scalesArg[[x.or.y]]$log)) {
+			logBase <- latticeLogBase(scalesArg[[x.or.y]]$log)
+			if (!is.null(logBase)) return(log(x, base=logBase))
+		} else {
+			logBase <- latticeLogBase(scalesArg$log)
+			if (!is.null(logBase)) return(log(x, base=logBase))
+		}
+	} else {
+		# traditional graphics plot
+		if (par(paste(x.or.y, "log", sep=""))) return(log10(x))
 	}
 	x
 }
@@ -764,7 +773,7 @@ deviceToUserCoordsFunction <- function(is.grid = TRUE) {
 			y <- ylim[1] + y_npc * diff(ylim)
 			inside <- ((min(xlim) <= x) & (x <= max(xlim))
 				& (min(ylim) <= y) & (y <= max(ylim)))
-			# TODO: unlog
+			# note: do not unlog here, might want raw coords
 			list(x=x, y=y, inside=inside)
 		}
 	} else {
@@ -788,9 +797,7 @@ deviceToUserCoordsFunction <- function(is.grid = TRUE) {
 			y <- ylim[1] + y_npc * diff(ylim)
 			inside <- ((min(xlim) <= x) & (x <= max(xlim))
 				& (min(ylim) <= y) & (y <= max(ylim)))
-			# unlog
-			if (xlog) x <- 10 ^ x
-			if (ylog) y <- 10 ^ y
+			# note: do not unlog here, might want raw coords
 			list(x=x, y=y, inside=inside)
 		}
 	}

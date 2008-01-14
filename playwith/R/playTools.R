@@ -96,6 +96,7 @@ quickTool <- function(
 		gSignalConnect(x, "clicked", f, data=data)
 	}
 	if (!is.null(post.plot.action))
+		# TODO: attr(x, "post.plot.action") <- post.plot.action
 		gObjectSetData(x, "post.plot.action", data=post.plot.action)
 	x
 }
@@ -396,11 +397,13 @@ coords_click_handler <- function(widget, event, playState) {
 	space <- whichSpace(playState, x, y)
 	if (space != "page") {
 		xy <- deviceCoordsToSpace(playState, x, y, space=space)
-		xyx <- format(xy$x, nsmall=4)
-		xyy <- format(xy$y, nsmall=4)
-		xyx <- substr(xyx, 1, 5)
-		xyy <- substr(xyy, 1, 5)
-		coordsTxt <- paste("<tt>", xyx, "\n", xyy, "</tt>", sep="")
+		x <- playReLogX(playState, xy$x)
+		y <- playReLogY(playState, xy$y)
+		x <- format(x, nsmall=4)
+		y <- format(y, nsmall=4)
+		x <- substr(x, 1, 5)
+		y <- substr(y, 1, 5)
+		coordsTxt <- paste("<tt>", x, "\n", y, "</tt>", sep="")
 	}
 	playState$widgets$coordsLabel$setMarkup(coordsTxt)
 	return(FALSE)
@@ -709,11 +712,13 @@ expand_handler <- function(widget, playState) {
 		playState$call$layout <- c(0,1,1)
 		playState$.old.page <- playState$page
 		playState$page <- packet.number()
+		playState$.old.pages <- playState$pages
 	} else {
 		if (is.null(playState$.old.page)) return()
 		playState$call$layout <- playState$.old.call.layout
 		playState$page <- playState$.old.page
-		rm(.old.call.layout, .old.page, envir=playState)
+		playState$pages <- playState$.old.pages
+		rm(.old.call.layout, .old.page, .old.pages, envir=playState)
 	}
 	playReplot(playState)
 }
@@ -739,6 +744,7 @@ toolConstructors$identify <- function(playState) {
 		!(callName %in% c("splom", "cloud", "levelplot",
 			"contourplot", "wireframe", "parallel")) ) {
 		# need this for correctly identifying points
+		# TODO: the plot call has already been evaluated here!
 		callArg(playState, subscripts) <- quote(T)
 	}
 	labels <- playState$.args$labels
@@ -785,6 +791,16 @@ toolConstructors$identify <- function(playState) {
 							tmp.x <- tmp.x$x
 						labels <- makeLabels(tmp.x, orSeq=T)
 					}
+					# exceptions...
+					callName <- deparseOneLine(playState$call[[1]])
+					if (callName %in% c("qqplot")) {
+						tmp.y <- callArg(playState, 2)
+						x.lab <- makeLabels(tmp.x, orSeq=T)
+						y.lab <- makeLabels(tmp.y, orSeq=T)
+						labels <- paste(sep="",
+							x.lab[order(tmp.x)], ",",
+							y.lab[order(tmp.y)])
+					}
 				}
 			}
 		} else {
@@ -815,7 +831,9 @@ makeLabels <- function(x, orSeq=FALSE) {
 		labels <- format(x)
 	if (inherits(x, "ts") || inherits(x, "zoo"))
 		labels <- rep(format(stats::time(x)), NCOL(x))
-	if (orSeq && is.null(labels)) labels <- seq_along(x)
+	if (is.null(labels) && is.numeric(x))
+		labels <- names(x)
+	if (is.null(labels) && orSeq) labels <- seq_along(x)
 	labels
 }
 
@@ -824,6 +842,8 @@ drawLabels <- function(playState, which, space="plot", pos=1) {
 	xy <- xyCoords(playState, space=space)
 	x <- xy$x[which]
 	y <- xy$y[which]
+	x <- playReLogX(playState, x)
+	y <- playReLogY(playState, y)
 	labels <- playState$labels
 	if (playState$is.lattice && (length(labels) > length(xy$subscripts)))
 		labels <- labels[ xy$subscripts ]
@@ -869,7 +889,6 @@ drawLabels <- function(playState, which, space="plot", pos=1) {
 }
 
 identify_handler <- function(widget, playState) {
-	# TODO qqmath? - or just pass in data.points
 	repeat {
 		foo <- playSelectData(playState, 
 			"Click or drag to identify points. Right-click to end.")
@@ -978,8 +997,7 @@ annotate_handler <- function(widget, playState) {
 		refStyle <- do.call(gpar, trellis.par.get("add.text"))
 	}
 	# col
-	colList <- palette()
-	colList <- c(colList, trellis.par.get("superpose.symbol")$col)
+	colList <- c(palette(), trellis.par.get("superpose.symbol")$col)
 	wid$col <- gdroplist(colList, selected=0, editable=TRUE)
 	wid$alpha <- gspinbutton(value=1, from=0, to=1, by=0.05, digits=2)
 	if (!is.null(refStyle$col)) svalue(wid$col) <- refStyle$col
@@ -1189,6 +1207,7 @@ annotate_handler <- function(widget, playState) {
 		if (showingPreview) playReplot(playState); dispose(h$obj) }, 
 		container=buttgroup)
 	size(okbutt) <- size(prebutt) <- size(canbutt) <- c(80, 30)
+	
 	return()
 }
 
@@ -1698,8 +1717,8 @@ splom.drawBrushed <- function(ids, pargs=trellis.panelArgs(), threshold=18, col=
 ## NAV 3D
 
 toolConstructors$zoomin.3d <- function(playState) {
-	if (is.null(callArg(playState, zoom))) 
-		callArg(playState, zoom) <- 1
+	#if (is.null(callArg(playState, zoom))) 
+	#	callArg(playState, zoom) <- 1
 	quickTool(playState,
 		label = "Zoom in", 
 		icon = "gtk-zoom-in", 
@@ -1714,8 +1733,6 @@ toolConstructors$zoomout.3d <- function(playState) {
 }
 
 toolConstructors$fly.left.3d <- function(playState) {
-	if (is.null(callArg(playState, screen))) 
-		callArg(playState, screen) <- quote(list(z=40, x=-60))
 	quickTool(playState,
 		label = "Fly left", 
 		icon = "gtk-media-rewind-ltr", 
@@ -1731,18 +1748,21 @@ toolConstructors$fly.right.3d <- function(playState) {
 
 zoomin3d_handler <- function(widget, playState) {
 	zoom <- callArg(playState, zoom)
+	if (is.null(zoom)) zoom <- 1
 	callArg(playState, zoom) <- signif(zoom * 1.5, 4)
 	playReplot(playState)
 }
 
 zoomout3d_handler <- function(widget, playState) {
 	zoom <- callArg(playState, zoom)
+	if (is.null(zoom)) zoom <- 1
 	callArg(playState, zoom) <- signif(zoom / 1.5, 4)
 	playReplot(playState)
 }
 
 flyleft3d_handler <- function(widget, playState) {
 	screen <- callArg(playState, screen)
+	if (is.null(screen)) screen <- quote(list(z=40, x=-60))
 	if (names(screen)[1] == 'z') screen[[1]] <- screen[[1]] + 45
 	else screen <- c(z = 45, screen)
 	# convert list to call so that deparse is pretty
@@ -1752,6 +1772,7 @@ flyleft3d_handler <- function(widget, playState) {
 
 flyright3d_handler <- function(widget, playState) {
 	screen <- callArg(playState, screen)
+	if (is.null(screen)) screen <- quote(list(z=40, x=-60))
 	if (names(screen)[1] == 'z') screen[[1]] <- screen[[1]] - 45
 	else screen <- c(z = -45, screen)
 	# convert list to call so that deparse is pretty

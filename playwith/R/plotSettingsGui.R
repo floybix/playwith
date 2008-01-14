@@ -4,9 +4,12 @@
 ## GPL version 2 or newer
 
 settings_handler <- function(widget, playState) {
-	widget["sensitive"] <- FALSE
-	on.exit(widget["sensitive"] <- TRUE)
+	
+	dialog <- gwindow(title="Plot settings")
+	loadingLabel <- glabel("Loading...")
+	add(dialog, loadingLabel)
 	wingroup <- ggroup(horizontal=FALSE)
+	tabs <- gnotebook(container=wingroup)
 	wid <- list()
 	
 	# convenience extractor
@@ -14,8 +17,12 @@ settings_handler <- function(widget, playState) {
 	
 	# TODO: LEGEND / KEY
 	
+	# (NEW TAB)
+	annTab <- ggroup(horizontal=FALSE)
+	add(tabs, annTab, label="Title and Axes")
+	
 	# TITLES
-	labgroup <- gframe("Titles", horizontal=FALSE, container=wingroup)
+	labgroup <- gframe("Titles", horizontal=FALSE, container=annTab)
 	lay <- glayout(container=labgroup)
 	rownum <- 1
 	for (nm in c("main", "sub", "xlab", "ylab")) {
@@ -34,7 +41,7 @@ settings_handler <- function(widget, playState) {
 	visible(lay) <- TRUE
 	
 	# AXES
-	axisgroup <- gframe("Axes", horizontal=FALSE, container=wingroup)
+	axisgroup <- gframe("Axes", horizontal=FALSE, container=annTab)
 	lay <- glayout(container=axisgroup)
 	wid$xaxis.show <- gcheckbox("visible", checked=!(
 		any(arg(scales$x$draw) == FALSE) ||
@@ -71,9 +78,13 @@ settings_handler <- function(widget, playState) {
 	visible(lay) <- TRUE
 	add(axisgroup, wid$aspect.iso)
 	
-	# DECORATIONS
-	decogroup <- gframe("Decorations", horizontal=FALSE, container=wingroup)
-##	enabled(decogroup) <- FALSE
+	# (NEW TAB)
+	decoTab <- ggroup(horizontal=FALSE)
+	add(tabs, decoTab, label="Reference lines")
+	
+	# REFERENCE LINES
+	decogroup <- gframe("Reference lines", horizontal=FALSE, container=decoTab)
+	enabled(decogroup) <- FALSE
 	# grid
 	gridgroup <- ggroup(container=decogroup)
 	wid$grid_h <- gcheckbox("horizontal", checked=F)
@@ -90,6 +101,17 @@ settings_handler <- function(widget, playState) {
 	add(linegroup, wid$abline_h)
 	add(linegroup, wid$abline_v)
 	add(linegroup, wid$abline_d)
+	# rug
+	ruggroup <- ggroup(container=decogroup)
+	wid$rug_bot <- gcheckbox("bottom", checked=F)
+	wid$rug_top <- gcheckbox("top", checked=F)
+	wid$rug_left <- gcheckbox("left", checked=F)
+	wid$rug_right <- gcheckbox("right", checked=F)
+	add(ruggroup, glabel("Rug (marginal distribution):"))
+	add(ruggroup, wid$rug_bot)
+	add(ruggroup, wid$rug_top)
+	add(ruggroup, wid$rug_left)
+	add(ruggroup, wid$rug_right)
 	# stats: min / max / median / quartiles / mean
 	statgroup <- ggroup(container=decogroup)
 	wid$stat_min <- gcheckbox("min", checked=F)
@@ -97,11 +119,19 @@ settings_handler <- function(widget, playState) {
 	wid$stat_median <- gcheckbox("median", checked=F)
 	wid$stat_quart <- gcheckbox("quart", checked=F)
 	wid$stat_mean <- gcheckbox("mean", checked=F)
+	wid$stat_yaxis <- gcheckbox("y axis", checked=F)
+	wid$stat_xaxis <- gcheckbox("x axis", checked=F)
+	add(statgroup, glabel("Stats:"))
 	add(statgroup, wid$stat_min)
 	add(statgroup, wid$stat_max)
 	add(statgroup, wid$stat_median)
 	add(statgroup, wid$stat_quart)
 	add(statgroup, wid$stat_mean)
+	statgroup2 <- ggroup(container=decogroup)
+	addSpring(statgroup2)
+	add(statgroup2, glabel("on"))
+	add(statgroup2, wid$stat_yaxis)
+	add(statgroup2, wid$stat_xaxis)
 	# loess
 	loessgroup <- ggroup(container=decogroup)
 	wid$loess <- gcheckbox("Loess smoother", checked=F)
@@ -109,16 +139,38 @@ settings_handler <- function(widget, playState) {
 	add(loessgroup, wid$loess)
 	add(loessgroup, glabel("span:"))
 	add(loessgroup, wid$loess_span)
-	# rug
-	wid$rug <- gcheckbox("Rug (marginal distribution)", checked=F)
-	add(decogroup, wid$rug)
-	
 	# panel.lmline()
-	# panel.loess()
+	
+	# REFERENCE LINE STYLE
+	reflinestylegroup <- gframe("Style of reference lines", horizontal=FALSE, container=decoTab)
+	enabled(reflinestylegroup) <- FALSE
+	# col / lty / lwd
+	colList <- c(palette(), trellis.par.get("superpose.symbol")$col)
+	wid$refline_col <- gdroplist(colList, selected=0, editable=TRUE)
+	wid$refline_alpha <- gspinbutton(value=1, from=0, to=1, by=0.05, digits=2)
+	# lty
+	ltyList <- c("solid", "dashed", "dotted", "dotdash", "longdash")
+	wid$refline_lty <- gdroplist(ltyList, selected=0)
+	# lwd
+	wid$refline_lwd <- gedit("1", width=5, coerce.with=as.numeric)
+	lay <- glayout(container=reflinestylegroup)
+	lay[1,1] <- "Color:"
+	lay[1,2] <- wid$refline_col
+	lay[2,1] <- "Alpha (opacity):"
+	lay[2,2] <- wid$refline_alpha
+	lay[3,1] <- "Line type:"
+	lay[3,2] <- wid$refline_lty
+	lay[4,1] <- "Line width:"
+	lay[4,2] <- wid$refline_lwd
+	visible(lay) <- TRUE
+	
+	# (NEW TAB)
+	styleTab <- ggroup(horizontal=FALSE)
+	add(tabs, styleTab, label="Style")
 	
 	# STYLE
-	stylegroup <- gframe("Style", horizontal=FALSE, container=wingroup)
-##	enabled(stylegroup) <- FALSE
+	stylegroup <- gframe("Plot style", horizontal=FALSE, container=styleTab)
+	enabled(stylegroup) <- FALSE
 	# type
 	arg_type <- callArg(playState, type)
 	hasPoints <- (is.null(arg_type) || any(c("p","b","o") %in% arg_type))
@@ -157,17 +209,28 @@ settings_handler <- function(widget, playState) {
 	lay[2,1] <- "Plot symbol:"
 	lay[2,2] <- wid$pch
 	# col
-	colList <- palette()
+	colList <- c(palette(), trellis.par.get("superpose.symbol")$col)
 	arg_col <- callArg(playState, col)
 	which_col <- if (is.numeric(arg_col)) which(arg_col == seq_along(colList))
 		else which(sapply(colList, identical, arg_col))
 	if (length(which_col) == 0) which_col <- 0
-	wid$col <- gdroplist(colList, selected=which_col)
+	wid$col <- gdroplist(colList, selected=which_col, editable=TRUE)
 	lay[3,1] <- "Color (foreground):"
 	lay[3,2] <- wid$col
 	# lty
 	ltyList <- c("solid", "dashed", "dotted", "dotdash", "longdash")
-	# lwd TODO
+	arg_lty <- callArg(playState, lty)
+	which_lty <- if (is.numeric(arg_lty)) which(arg_lty == seq_along(ltyList))
+		else which(sapply(ltyList, identical, arg_lty))
+	if (length(which_lty) == 0) which_lty <- 0
+	wid$lty <- gdroplist(ltyList, selected=which_lty, editable=TRUE)
+	lay[4,1] <- "Line type:"
+	lay[4,2] <- wid$lty
+	# lwd
+	wid$lwd <- gedit(toString(callArg(playState, lwd)), width=5, 
+		coerce.with=as.numeric)
+	lay[5,1] <- "Line width:"
+	lay[5,2] <- wid$lwd
 	# fontface / fontfamily / font
 	familyList <- list("sans", "serif", "mono")
 	fontList <- list(plain=1, bold=2, italic=3, bolditalic=4)
@@ -198,11 +261,10 @@ settings_handler <- function(widget, playState) {
 	
 	# layers
 	
-	# TODO: make the dialog not modal
+	svalue(tabs) <- 1
 	
-	gbasicdialog("Plot settings", widget=wingroup, action=playState, 
-	handler=function(h, ...) {
-		playState <- h$action
+	settings_handler <- function(h, ...) {
+		# note: playState is accessed from the function environment!
 		
 		# TITLES
 		argExpr <- function(wid, expr.wid) {
@@ -244,23 +306,35 @@ settings_handler <- function(widget, playState) {
 			callArg(playState, asp) <- newAsp
 		}
 		
-		# DECORATIONS
+		# REFERENCE LINES
 		wid$grid_h
 		wid$grid_v
 		wid$abline_h
 		wid$abline_v
 		wid$abline_d
-		wid$rug
-		wid$loess
-		wid$loess_span
-
+		wid$rug_bot
+		wid$rug_top
+		wid$rug_left
+		wid$rug_right
 		wid$stat_min
 		wid$stat_max
 		wid$stat_median
 		wid$stat_quart
 		wid$stat_mean
+		wid$stat_yaxis
+		wid$stat_xaxis
+		wid$loess
+		wid$loess_span
+		
+		# REFERENCE LINE STYLE
+		wid$refline_col
+		wid$refline_alpha
+		wid$refline_lty
+		wid$refline_lwd
 		
 		# STYLE
+		# lattice: use callArg(playState, par.settings) <-
+		# list(superpose.symbol=list(pch=c(22, 23),cex=c(1.7,1.6),col="black"))
 		wid$points
 		wid$lines
 		wid$droplines
@@ -268,13 +342,30 @@ settings_handler <- function(widget, playState) {
 		wid$cex
 		wid$pch
 		wid$col
+		wid$alpha
 		wid$lty
-		#...
-
-		# dispose(h$obj)
+		wid$lwd
+		
 		playReplot(playState)
-	})
-	playState$win$present()
+		
+		if (h$action == "apply") return()
+		dispose(h$obj)
+		playState$win$present()
+	}
+	
+	buttgroup <- ggroup(container=wingroup)
+	addSpring(buttgroup)
+	okbutt <- gbutton("OK", handler=settings_handler, 
+		action="ok", container=buttgroup)
+	prebutt <- gbutton("Apply", handler=settings_handler, 
+		action="apply", container=buttgroup)
+	canbutt <- gbutton("Close", handler=function(h, ...) dispose(h$obj), 
+		container=buttgroup)
+	size(okbutt) <- size(prebutt) <- size(canbutt) <- c(80, 30)
+	
+	delete(dialog, loadingLabel)
+	add(dialog, wingroup)
+	return()
 }
 
 

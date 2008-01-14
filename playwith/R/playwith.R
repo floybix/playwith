@@ -39,7 +39,6 @@ playwith <- function(
 	time.mode = FALSE,
 	labels = NULL, 
 	data.points = NULL, 
-	is.lattice = NA, 
 	viewport = NULL, 
 	top.tools = playApplicationTools, 
 	left.tools = playInteractionTools, 
@@ -95,11 +94,12 @@ playwith <- function(
 	StateEnv$.current <- playState
 	# work out evaluation rules
 	env <- new.env()
-	inherits <- !is.na(eval.args)
+	evalGlobals <- !is.na(eval.args)
 	if (is.na(eval.args)) eval.args <- (environmentName(envir) != "R_GlobalEnv")
 	if (!identical(eval.args, FALSE)) {
-		copyArgsIntoEnv(plot.call, envir=envir, newEnv=env, inherits=inherits, 
-			pattern=eval.args, invert.match=invert.match)
+		try(copyArgsIntoEnv(plot.call, envir=envir, newEnv=env, 
+			evalGlobals=evalGlobals, pattern=eval.args, 
+			invert.match=invert.match))
 	}
 	# check whether the window already exists
 	if (!is.null(myWin <- playState$win) &&
@@ -199,14 +199,14 @@ playwith <- function(
 		callToolbar$hide()
 	}
 	# create the top toolbar
-	topToolbar <- gtkToolbar()
+	topToolbar <- gtkToolbar(show=FALSE)
 	topToolbar["toolbar-style"] <- GtkToolbarStyle["both"]
 	myVBox$packStart(topToolbar, expand=FALSE)
 	# create the plot area and side toolbars
 	myHBox <- gtkHBox()
 	myVBox$packStart(myHBox)
 	# create the left toolbar
-	leftToolbar <- gtkToolbar()
+	leftToolbar <- gtkToolbar(show=FALSE)
 	leftToolbar["orientation"] <- GtkOrientation["vertical"]
 	leftToolbar["toolbar-style"] <- GtkToolbarStyle["both"]
 	myHBox$packStart(leftToolbar, expand=FALSE)
@@ -228,7 +228,7 @@ playwith <- function(
 		data=playState, after=TRUE)
 	trellis.device(new=F)
 	# create the page scrollbar
-	pageScrollBox <- gtkVBox()
+	pageScrollBox <- gtkVBox(show=FALSE)
 	myHBox$packStart(pageScrollBox, expand=FALSE)
 	pageScrollBox$packStart(gtkLabel("Page"), expand=FALSE)
 	pageEntry <- gtkEntry()
@@ -256,12 +256,12 @@ playwith <- function(
 		data=playState)
 	pageScrollBox$packStart(pageScrollbar)
 	# create the right toolbar
-	rightToolbar <- gtkToolbar()
+	rightToolbar <- gtkToolbar(show=FALSE)
 	rightToolbar["orientation"] <- GtkOrientation["vertical"]
 	rightToolbar["toolbar-style"] <- GtkToolbarStyle["both"]
 	myHBox$packStart(rightToolbar, expand=FALSE)
 	# create the time/index scrollbar
-	timeScrollBox <- gtkHBox()
+	timeScrollBox <- gtkHBox(show=time.mode)
 	myVBox$packStart(timeScrollBox, expand=FALSE)
 	timeScrollBox$packStart(gtkLabel("Time"), expand=FALSE)
 	timeEntry <- gtkEntry()
@@ -276,9 +276,21 @@ playwith <- function(
 		time.mode_scrollbar_handler, data=playState)
 	timeScrollBox$packStart(timeScrollbar)
 	# create the bottom toolbar
-	bottomToolbar <- gtkToolbar()
+	bottomToolbar <- gtkToolbar(show=FALSE)
 	bottomToolbar["toolbar-style"] <- GtkToolbarStyle["both"]
 	myVBox$packStart(bottomToolbar, expand=FALSE)
+	# add dummy toolbar buttons to force plot device to approx size
+	initTbar <- function(tbar, horiz) {
+		tbar$show()
+		tbar$insert(quickTool(playState, label="Loading...", 
+			icon="gtk-execute"), -1)
+		if (horiz) tbar$setSizeRequest(-1, tbar$getAllocation()$height)
+			else tbar$setSizeRequest(tbar$getAllocation()$width, -1)
+	}
+	if (length(top.tools)) initTbar(topToolbar, horiz=TRUE)
+	if (length(bottom.tools)) initTbar(bottomToolbar, horiz=TRUE)
+	if (length(left.tools)) initTbar(leftToolbar, horiz=FALSE)
+	if (length(right.tools)) initTbar(rightToolbar, horiz=FALSE)
 	# store the state of this plot window in a new environment
 	missing_top.tools <- missing(top.tools)
 	missing_left.tools <- missing(left.tools)
@@ -314,7 +326,6 @@ playwith <- function(
 	playState$time.mode <- time.mode
 	playState$labels <- labels
 	playState$data.points <- data.points
-	playState$is.lattice <- is.lattice
 	playState$viewport <- viewport
 	playState$show.call <- show.call
 	playState$ids <- list()
@@ -350,7 +361,6 @@ playwith <- function(
 		right.tools = right.tools,
 		missing_top.tools = missing_top.tools,
 		missing_left.tools = missing_left.tools,
-		is.lattice = is.lattice,
 		data.points = data.points,
 		labels = labels,
 		title = title
@@ -361,28 +371,31 @@ playwith <- function(
 
 playNewPlot <- function(playState) {
 	playDevSet(playState)
-	# clear the current plot if any, to avoid redraws
+	# clear the current plot if any, to avoid lengthy redraws
 	playState$plot.ready <- FALSE
 	grid.newpage()
-	# clear toolbars and scrollbars
-	playState$widgets$pageScrollBox$hide()
-	playState$widgets$timeScrollBox$hide()
-	tbars <- playState$widgets[
-		c("topToolbar", "leftToolbar", "bottomToolbar", "rightToolbar")]
-	for (tbar in tbars) {
-		tbar$hide()
-		for (x in rev(tbar$getChildren())) x$destroy()
+	playPrompt(playState, NULL)
+	# disable toolbars until this is over
+	playFreezeGUI(playState)
+	on.exit(playThawGUI(playState))
+	# hide scrollbars if they are not needed
+	if (playState$time.mode == FALSE) {
+		removeWidgetNicely(playState, playState$widgets$timeScrollBox,
+			horiz=TRUE)
+	}
+	if (playState$pages == 1) {
+		removeWidgetNicely(playState, playState$widgets$pageScrollBox,
+			horiz=FALSE)
 	}
 	# get access to some of the original arguments
 	argfoo <- playState$.args
 	for (foo in names(argfoo)) assign(foo, argfoo[[foo]])
+	# check whether the called function accepts arguments
 	callFun <- eval(playState$call[[1]])
-	callName <- deparseOneLine(playState$call[[1]])
-	if (is.na(is.lattice)) is.lattice <- (callName %in% latticeNames)
-	playState$is.lattice <- is.lattice
-	# check whether the call accepts arguments
-	if ((typeof(callFun) == "closure") && !is.null(formals(callFun))) {
-		# put call into canonical form
+	playState$accepts.arguments <- 
+		((typeof(callFun) == "closure") && !is.null(formals(callFun)))
+	# put call into canonical form, but with first argument un-named
+	if (playState$accepts.arguments) {
 		plot.call <- playState$call
 		firstArgName <- names(plot.call)[2]
 		plot.call <- match.call(callFun, plot.call)
@@ -390,17 +403,21 @@ playNewPlot <- function(playState) {
 			if (!is.null(names(plot.call))) names(plot.call)[2] <- ""
 		playState$call <- plot.call
 	}
-	# TODO: top.tools etc as options()
-	# choose buttons automatically depending on the type of plot
-	if (is.lattice && (callName %in% c("cloud", "wireframe"))) {
-		if (missing_left.tools) left.tools <- play3DTools
-	}
-	if (is.lattice && (callName %in% "splom")) {
-		if (missing_left.tools) left.tools <- playSplomTools
-	}
-	# eval buttons and add them to the toolbars
-	# note that these may be user-defined initialisation functions
-	# if an element evaluates to NA it is skipped
+	# update address bar with current call
+	updateAddressBar(playState)
+	# eval plot call
+	# (NOTE this will draw the plot UNLESS it is lattice or ggplot)
+	result <- eval(playState$call, playState$env)
+	# detect lattice
+	playState$is.lattice <- (inherits(result, "trellis"))
+	if (playState$is.lattice) playState$trellis <- result
+	# detect ggplot
+	playState$is.ggplot <- (inherits(result, "ggplot"))
+	if (playState$is.ggplot) playState$ggplot <- result
+	
+	# initialise tools and add them to the toolbars
+	# note that these may be user-defined constructor functions
+	# if a constructor evaluates to NA it is skipped
 	populateToolbar <- function(toolbar, tools) {
 		for (i in seq_along(tools)) {
 			myName <- names(tools)[i]
@@ -428,17 +445,36 @@ playNewPlot <- function(playState) {
 			playState$tools[[myName]] <- newTool
 		}
 	}
-	# set up the toolbars
-	with(playState$widgets, {
-		populateToolbar(topToolbar, top.tools)
-		populateToolbar(leftToolbar, left.tools)
-		populateToolbar(bottomToolbar, bottom.tools)
-		populateToolbar(rightToolbar, right.tools)
+	# choose buttons automatically depending on the type of plot
+#	if (is.lattice && (callName %in% c("cloud", "wireframe"))) {
+#		if (missing_left.tools) left.tools <- play3DTools
+#	}
+#	if (is.lattice && (callName %in% "splom")) {
+#		if (missing_left.tools) left.tools <- playSplomTools
+#	}
+	# set up toolbar tools
+	playState$tools <- list()
+	tbars <- playState$widgets[c("topToolbar", "leftToolbar", 
+		"bottomToolbar", "rightToolbar")]
+	doToolbars <- quote({
+		for (tbar in tbars) {
+			for (x in rev(tbar$getChildren())) x$destroy()
+		}
+		with(playState$widgets, {
+			populateToolbar(topToolbar, top.tools)
+			populateToolbar(leftToolbar, left.tools)
+			populateToolbar(bottomToolbar, bottom.tools)
+			populateToolbar(rightToolbar, right.tools)
+		})
+		for (tbar in tbars) {
+			if (length(tbar$getChildren())) tbar$show()
+			else tbar$hide()
+		}
 	})
-	for (tbar in tbars) {
-		if (length(tbar$getChildren()) > 0) tbar$show()
-	}
-	playReplot(playState)
+	if (playState$is.lattice || playState$is.ggplot) eval(doToolbars)
+	else blockRedraws(eval(doToolbars), playState)
+	# continue
+	playPostPlot(result, playState)
 }
 
 playReplot <- function(playState) {
@@ -450,28 +486,28 @@ playReplot <- function(playState) {
 	# disable toolbars until this is over
 	playFreezeGUI(playState)
 	on.exit(playThawGUI(playState))
-	widg <- playState$widgets
-	# add current call to text box
-	callTxt <- ""
-	if (object.size(playState$call) < 50000) {
-		callTxt <- deparseOneLine(playState$call, control="showAttributes")
-		if (is.null(playState$.args$title)) playState$win["title"] <- 
-			toString(callTxt, width=34)
-		oldCallTxt <- widg$callEntry$getActiveText()
-		if ((widg$callEntry["active"] == -1) || (callTxt != oldCallTxt)) {
-			# a new call: edited inline OR playState$call modified
-			widg$callEntry$prependText(callTxt)
-			widg$callEntry["active"] <- 0
-			widg$undoButton["sensitive"] <- TRUE
-		}
-		widg$redoButton["sensitive"] <- (widg$callEntry["active"] > 0)
+	# hide scrollbars if they are not needed
+	if (playState$time.mode == FALSE) {
+		removeWidgetNicely(playState, playState$widgets$timeScrollBox,
+			horiz=TRUE)
 	}
-	# do the plot
+	if (playState$pages == 1) {
+		removeWidgetNicely(playState, playState$widgets$pageScrollBox,
+			horiz=FALSE)
+	}
+	# update address bar with current call
+	updateAddressBar(playState)
+	# eval plot call
+	# (NOTE this will draw the plot UNLESS it is lattice or ggplot)
 	result <- eval(playState$call, playState$env)
+	# continue
+	playPostPlot(result, playState)
+}
 
+playPostPlot <- function(result, playState) {
+	# set back to this device, since may have switched during plot
+	playDevSet(playState)
 	if (inherits(result, "trellis")) {
-		# set back to this device, since may have switched during plot
-		playDevSet(playState)
 		# work out panels and pages
 		nPackets <- prod(dim(result))
 		nPanels <- nPackets
@@ -484,9 +520,25 @@ playReplot <- function(playState) {
 		}
 		if (playState$page > nPages) playState$page <- 1
 		playState$pages <- nPages
-		# plot trellis object
+		# plot trellis object (specified page only)
 		plot(result, packet.panel=packet.panel.page(playState$page))
 		playState$trellis <- result
+	}
+	if (inherits(result, "ggplot")) {
+		# plot ggplot object
+		print(result)
+		playState$ggplot <- result
+		#if (is.null(playState$viewport)) {
+			vpNames <- grid.ls(viewports=TRUE, grobs=FALSE, print=FALSE)$name
+			panelNames <- vpNames[grep("panel", vpNames)]
+			panelNames <- unique(panelNames)
+			tmp.vp <- as.list(panelNames)
+			names(tmp.vp) <- panelNames
+			names(tmp.vp)[1] <- "plot"
+			playState$viewport <- tmp.vp
+			#playState$viewport <- list(plot="panel_1_1")
+			# TODO
+		#}
 	}
 	# store coordinate system(s)
 	generateSpaces(playState)
@@ -508,6 +560,25 @@ playReplot <- function(playState) {
 		pages_post.plot.action(widg$pageScrollBox, playState=playState)
 	})
 	invisible(result)
+}
+
+updateAddressBar <- function(playState) {
+	# add current call to "address bar" and set up associated tools
+	callTxt <- ""
+	if (object.size(playState$call) < 50000) {
+		widg <- playState$widgets
+		callTxt <- deparseOneLine(playState$call, control="showAttributes")
+		if (is.null(playState$.args$title)) playState$win["title"] <- 
+			toString(callTxt, width=34)
+		oldCallTxt <- widg$callEntry$getActiveText()
+		if ((widg$callEntry["active"] == -1) || (callTxt != oldCallTxt)) {
+			# a new call: edited inline OR playState$call modified
+			widg$callEntry$prependText(callTxt)
+			widg$callEntry["active"] <- 0
+			widg$undoButton["sensitive"] <- TRUE
+		}
+		widg$redoButton["sensitive"] <- (widg$callEntry["active"] > 0)
+	}
 }
 
 playRefresh <- function(playState) {
@@ -574,6 +645,17 @@ generateSpaces <- function(playState) {
 	playState$.need.reconfig <- FALSE
 }
 
+removeWidgetNicely <- function(playState, widget, horiz) {
+	whichDim <- if (horiz) "height" else "width"
+	if (widget["visible"]) blockRedraws({
+		widgSize <- widget$getAllocation()
+		winSize <- playState$win$getSize()
+		widget["visible"] <- FALSE
+		winSize[[whichDim]] <- winSize[[whichDim]] - widgSize[[whichDim]]
+		playState$win$resize(winSize$width, winSize$height)
+	})
+}
+
 ## Window signal handlers
 
 pages_post.plot.action <- function(widget, playState) {
@@ -582,9 +664,14 @@ pages_post.plot.action <- function(widget, playState) {
 		widg$pageScrollbar["adjustment"]["upper"] <- playState$pages+1
 		widg$pageScrollbar["adjustment"]["value"] <- playState$page
 		widg$pageEntry["text"] <- as.character(playState$page)
+		widg$pageScrollBox["sensitive"] <- TRUE
+		widg$pageScrollbar["sensitive"] <- TRUE
+		widg$pageEntry["sensitive"] <- TRUE
 		widg$pageScrollBox$show()
 	} else {
-		widg$pageScrollBox$hide()
+		#widg$pageScrollBox$hide()
+		widg$pageScrollbar["sensitive"] <- FALSE
+		widg$pageEntry["sensitive"] <- FALSE
 	}
 }
 
@@ -794,7 +881,7 @@ xy.coords.call <- function(the.call, envir=parent.frame(), log=NULL, recycle=TRU
 	xy.coords(tmp.x, tmp.y, log=log, recycle=recycle)
 }
 
-copyArgsIntoEnv <- function(the.call, envir=parent.frame(), newEnv, inherits=F, pattern=T, invert.match=F) {
+copyArgsIntoEnv <- function(the.call, envir=parent.frame(), newEnv, evalGlobals=F, pattern=T, invert.match=F) {
 	stopifnot(is.call(the.call) || is.list(the.call) || is.expression(the.call))
 	isMatch <- !invert.match
 	for (i in seq_along(the.call)) {
@@ -807,40 +894,32 @@ copyArgsIntoEnv <- function(the.call, envir=parent.frame(), newEnv, inherits=F, 
 		if (mode(this.arg) %in% c("call", "(", "list", "expression")) {
 			# call recursively...
 			copyArgsIntoEnv(this.arg, envir=envir, newEnv=newEnv,
-				inherits=inherits, pattern=pattern, 
+				evalGlobals=evalGlobals, pattern=pattern, 
 				invert.match=invert.match)
 		} else if (mode(this.arg) %in% "name") {
 			this.name <- as.character(this.arg)
+			# check if this name already exists in local env
+			if (exists(this.name, envir=newEnv, inherits=F))
+				next
+			# check that the name matches the pattern
 			if (!isTRUE(pattern) && 
 				(any(grep(pattern, this.name))) != isMatch)
 				next
-			# TODO: this should stop at GlobalEnv, ignore loaded packages
+			# find whether name exists in sys.frames or in GlobalEnv
 			# (`inherits=TRUE` matches packages too)
-			if (exists(this.name, envir=envir, inherits=inherits)
-			&& !exists(this.name, envir=newEnv, inherits=F)) {
-				assign(this.name, eval(this.arg, envir=envir),
-					envir=newEnv)
-			}
+			# TODO
+			# ignore global symbols if evalGlobals == FALSE
+			if ((evalGlobals == FALSE) && 
+				(exists(this.name, envir=.GlobalEnv, inherits=F)))
+				next
+			# ignore symbols in loaded packages
+			if (exists(this.name, where=2)) next
+			# OK, copy it
+			try(assign(this.name, eval(this.arg, envir=envir),
+					envir=newEnv))
 		}
 		# leave constants alone
 	}
-}
-
-evalCallArgs <- function(myCall, envir=parent.frame(), pattern=T) {
-	for (i in seq(along=myCall)) {
-		if ((mode(myCall) %in% "call") && (i == 1)) {
-			next # don't eval function itself
-		}
-		if (isTRUE(pattern)) {
-			myCall[[i]] <- eval(myCall[[i]], envir)
-		} else if (any(grep(pattern, deparse(myCall[[i]])))) {
-			myCall[[i]] <- eval(myCall[[i]], envir)
-		} else if (mode(myCall[[i]]) %in% c("call","list")) {
-			myCall[[i]] <- evalCallArgs(myCall[[i]], envir=envir,
-				pattern=pattern)
-		}
-	}
-	return(myCall)
 }
 
 recursive.as.list.call <- function(x) {

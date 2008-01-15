@@ -397,10 +397,9 @@ coords_click_handler <- function(widget, event, playState) {
 	space <- whichSpace(playState, x, y)
 	if (space != "page") {
 		xy <- deviceCoordsToSpace(playState, x, y, space=space)
-		x <- playReLogX(playState, xy$x)
-		y <- playReLogY(playState, xy$y)
-		x <- format(x, nsmall=4)
-		y <- format(y, nsmall=4)
+		xy <- spaceCoordsToDataCoords(playState, xy)
+		x <- format(xy$x, nsmall=4)
+		y <- format(xy$y, nsmall=4)
 		x <- substr(x, 1, 5)
 		y <- substr(y, 1, 5)
 		coordsTxt <- paste("<tt>", x, "\n", y, "</tt>", sep="")
@@ -840,10 +839,9 @@ makeLabels <- function(x, orSeq=FALSE) {
 drawLabels <- function(playState, which, space="plot", pos=1) {
 	playDevSet(playState)
 	xy <- xyCoords(playState, space=space)
+	xy <- dataCoordsToSpaceCoords(playState, xy)
 	x <- xy$x[which]
 	y <- xy$y[which]
-	x <- playReLogX(playState, x)
-	y <- playReLogY(playState, y)
 	labels <- playState$labels
 	if (playState$is.lattice && (length(labels) > length(xy$subscripts)))
 		labels <- labels[ xy$subscripts ]

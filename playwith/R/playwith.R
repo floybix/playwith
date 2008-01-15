@@ -526,7 +526,7 @@ playPostPlot <- function(result, playState) {
 	}
 	if (inherits(result, "ggplot")) {
 		# plot ggplot object
-		print(result)
+		print(result, pretty=FALSE) # there is a bug in grid (TODO)
 		playState$ggplot <- result
 		#if (is.null(playState$viewport)) {
 			vpNames <- grid.ls(viewports=TRUE, grobs=FALSE, print=FALSE)$name
@@ -773,7 +773,7 @@ playwith.trellis <-
            !lattice:::lattice.getStatus("print.more"))
    if (dev.interactive2(TRUE) && new) {
        ## starting a new plot on an interactive device
-       eval(call("playwith", x$call, is.lattice=TRUE, envir=parent.frame(2)))
+       eval(call("playwith", x$call, envir=parent.frame(2)))
        return(invisible())
    }
    ## call `plot.trellis` from lattice package, as usual

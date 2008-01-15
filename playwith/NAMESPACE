@@ -52,7 +52,9 @@ export(
 	"rawXLim<-",
 	"rawYLim<-",
 	xyCoords,
-	xyData
+	xyData,
+	spaceCoordsToDataCoords,
+	dataCoordsToSpaceCoords
 )
 
 S3method(print, playState)

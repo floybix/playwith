@@ -12,8 +12,9 @@
 	
 	Constructors should use the
 	convenience function \code{\link{quickTool}} where possible.
-	All constructor functions should check whether their tool can work
-	with the current plot, and if not return \code{NA}, in which case the tool is skipped.
+	If the constructor function returns \code{NA}, that tool is skipped.
+	So one should check whether the tool can work with the current plot,
+	and skip it otherwise.
 	
 	Following is a table of the API functions that can be used by tools.
 	See the links to specific help pages for details.
@@ -103,9 +104,7 @@ playwith(plot(1:10), bottom=list(helloTool))
 
 ## constructor function
 subsetTool <- function(playState) {
-	## check if tool can work with current plot
-	# TODO
-	## set up list to store state
+	## set up a list to store state
 	playState$subsetTool <- list()
 	quickTool(playState,
 		label = "Data subset",

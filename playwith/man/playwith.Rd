@@ -199,7 +199,7 @@ playwith(expr,
 \examples{
 if (interactive()) {
 
-## time series plot
+## time series plot (base graphics)
 treering2 <- window(treering, start=1)
 playwith(plot(treering2, xlim=c(0,300)), 
 	time.mode = TRUE,
@@ -223,6 +223,10 @@ playwith(splom(environmental))
 
 ## simple spin and zoom for a 3D plot
 playwith(wireframe(volcano, drape=TRUE))
+
+## a simple ggplot (nothing more than qplot works)
+library(ggplot2)
+playwith(qplot(1:10, 11:20))
 
 ## a minimalist grid plot
 gridPlot <- function(x, y, xlim = NULL, ylim = NULL) {

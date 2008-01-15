@@ -180,7 +180,7 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y")) {
 	playDevSet(playState)
 	x.or.y <- match.arg(x.or.y)
 	# convert back from log scale if required
-	x <- playUnLogXY(playState, x, x.or.y=x.or.y)
+	x <- spaceCoordsToDataCoordsXY(playState, x, x.or.y=x.or.y)
 	# round digits conservatively
 	x <- round(x, digits=6)
 	if (playState$is.lattice) {
@@ -264,8 +264,7 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
 	if (is.null(foo$coords)) return(NULL)
 	coords <- foo$coords
 	# convert from log scale if necessary
-	coords$x <- playUnLogX(playState, coords$x)
-	coords$y <- playUnLogY(playState, coords$y)
+	coords <- spaceCoordsToDataCoords(playState, coords)
 	data <- xyCoords(playState, space=foo$space)
 	if (length(data$x) == 0) {
 		gmessage.error(paste("Sorry, can not guess the data point coordinates.",
@@ -648,61 +647,64 @@ xy.coords.qqmath <-
     }
 }
 
-playUnLogX <- function(playState, x) {
-	playUnLogXY(playState, x, x.or.y="x")
+# aka playUnLog
+spaceCoordsToDataCoords <- function(playState, xy) {
+	if (!is.null(xy$x)) xy$x <- 
+		spaceCoordsToDataCoordsXY(playState, xy$x, x.or.y="x")
+	if (!is.null(xy$y)) xy$y <- 
+		spaceCoordsToDataCoordsXY(playState, xy$y, x.or.y="y")
+	xy
 }
 
-playUnLogY <- function(playState, x) {
-	playUnLogXY(playState, x, x.or.y="y")
+spaceCoordsToDataCoordsXY <- function(playState, x, x.or.y=c("x", "y")) {
+	x.or.y <- match.arg(x.or.y)
+	logBase <- playLogBase(playState, x.or.y)
+	if (is.na(logBase)) return(x)
+	logBase ^ x
 }
 
-playReLogX <- function(playState, x) {
-	playReLogXY(playState, x, x.or.y="x")
+# aka playReLog
+dataCoordsToSpaceCoords <- function(playState, xy) {
+	if (!is.null(xy$x)) xy$x <- 
+		dataCoordsToSpaceCoordsXY(playState, xy$x, x.or.y="x")
+	if (!is.null(xy$y)) xy$y <- 
+		dataCoordsToSpaceCoordsXY(playState, xy$y, x.or.y="y")
+	xy
 }
 
-playReLogY <- function(playState, x) {
-	playReLogXY(playState, x, x.or.y="y")
+dataCoordsToSpaceCoordsXY <- function(playState, x, x.or.y=c("x", "y")) {
+	x.or.y <- match.arg(x.or.y)
+	logBase <- playLogBase(playState, x.or.y)
+	if (is.na(logBase)) return(x)
+	log(x, base=logBase)
 }
 
-playUnLogXY <- function(playState, x, x.or.y=c("x", "y")) {
+playLogBase <- function(playState, x.or.y=c("x", "y")) {
 	x.or.y <- match.arg(x.or.y)
 	if (playState$is.lattice) {
 		scalesArg <- playState$call$scales
 		if (!is.null(scalesArg[[x.or.y]]$log)) {
 			logBase <- latticeLogBase(scalesArg[[x.or.y]]$log)
-			if (!is.null(logBase)) return(logBase ^ x)
+			if (!is.na(logBase)) return(logBase)
 		} else {
 			logBase <- latticeLogBase(scalesArg$log)
-			if (!is.null(logBase)) return(logBase ^ x)
+			if (!is.na(logBase)) return(logBase)
 		}
+	} else if (playState$is.ggplot) {
+		logArg <- playState$call$log
+		if (!is.null(logArg) &&
+			(x.or.y %in% strsplit(logArg, split=NULL)[[1]]))
+			return(10)
 	} else {
 		# traditional graphics plot
-		if (par(paste(x.or.y, "log", sep=""))) return(10 ^ x)
+		if (par(paste(x.or.y, "log", sep=""))) return(10)
 	}
-	x
-}
-
-playReLogXY <- function(playState, x, x.or.y=c("x", "y")) {
-	x.or.y <- match.arg(x.or.y)
-	if (playState$is.lattice) {
-		scalesArg <- playState$call$scales
-		if (!is.null(scalesArg[[x.or.y]]$log)) {
-			logBase <- latticeLogBase(scalesArg[[x.or.y]]$log)
-			if (!is.null(logBase)) return(log(x, base=logBase))
-		} else {
-			logBase <- latticeLogBase(scalesArg$log)
-			if (!is.null(logBase)) return(log(x, base=logBase))
-		}
-	} else {
-		# traditional graphics plot
-		if (par(paste(x.or.y, "log", sep=""))) return(log10(x))
-	}
-	x
+	return(NA)
 }
 
 latticeLogBase <- function(x) {
 	x <- eval(x)
-	if (is.null(x) || identical(x, FALSE)) return(NULL)
+	if (is.null(x) || identical(x, FALSE)) return(NA)
 	if (isTRUE(x)) return(10)
 	if (identical(x, "e")) return(exp(1))
 	x

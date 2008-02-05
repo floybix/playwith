@@ -26,36 +26,19 @@ playInteractionTools <- list(
 	"annotate",
 	"arrow",
 	"edit.annotations",
+	"brush",
 	"clear",
 	"--",
+	"zoomin.3d",
+	"zoomout.3d", 
+	"fly.left.3d",
+	"fly.right.3d",
 	"zoom",
 	"zoomout",
 	"zoomfit",
 	"zero",
 	"---",
 	"coords"
-)
-
-play3DTools <- list(
-	"expand",
-	"annotate",
-	"arrow",
-	"edit.annotations",
-	"clear",
-	"--",
-	"zoomin.3d",
-	"zoomout.3d", 
-	"fly.left.3d",
-	"fly.right.3d"
-)
-
-playSplomTools <- list(
-	"expand",
-	"annotate",
-	"arrow",
-	"edit.annotations",
-	"brush",
-	"clear"
 )
 
 toolConstructors <- list(
@@ -104,11 +87,8 @@ quickTool <- function(
 ## SETTINGS
 
 toolConstructors$settings <- function(playState) {
-	callFun <- eval(playState$call[[1]])
-	if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
-		# call does not take arguments
-		return(NA)
-	}
+	if (playState$accepts.arguments == FALSE) return(NA)
+	
 	quickTool(playState,
 		label = "Plot settings",  # or "Edit plot"?
 		icon = "gtk-preferences", 
@@ -260,18 +240,32 @@ toolConstructors$copy <- function(playState) {
 }
 
 copy_handler <- function(widget, playState) {
-	# TODO: option to copy as bitmap or WMF
 	# disable toolbars until this is over
 	playFreezeGUI(playState)
 	on.exit(playThawGUI(playState))
-	# save plot to file
-	filename <- paste(tempfile(), ".png", sep="")
 	playDevSet(playState)
 	da <- playState$widgets$drawingArea
 	w.px <- da$getAllocation()$width
 	h.px <- da$getAllocation()$height
 	w.in <- w.px / 96
 	h.in <- h.px / 96
+	if (exists("win.metafile")) { # i.e. in MS Windows
+		copy.exts <- c("wmf", "png")
+		copy.labels <- c("Windows Metafile (wmf)", "Bitmap (png)")
+		sel.label <- select.list(copy.labels, preselect=copy.labels[1],
+			title="Copy in which format?")
+		playState$win$present()
+		if (sel.label == "") return()
+		copy.ext <- copy.exts[copy.labels == sel.label]
+		if (copy.ext == "wmf") {
+			dev.copy(win.metafile, width=w.in, height=h.in)
+			dev.off()
+			playState$win$present()
+			return()
+		}
+	}
+	# save plot to temporary file, to copy as png
+	filename <- paste(tempfile(), ".png", sep="")
 	dev.copy(Cairo_png, file=filename, width=w.in, height=h.in)
 	dev.off()
 	im <- gdkPixbufNewFromFile(filename)$retval
@@ -416,12 +410,7 @@ toolConstructors$time.mode <- function(playState) {
 		timeEntry["sensitive"] <- playState$time.mode
 	})
 	if (is.null(playState$time.vector)) {
-		# x-axis scrolling mode
-		callFun <- eval(playState$call[[1]])
-		if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
-			# call does not take arguments
-			return(NA)
-		}
+		if (playState$accepts.arguments == FALSE) return(NA)
 	}
 	quickTool(playState,
 		label = "Time mode", 
@@ -684,6 +673,7 @@ set.label.style_handler <- function(widget, playState) {
 ## EXPAND
 
 toolConstructors$expand <- function(playState) {
+	if (playState$accepts.arguments == FALSE) return(NA)
 	if (!playState$is.lattice) return(NA)
 	quickTool(playState,
 		label = "Panel", 
@@ -731,20 +721,13 @@ expand_postplot_action <- function(widget, playState) {
 
 toolConstructors$identify <- function(playState) {
 	if (is.null(playState$data.points)) {
-		callFun <- eval(playState$call[[1]])
-		if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
-			# call does not take arguments
+		if (playState$accepts.arguments == FALSE) return(NA)
+		# this tool does not currently work with "splom" or 3D lattice plots
+		# (TODO)
+		callName <- deparseOneLine(playState$call[[1]])
+		if (playState$is.lattice && 
+			(callName %in% c("splom", "cloud", "wireframe")))
 			return(NA)
-		}
-	}
-	plot.call <- playState$call
-	callName <- deparseOneLine(plot.call[[1]])
-	if (playState$is.lattice &&
-		!(callName %in% c("splom", "cloud", "levelplot",
-			"contourplot", "wireframe", "parallel")) ) {
-		# need this for correctly identifying points
-		# TODO: the plot call has already been evaluated here!
-		callArg(playState, subscripts) <- quote(T)
 	}
 	labels <- playState$.args$labels
 	if (is.null(labels)) {
@@ -752,7 +735,7 @@ toolConstructors$identify <- function(playState) {
 			# try to construct labels from the plot call
 			if (playState$is.lattice) {
 				tmp.data <- NULL
-				if ('data' %in% names(plot.call)) {
+				if ("data" %in% names(playState$call)) {
 					tmp.data <- callArg(playState, data)
 					labels <- makeLabels(tmp.data)
 				}
@@ -775,7 +758,7 @@ toolConstructors$identify <- function(playState) {
 				}
 			} else {
 				# base graphics
-				if (length(plot.call) >= 2) {
+				if (length(playState$call) >= 2) {
 					tmp.x <- callArg(playState, 1)
 					if (inherits(tmp.x, "formula")) {
 						xObj <- if (length(tmp.x) == 2)
@@ -843,7 +826,8 @@ drawLabels <- function(playState, which, space="plot", pos=1) {
 	x <- xy$x[which]
 	y <- xy$y[which]
 	labels <- playState$labels
-	if (playState$is.lattice && (length(labels) > length(xy$subscripts)))
+	if (playState$is.lattice && !is.null(xy$subscripts) &&
+			(length(labels) > length(xy$subscripts)))
 		labels <- labels[ xy$subscripts ]
 	labels <- labels[which]
 	style <- eval(playState$label.style)
@@ -1321,7 +1305,7 @@ edit.annotations_handler <- function(widget, playState) {
 toolConstructors$clear <- function(playState) {
 	if ((length(playState$call) == 1) && 
 		identical(playState$call[[1]], quote(`{`))) {
-		# do not know the call; it cannot be redrawn
+		# do not know the call; it cannot be redrawn (TODO?)
 		return(NA)
 	}
 	types <- c(
@@ -1338,6 +1322,7 @@ toolConstructors$clear <- function(playState) {
 }
 
 clear_handler <- function(widget, playState) {
+	# TODO: allow new tools to specify more items to clear
 	types <- c(
 		if (length(playState$ids) > 0) "ids",
 		if (length(playState$annotations) > 0) "annotations",
@@ -1365,11 +1350,13 @@ clear_handler <- function(widget, playState) {
 ## ZOOM
 
 toolConstructors$zoom <- function(playState) {
-	callFun <- eval(playState$call[[1]])
-	if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
-		# call does not take arguments
+	if (playState$accepts.arguments == FALSE) return(NA)
+	# this tool does not work with "splom" or 3D lattice plots
+	callName <- deparseOneLine(playState$call[[1]])
+	if (playState$is.lattice && 
+		(callName %in% c("splom", "cloud", "wireframe")))
 		return(NA)
-	}
+	
 	quickTool(playState,
 		label = "Zoom...", 
 		icon = "gtk-zoom-in", 
@@ -1407,11 +1394,13 @@ zoom_handler <- function(widget, playState) {
 ## ZOOMOUT
 
 toolConstructors$zoomout <- function(playState) {
-	callFun <- eval(playState$call[[1]])
-	if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
-		# call does not take arguments
+	if (playState$accepts.arguments == FALSE) return(NA)
+	# this tool does not work with "splom" or 3D lattice plots
+	callName <- deparseOneLine(playState$call[[1]])
+	if (playState$is.lattice && 
+		(callName %in% c("splom", "cloud", "wireframe")))
 		return(NA)
-	}
+	
 	quickTool(playState,
 		label = "Zoom out", 
 		tooltip = "Zoom out to show 4x plot area",
@@ -1437,11 +1426,7 @@ zoomout_handler <- function(widget, playState) {
 ## ZOOMFIT
 
 toolConstructors$zoomfit <- function(playState) {
-	callFun <- eval(playState$call[[1]])
-	if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
-		# call does not take arguments
-		return(NA)
-	}
+	if (playState$accepts.arguments == FALSE) return(NA)
 	quickTool(playState,
 		label = "Fit data",
 		icon = "gtk-zoom-fit", 
@@ -1452,29 +1437,37 @@ toolConstructors$zoomfit <- function(playState) {
 zoomfit_handler <- function(widget, playState) {
 	nav.x <- TRUE
 	nav.y <- TRUE #!(playState$time.mode)
+	callName <- deparseOneLine(playState$call[[1]])
+	nav.z <- (playState$is.lattice && (callName %in% c("cloud", "wireframe")))
 	# update scales
 	if (nav.x) callArg(playState, xlim) <- NULL
 	if (nav.y) callArg(playState, ylim) <- NULL
+	if (nav.z) callArg(playState, zlim) <- NULL
 	playReplot(playState)
 }
 
 zoomfit_postplot_action <- function(widget, playState) {
 	nav.x <- TRUE
 	nav.y <- TRUE #!(playState$time.mode)
+	callName <- deparseOneLine(playState$call[[1]])
+	nav.z <- (playState$is.lattice && (callName %in% c("cloud", "wireframe")))
 	nonfit <- FALSE
 	if (nav.x && !is.null(callArg(playState, xlim))) nonfit <- TRUE
 	if (nav.y && !is.null(callArg(playState, ylim))) nonfit <- TRUE
+	if (nav.z && !is.null(callArg(playState, zlim))) nonfit <- TRUE
 	widget["visible"] <- nonfit
 }
 
 ## ZERO
 
 toolConstructors$zero <- function(playState) {
-	callFun <- eval(playState$call[[1]])
-	if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
-		# call does not take arguments
+	if (playState$accepts.arguments == FALSE) return(NA)
+	# this tool does not currently work with "splom" or 3D lattice plots
+	callName <- deparseOneLine(playState$call[[1]])
+	if (playState$is.lattice && 
+		(callName %in% c("splom", "cloud", "wireframe")))
 		return(NA)
-	}
+	
 	quickTool(playState,
 		label = "Full scale", 
 		icon = "gtk-goto-bottom", 
@@ -1535,9 +1528,7 @@ toolConstructors$help <- function(playState) {
 }
 
 help_handler <- function(widget, playState) {
-	callFun <- eval(playState$call[[1]])
-	if ((typeof(callFun) != "closure") || is.null(formals(callFun))) {
-		# call does not take arguments
+	if (playState$accepts.arguments == FALSE) {
 		gmessage.error("Do not know the name of the plot function.")
 		return()
 	}
@@ -1604,6 +1595,12 @@ edit.call_handler <- function(widget, playState) {
 ## BRUSH
 
 toolConstructors$brush <- function(playState) {
+	if (playState$accepts.arguments == FALSE) return(NA)
+	# this tool only works with "splom" lattice plots
+	callName <- deparseOneLine(playState$call[[1]])
+	if (playState$is.lattice && (callName %in% "splom") == FALSE)
+		return(NA)
+	
 	quickTool(playState,
 		label = "Brush", 
 		icon = "gtk-media-record", 
@@ -1613,10 +1610,6 @@ toolConstructors$brush <- function(playState) {
 }
 
 brush_handler <- function(widget, playState) {
-	if (!playState$is.lattice) {
-		gmessage.error("Brushing only works with lattice::splom")
-		return()
-	}
 	# do brushing
 	repeat {
 		foo <- playRectInput(playState, prompt=paste("Brushing data points...",
@@ -1715,8 +1708,13 @@ splom.drawBrushed <- function(ids, pargs=trellis.panelArgs(), threshold=18, col=
 ## NAV 3D
 
 toolConstructors$zoomin.3d <- function(playState) {
-	#if (is.null(callArg(playState, zoom))) 
-	#	callArg(playState, zoom) <- 1
+	if (playState$accepts.arguments == FALSE) return(NA)
+	# this tool only works with 3D lattice plots
+	callName <- deparseOneLine(playState$call[[1]])
+	if (playState$is.lattice && 
+		(callName %in% c("cloud", "wireframe")) == FALSE)
+		return(NA)
+	
 	quickTool(playState,
 		label = "Zoom in", 
 		icon = "gtk-zoom-in", 
@@ -1724,6 +1722,13 @@ toolConstructors$zoomin.3d <- function(playState) {
 }
 
 toolConstructors$zoomout.3d <- function(playState) {
+	if (playState$accepts.arguments == FALSE) return(NA)
+	# this tool only works with 3D lattice plots
+	callName <- deparseOneLine(playState$call[[1]])
+	if (playState$is.lattice && 
+		(callName %in% c("cloud", "wireframe")) == FALSE)
+		return(NA)
+	
 	quickTool(playState,
 		label = "Zoom out", 
 		icon = "gtk-zoom-out", 
@@ -1731,6 +1736,13 @@ toolConstructors$zoomout.3d <- function(playState) {
 }
 
 toolConstructors$fly.left.3d <- function(playState) {
+	if (playState$accepts.arguments == FALSE) return(NA)
+	# this tool only works with 3D lattice plots
+	callName <- deparseOneLine(playState$call[[1]])
+	if (playState$is.lattice && 
+		(callName %in% c("cloud", "wireframe")) == FALSE)
+		return(NA)
+	
 	quickTool(playState,
 		label = "Fly left", 
 		icon = "gtk-media-rewind-ltr", 
@@ -1738,6 +1750,13 @@ toolConstructors$fly.left.3d <- function(playState) {
 }
 
 toolConstructors$fly.right.3d <- function(playState) {
+	if (playState$accepts.arguments == FALSE) return(NA)
+	# this tool only works with 3D lattice plots
+	callName <- deparseOneLine(playState$call[[1]])
+	if (playState$is.lattice && 
+		(callName %in% c("cloud", "wireframe")) == FALSE)
+		return(NA)
+	
 	quickTool(playState,
 		label = "Fly right", 
 		icon = "gtk-media-rewind-rtl", 
@@ -1760,7 +1779,7 @@ zoomout3d_handler <- function(widget, playState) {
 
 flyleft3d_handler <- function(widget, playState) {
 	screen <- callArg(playState, screen)
-	if (is.null(screen)) screen <- quote(list(z=40, x=-60))
+	if (is.null(screen)) screen <- list(z=40, x=-60)
 	if (names(screen)[1] == 'z') screen[[1]] <- screen[[1]] + 45
 	else screen <- c(z = 45, screen)
 	# convert list to call so that deparse is pretty
@@ -1770,7 +1789,7 @@ flyleft3d_handler <- function(widget, playState) {
 
 flyright3d_handler <- function(widget, playState) {
 	screen <- callArg(playState, screen)
-	if (is.null(screen)) screen <- quote(list(z=40, x=-60))
+	if (is.null(screen)) screen <- list(z=40, x=-60)
 	if (names(screen)[1] == 'z') screen[[1]] <- screen[[1]] - 45
 	else screen <- c(z = -45, screen)
 	# convert list to call so that deparse is pretty

@@ -403,6 +403,16 @@ playNewPlot <- function(playState) {
 			if (!is.null(names(plot.call))) names(plot.call)[2] <- ""
 		playState$call <- plot.call
 	}
+	# need to set subscripts argument for correctly identifying points
+	## no, too hard. just show the within-panel indices unless subscripts=T
+	#if (playState$accepts.arguments) {
+	#	plot.call <- playState$call
+	#	callName <- deparseOneLine(plot.call[[1]])
+	#	if (playState$is.lattice &&
+	#	!(callName %in% c("splom", "cloud", "levelplot",
+	#		"contourplot", "wireframe", "parallel")) ) {
+	#	callArg(playState, subscripts) <- quote(T)
+	#}
 	# update address bar with current call
 	updateAddressBar(playState)
 	# eval plot call
@@ -445,13 +455,6 @@ playNewPlot <- function(playState) {
 			playState$tools[[myName]] <- newTool
 		}
 	}
-	# choose buttons automatically depending on the type of plot
-#	if (is.lattice && (callName %in% c("cloud", "wireframe"))) {
-#		if (missing_left.tools) left.tools <- play3DTools
-#	}
-#	if (is.lattice && (callName %in% "splom")) {
-#		if (missing_left.tools) left.tools <- playSplomTools
-#	}
 	# set up toolbar tools
 	playState$tools <- list()
 	tbars <- playState$widgets[c("topToolbar", "leftToolbar", 
@@ -713,7 +716,7 @@ devoff_handler <- function(widget, event, playState) {
 	return(FALSE)
 }
 
-## List of known Lattice (high-level) function names
+## List of known Lattice (high-level) function names -- NOT USED
 
 latticeNames <- c("barchart", "bwplot", "cloud", "contourplot", "densityplot", 
 	"dotplot", "histogram", "levelplot", "parallel", "qq", "qqmath", "rfs", 
@@ -907,16 +910,16 @@ copyArgsIntoEnv <- function(the.call, envir=parent.frame(), newEnv, evalGlobals=
 				next
 			# find whether name exists in sys.frames or in GlobalEnv
 			# (`inherits=TRUE` matches packages too)
-			# TODO
+			# TODO ... this is all a bit of a hack
 			# ignore global symbols if evalGlobals == FALSE
 			if ((evalGlobals == FALSE) && 
 				(exists(this.name, envir=.GlobalEnv, inherits=F)))
 				next
 			# ignore symbols in loaded packages
 			if (exists(this.name, where=2)) next
-			# OK, copy it
+			# OK, copy it if possible (still may fail)
 			try(assign(this.name, eval(this.arg, envir=envir),
-					envir=newEnv))
+					envir=newEnv), silent=TRUE)
 		}
 		# leave constants alone
 	}

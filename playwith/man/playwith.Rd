@@ -134,8 +134,6 @@ playwith(expr,
 	The pre-defined tools can be listed with \code{names(toolConstructors)}.
 	See \link{playTools} for a description of the pre-defined tools,
 	and \link{playwith.API} for help on defining new tools.
-	Note that different sets of tools will be used by default for calls to 
-	\code{\link[lattice]{splom}}, \code{\link[lattice]{cloud}} and \code{\link[lattice]{wireframe}}.
 	
 	Four types of plots are handled slightly differently: 
 	\itemize{
@@ -160,6 +158,9 @@ playwith(expr,
 	These guesses may be wrong in complex cases, in which case 
 	you can pass the correct values in as \code{data.points} and/or \code{labels}.
 	Please also contact the maintainer to help improve the guesses.
+	\strong{NOTE:} The automatic subscripts used to identify points in Lattice plots
+	will be usually be the within-panel indices unless \code{subscripts=T} is
+	specified in the plot call: see \code{\link[lattice]{xyplot}}.
   
 	In order to interact with a plot, its supporting data needs to be stored:
 	i.e. all variables appearing in the plot call must remain accessible.

@@ -3,8 +3,6 @@
 \alias{toolConstructors}
 \alias{playApplicationTools}
 \alias{playInteractionTools}
-\alias{play3DTools}
-\alias{playSplomTools}
 \title{Built-in tools for playwith}
 \description{
   This document describes the built-in tools that can be placed in 
@@ -88,7 +86,7 @@
 		}
 	}
 	
-	Tools in the set \code{play3DTools}:
+	Tools in the set \code{playInteractionTools} that only work with 3D Lattice plots:
 	\describe{
 		\item{\code{zoomin.3d}}{
 			zoom in.
@@ -104,7 +102,7 @@
 		}
 	}
 	
-	Tools in the set \code{playSplomTools}:
+	Tools in the set \code{playInteractionTools} that only work with Lattice \code{splom}:
 	\describe{
 		\item{\code{brush}}{
 			brush data points, similar to \code{\link[lattice]{panel.brush.splom}}.

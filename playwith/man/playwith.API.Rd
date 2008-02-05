@@ -47,6 +47,8 @@
 \link{rawYLim}(playState, space = "plot")
 \link{rawXLim}(playState) <- value
 \link{rawYLim}(playState) <- value
+\link{spaceCoordsToDataCoords}(playState, xy)
+\link{dataCoordsToSpaceCoords}(playState, xy)
 
 \link{whichSpace}(playState, x.device, y.device)
 \link{deviceCoordsToSpace}(playState, x.device, y.device, 

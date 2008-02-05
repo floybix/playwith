@@ -20,9 +20,7 @@ export(
 export(
 	toolConstructors,
 	playApplicationTools,
-	playInteractionTools,
-	play3DTools,
-	playSplomTools
+	playInteractionTools
 )
 
 # API

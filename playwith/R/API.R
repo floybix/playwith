@@ -50,8 +50,10 @@ callArg <- function(playState, arg, name=NULL) {
 	if (missing(arg) && missing(name)) stop("give 'arg' or 'name'")
 	arg <- if (missing(arg)) parse(text=name)[[1]]
 		else substitute(arg)
+	# work-around since the `exact` argument only appeared in R 2.6
+	exactbit <- if (getRversion() <= "2.6") '"]]' else '", exact=TRUE]]'
 	getx <- if (is.numeric(arg)) paste("[[", arg+1, "]]", sep="")
-		else if (is.symbol(arg)) paste('[["', arg, '", exact=TRUE]]', sep="")
+		else if (is.symbol(arg)) paste('[["', arg, exactbit, sep="")
 		else paste("$", deparseOneLine(arg), sep="")
 	expr <- eval(parse(text=paste("playState$call", getx, sep="")))
 	if (mode(expr) == "expression") return(expr)
@@ -693,7 +695,7 @@ playLogBase <- function(playState, x.or.y=c("x", "y")) {
 	} else if (playState$is.ggplot) {
 		logArg <- playState$call$log
 		if (!is.null(logArg) &&
-			(x.or.y %in% strsplit(logArg, split=NULL)[[1]]))
+			(x.or.y %in% strsplit(logArg, split="")[[1]]))
 			return(10)
 	} else {
 		# traditional graphics plot

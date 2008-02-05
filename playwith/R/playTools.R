@@ -722,11 +722,9 @@ expand_postplot_action <- function(widget, playState) {
 toolConstructors$identify <- function(playState) {
 	if (is.null(playState$data.points)) {
 		if (playState$accepts.arguments == FALSE) return(NA)
-		# this tool does not currently work with "splom" or 3D lattice plots
-		# (TODO)
+		# does not currently work with "splom" or 3D plots (TODO)
 		callName <- deparseOneLine(playState$call[[1]])
-		if (playState$is.lattice && 
-			(callName %in% c("splom", "cloud", "wireframe")))
+		if (callName %in% c("splom", "cloud", "wireframe"))
 			return(NA)
 	}
 	labels <- playState$.args$labels
@@ -1351,10 +1349,9 @@ clear_handler <- function(widget, playState) {
 
 toolConstructors$zoom <- function(playState) {
 	if (playState$accepts.arguments == FALSE) return(NA)
-	# this tool does not work with "splom" or 3D lattice plots
+	# this tool does not work with "splom" or 3D plots
 	callName <- deparseOneLine(playState$call[[1]])
-	if (playState$is.lattice && 
-		(callName %in% c("splom", "cloud", "wireframe")))
+	if (callName %in% c("splom", "cloud", "wireframe"))
 		return(NA)
 	
 	quickTool(playState,
@@ -1395,10 +1392,9 @@ zoom_handler <- function(widget, playState) {
 
 toolConstructors$zoomout <- function(playState) {
 	if (playState$accepts.arguments == FALSE) return(NA)
-	# this tool does not work with "splom" or 3D lattice plots
+	# this tool does not work with "splom" or 3D plots
 	callName <- deparseOneLine(playState$call[[1]])
-	if (playState$is.lattice && 
-		(callName %in% c("splom", "cloud", "wireframe")))
+	if (callName %in% c("splom", "cloud", "wireframe"))
 		return(NA)
 	
 	quickTool(playState,
@@ -1438,7 +1434,7 @@ zoomfit_handler <- function(widget, playState) {
 	nav.x <- TRUE
 	nav.y <- TRUE #!(playState$time.mode)
 	callName <- deparseOneLine(playState$call[[1]])
-	nav.z <- (playState$is.lattice && (callName %in% c("cloud", "wireframe")))
+	nav.z <- (callName %in% c("cloud", "wireframe"))
 	# update scales
 	if (nav.x) callArg(playState, xlim) <- NULL
 	if (nav.y) callArg(playState, ylim) <- NULL
@@ -1450,7 +1446,7 @@ zoomfit_postplot_action <- function(widget, playState) {
 	nav.x <- TRUE
 	nav.y <- TRUE #!(playState$time.mode)
 	callName <- deparseOneLine(playState$call[[1]])
-	nav.z <- (playState$is.lattice && (callName %in% c("cloud", "wireframe")))
+	nav.z <- (callName %in% c("cloud", "wireframe"))
 	nonfit <- FALSE
 	if (nav.x && !is.null(callArg(playState, xlim))) nonfit <- TRUE
 	if (nav.y && !is.null(callArg(playState, ylim))) nonfit <- TRUE
@@ -1462,10 +1458,9 @@ zoomfit_postplot_action <- function(widget, playState) {
 
 toolConstructors$zero <- function(playState) {
 	if (playState$accepts.arguments == FALSE) return(NA)
-	# this tool does not currently work with "splom" or 3D lattice plots
+	# this tool does not currently work with "splom" or 3D plots
 	callName <- deparseOneLine(playState$call[[1]])
-	if (playState$is.lattice && 
-		(callName %in% c("splom", "cloud", "wireframe")))
+	if (callName %in% c("splom", "cloud", "wireframe"))
 		return(NA)
 	
 	quickTool(playState,
@@ -1598,7 +1593,7 @@ toolConstructors$brush <- function(playState) {
 	if (playState$accepts.arguments == FALSE) return(NA)
 	# this tool only works with "splom" lattice plots
 	callName <- deparseOneLine(playState$call[[1]])
-	if (playState$is.lattice && (callName %in% "splom") == FALSE)
+	if ((callName %in% "splom") == FALSE)
 		return(NA)
 	
 	quickTool(playState,
@@ -1711,8 +1706,7 @@ toolConstructors$zoomin.3d <- function(playState) {
 	if (playState$accepts.arguments == FALSE) return(NA)
 	# this tool only works with 3D lattice plots
 	callName <- deparseOneLine(playState$call[[1]])
-	if (playState$is.lattice && 
-		(callName %in% c("cloud", "wireframe")) == FALSE)
+	if ((callName %in% c("cloud", "wireframe")) == FALSE)
 		return(NA)
 	
 	quickTool(playState,
@@ -1725,8 +1719,7 @@ toolConstructors$zoomout.3d <- function(playState) {
 	if (playState$accepts.arguments == FALSE) return(NA)
 	# this tool only works with 3D lattice plots
 	callName <- deparseOneLine(playState$call[[1]])
-	if (playState$is.lattice && 
-		(callName %in% c("cloud", "wireframe")) == FALSE)
+	if ((callName %in% c("cloud", "wireframe")) == FALSE)
 		return(NA)
 	
 	quickTool(playState,
@@ -1739,8 +1732,7 @@ toolConstructors$fly.left.3d <- function(playState) {
 	if (playState$accepts.arguments == FALSE) return(NA)
 	# this tool only works with 3D lattice plots
 	callName <- deparseOneLine(playState$call[[1]])
-	if (playState$is.lattice && 
-		(callName %in% c("cloud", "wireframe")) == FALSE)
+	if ((callName %in% c("cloud", "wireframe")) == FALSE)
 		return(NA)
 	
 	quickTool(playState,
@@ -1753,8 +1745,7 @@ toolConstructors$fly.right.3d <- function(playState) {
 	if (playState$accepts.arguments == FALSE) return(NA)
 	# this tool only works with 3D lattice plots
 	callName <- deparseOneLine(playState$call[[1]])
-	if (playState$is.lattice && 
-		(callName %in% c("cloud", "wireframe")) == FALSE)
+	if ((callName %in% c("cloud", "wireframe")) == FALSE)
 		return(NA)
 	
 	quickTool(playState,

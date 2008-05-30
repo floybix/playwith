@@ -550,7 +550,7 @@ playPostPlot <- function(result, playState) {
 	blockRedraws({
 		for (x in playState$tools) {
 			playDevSet(playState)
-			xUpd <- gObjectGetData(x, "post.plot.action")
+			xUpd <- attr(x, "post.plot.action")
 			if (!is.null(xUpd)) {
 				if (!is.function(xUpd)) {
 					warning("post.plot.action not a function")

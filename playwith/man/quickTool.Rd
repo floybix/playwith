@@ -35,12 +35,12 @@ quickTool(
 }
 \details{
   This is just a convenient way to make a \code{\link[RGtk2]{gtkToolButton}}. 
-  The \code{post.plot.action} is attached to the returned object as a GObject with
-  key "post.plot.action".
+  The \code{post.plot.action} is attached to the returned object as attribute
+  "post.plot.action".
 }
 \value{
 	\code{quickTool} returns a \code{\link[RGtk2]{gtkToolButton}}.
-	Any \code{post.plot.action} is attached to the gObject with key "post.plot.action".
+	Any \code{post.plot.action} is set as an attribute "post.plot.action".
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
 \seealso{ \code{\link{playwith.API}}, \code{\link{playwith}} }

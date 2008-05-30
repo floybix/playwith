@@ -79,8 +79,7 @@ quickTool <- function(
 		gSignalConnect(x, "clicked", f, data=data)
 	}
 	if (!is.null(post.plot.action))
-		# TODO: attr(x, "post.plot.action") <- post.plot.action
-		gObjectSetData(x, "post.plot.action", data=post.plot.action)
+		attr(x, "post.plot.action") <- post.plot.action
 	x
 }
 

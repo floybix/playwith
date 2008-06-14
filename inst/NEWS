@@ -1,0 +1,18 @@
+
+Changes in Version 0.8-54
+
+  o default action when dragging on the plot is zoom.
+    default action on right-click is zoomout.
+
+  o playState$now.interacting defined as TRUE while tool
+    interaction is active (playPointInput / playRectInput etc).
+
+  o restrict zooming to x axis in time.mode
+    ONLY IF a time.vector was not specified.
+
+  o enabled pretty ggplot2 plots (print.ggplot with pretty=TRUE)
+    if using grid package version >= 2.7
+    (older versions had a problem with viewports being popped).
+
+  o code reorganisation: split tools into separate files; ESS style.
+

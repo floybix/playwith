@@ -10,21 +10,20 @@ toolConstructors$identify <- function(playState)
     if (is.null(playState$data.points)) {
         if (playState$accepts.arguments == FALSE) return(NA)
         ## does not currently work with "splom" or 3D plots (TODO)
-        callName <- deparseOneLine(playState$call[[1]])
+        callName <- deparseOneLine(callArg(playState, 0))
         if (callName %in% c("splom", "cloud", "wireframe"))
             return(NA)
     }
+    mainCall <- mainCall(playState)
     labels <- playState$.args$labels
     if (is.null(labels)) {
         if (is.null(playState$data.points)) {
             ## try to construct labels from the plot call
             if (playState$is.lattice) {
-                tmp.data <- NULL
-                if ("data" %in% names(playState$call)) {
-                    tmp.data <- callArg(playState, data)
+                tmp.data <- callArg(playState, data)
+                if (!is.null(tmp.data))
                     labels <- makeLabels(tmp.data)
-                }
-                if (is.null(labels)) {
+                if (is.null(labels) && length(mainCall > 1)) {
                     ## try to make labels from first argument
                     tmp.x <- callArg(playState, 1)
                     if (inherits(tmp.x, "formula")) {
@@ -43,7 +42,7 @@ toolConstructors$identify <- function(playState)
                 }
             } else {
                 ## base graphics
-                if (length(playState$call) >= 2) {
+                if (length(mainCall > 1)) {
                     tmp.x <- callArg(playState, 1)
                     if (inherits(tmp.x, "formula")) {
                         xObj <- if (length(tmp.x) == 2)
@@ -59,7 +58,7 @@ toolConstructors$identify <- function(playState)
                         labels <- makeLabels(tmp.x, orSeq=T)
                     }
                     ## exceptions...
-                    callName <- deparseOneLine(playState$call[[1]])
+                    callName <- deparseOneLine(callArg(playState, 0))
                     if (callName %in% c("qqplot")) {
                         tmp.y <- callArg(playState, 2)
                         x.lab <- makeLabels(tmp.x, orSeq=T)

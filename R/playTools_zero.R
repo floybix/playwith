@@ -9,7 +9,7 @@ toolConstructors$zero <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
     ## this tool does not currently work with "splom" or 3D plots
-    callName <- deparseOneLine(playState$call[[1]])
+    callName <- deparseOneLine(callArg(playState, 0))
     if (callName %in% c("splom", "cloud", "wireframe"))
         return(NA)
 
@@ -23,7 +23,8 @@ toolConstructors$zero <- function(playState)
 
 zero_handler <- function(widget, playState)
 {
-    trans.x <- !(playState$time.mode)
+    yonly <- playState$time.mode && is.null(playState$time.vector)
+    trans.x <- !yonly
     trans.y <- TRUE
     if (trans.x) {
         xlim <- rawXLim(playState)
@@ -48,7 +49,8 @@ zero_handler <- function(widget, playState)
 
 zero_postplot_action <- function(widget, playState)
 {
-    trans.x <- !(playState$time.mode)
+    yonly <- playState$time.mode && is.null(playState$time.vector)
+    trans.x <- !yonly
     trans.y <- TRUE
     nonzero <- FALSE
     if (trans.x) {

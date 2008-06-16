@@ -31,12 +31,8 @@ edit.annotations_handler <- function(widget, playState)
     annots <- playState$annotations[[space]]
     callTxt <- paste(unlist(lapply(annots, deparse, control="showAttributes")), collapse="\n")
     repeat {
-        newTxt <- NULL
-        txtBox <- gtext(callTxt, font.attr=c(family="monospace"), wrap=FALSE, width=600)
-        gbasicdialog(title="Edit annotations", widget=txtBox,
-                     action=environment(), handler=function(h, ...)
-                     assign("newTxt", svalue(h[[1]]), env=h$action)
-                     )
+        newTxt <- guiTextInput(callTxt, title="Edit annotations",
+                               prompt="", accepts.tab=F)
         if (is.null(newTxt)) break
         callTxt <- newTxt
         tmp <- tryCatch(parse(text=callTxt), error=function(e)e)

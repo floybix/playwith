@@ -59,9 +59,9 @@ time.mode_postplot_action <- function(widget, playState)
             if (is.null(x.jump)) x.jump <- round(log2(x.max))
             cur.time <- playState$env$cur.time
             widg$timeEntry["text"] <- toString(cur.time)
-            widg$timeScrollbar["adjustment"] <- gtkAdjustment(
-                                                              value=x.pos, lower=1, upper=x.max+1,
-                                                              step.incr=1, page.incr=x.jump, page.size=1)
+            widg$timeScrollbar["adjustment"] <-
+                gtkAdjustment(value=x.pos, lower=1, upper=x.max+1,
+                              step.incr=1, page.incr=x.jump, page.size=1)
             widg$timeScrollbar$setValue(x.pos) ## need this (bug?)
             return()
         }
@@ -82,9 +82,9 @@ time.mode_postplot_action <- function(widget, playState)
                                         #mostattributes(x.lim) <- playState$time.mode.x.attr
         widg$timeEntry["text"] <- paste(format(x.lim), collapse=" to ")
         ## set up scrollbar
-        widg$timeScrollbar["adjustment"] <- gtkAdjustment(
-                                                          value=x.pos, lower=min(x.range), upper=max(x.range),
-                                                          step.incr=x.page/2, page.incr=x.page, page.size=x.page)
+        widg$timeScrollbar["adjustment"] <-
+            gtkAdjustment(value=x.pos, lower=min(x.range), upper=max(x.range),
+                          step.incr=x.page/2, page.incr=x.page, page.size=x.page)
         widg$timeScrollbar$setValue(x.pos) ## need this (bug?)
     })
 }

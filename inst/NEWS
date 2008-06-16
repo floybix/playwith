@@ -1,14 +1,22 @@
 
 Changes in Version 0.8-54
 
+  o concept of the "main call" which accepts typical plot
+    arguments (xlim, ylim, main, etc) -- not necessarily the
+    top-level call. By default, a depth-first search is used
+    to find a function that accepts `xlim` or `...`.
+
   o default action when dragging on the plot is zoom.
     default action on right-click is zoomout.
 
   o playState$now.interacting defined as TRUE while tool
-    interaction is active (playPointInput / playRectInput etc).
+    interaction is active (i.e. playPointInput / playRectInput etc).
 
   o restrict zooming to x axis in time.mode
     ONLY IF a time.vector was not specified.
+
+  o use RGtk2 rather than gWidgets for edit.call and edit.annotations
+    because gWidgets is very slow.
 
   o enabled pretty ggplot2 plots (print.ggplot with pretty=TRUE)
     if using grid package version >= 2.7

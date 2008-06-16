@@ -12,11 +12,12 @@ toolConstructors$theme <- function(playState)
     myLabel <- gtkMenuItem("Lattice theme:")
     myLabel["sensitive"] <- FALSE
     myMenu$append(myLabel)
-    themeItems <- list(
-                       whitebg=gtkMenuItem(label="White BG (general)"),
-                       standard.screen=gtkMenuItem(label="Dark BG (for screen)"),
-                       standard.print=gtkMenuItem(label="Greyscale (for print)")
-                       )
+    themeItems <-
+        list(
+             whitebg=gtkMenuItem(label="White BG (general)"),
+             standard.screen=gtkMenuItem(label="Dark BG (for screen)"),
+             standard.print=gtkMenuItem(label="Greyscale (for print)")
+             )
     for (x in names(themeItems)) {
         myMenu$append(themeItems[[x]])
         gSignalConnect(themeItems[[x]], "activate", theme_handler,

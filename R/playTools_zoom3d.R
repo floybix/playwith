@@ -9,7 +9,7 @@ toolConstructors$zoomin.3d <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
     ## this tool only works with 3D lattice plots
-    callName <- deparseOneLine(playState$call[[1]])
+    callName <- deparseOneLine(callArg(playState, 0))
     if ((callName %in% c("cloud", "wireframe")) == FALSE)
         return(NA)
 
@@ -23,7 +23,7 @@ toolConstructors$zoomout.3d <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
     ## this tool only works with 3D lattice plots
-    callName <- deparseOneLine(playState$call[[1]])
+    callName <- deparseOneLine(callArg(playState, 0))
     if ((callName %in% c("cloud", "wireframe")) == FALSE)
         return(NA)
 
@@ -37,7 +37,7 @@ toolConstructors$fly.left.3d <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
     ## this tool only works with 3D lattice plots
-    callName <- deparseOneLine(playState$call[[1]])
+    callName <- deparseOneLine(callArg(playState, 0))
     if ((callName %in% c("cloud", "wireframe")) == FALSE)
         return(NA)
 
@@ -51,7 +51,7 @@ toolConstructors$fly.right.3d <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
     ## this tool only works with 3D lattice plots
-    callName <- deparseOneLine(playState$call[[1]])
+    callName <- deparseOneLine(callArg(playState, 0))
     if ((callName %in% c("cloud", "wireframe")) == FALSE)
         return(NA)
 
@@ -98,4 +98,13 @@ flyright3d_handler <- function(widget, playState)
     callArg(playState, screen) <- as.call(c(quote(list), screen))
     playReplot(playState)
 }
+
+
+
+
+
+
+
+
+
 

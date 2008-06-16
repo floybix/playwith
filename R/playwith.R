@@ -46,7 +46,8 @@ playwith <-
              invert.match = FALSE,
              envir = parent.frame(),
              playState = if (!new) playDevCur(),
-             plot.call)
+             plot.call,
+             main.function)
 {
     if (!missing(plot.call) && !missing(expr))
         stop("give only one of 'expr' and 'plot.call'")
@@ -62,6 +63,9 @@ playwith <-
         plot.call <- if (length(plot.call) > 1)
             as.call(c(as.symbol("{"), plot.call)) else plot.call[[1]]
     }
+    if (missing(main.function)) main.function <- NULL
+    if (is.character(main.function))
+        main.function <- get(main.function)
     ## check types
     if (!is.call(plot.call)) stop("'expr' / 'plot.call' should be a call")
     if (!is.null(title) && !is.character(title)) stop("'title' should be character")
@@ -211,8 +215,8 @@ playwith <-
     ## need to regenerate coord spaces after resize
     gSignalConnect(myDA, "configure-event", configure_handler,
                    data=playState)
-    myDA$addEvents(GdkEventMask["enter-notify-mask"] +
-                   GdkEventMask["leave-notify-mask"])
+    myDA$addEvents(GdkEventMask["enter-notify-mask"])
+                   # + GdkEventMask["leave-notify-mask"])
     gSignalConnect(myDA, "enter-notify-event",  auto.reconfig_handler,
                    data=playState)
     gSignalConnect(myHBox, "remove", devoff_handler,
@@ -356,7 +360,8 @@ playwith <-
                             missing_left.tools = missing_left.tools,
                             data.points = data.points,
                             labels = labels,
-                            title = title
+                            title = title,
+                            main.function = main.function
                             )
     ## do the plot
     invisible(playNewPlot(playState))
@@ -384,18 +389,42 @@ playNewPlot <- function(playState)
     ## get access to some of the original arguments
     argfoo <- playState$.args
     for (foo in names(argfoo)) assign(foo, argfoo[[foo]])
+    ## find which component of the call takes arguments (xlim etc)
+    main.call.index <- NULL
+    tmpCall <- playState$call
+    okCallPath <- function(tmpCall) {
+        tmpFun <- eval(tmpCall[[1]])
+        if (!is.null(main.function)) {
+            ok <- identical(tmpFun, main.function)
+        } else {
+            ok <- any(c("xlim", "...") %in% names(formals(tmpFun)))
+            ok <- ok && !identical(tmpFun, with) ## skip `with` function
+        }
+        if (ok) return(TRUE)
+        if (length(tmpCall) > 1)
+            for (i in seq(2, length(tmpCall)))
+                if (is.call(tmpCall[[i]])) {
+                    tmpPath <- okCallPath(tmpCall[[i]])
+                    if (isTRUE(tmpPath)) return(i)
+                    if (!is.null(tmpPath)) return(c(i, tmpPath))
+                }
+        return(NULL)
+    }
+    main.call.index <- okCallPath(tmpCall)
+    if (isTRUE(main.call.index)) main.call.index <- NA
+    playState$main.call.index <- main.call.index
     ## check whether the called function accepts arguments
-    callFun <- eval(playState$call[[1]])
-    playState$accepts.arguments <-
-        ((typeof(callFun) == "closure") && !is.null(formals(callFun)))
+    playState$accepts.arguments <- !is.null(playState$main.call.index)
+        #((typeof(callFun) == "closure") && !is.null(formals(callFun)))
     ## put call into canonical form, but with first argument un-named
     if (playState$accepts.arguments) {
-        plot.call <- playState$call
-        firstArgName <- names(plot.call)[2]
-        plot.call <- match.call(callFun, plot.call)
+        mainCall <- recursiveIndex(playState$call, main.call.index)
+        callFun <- eval(mainCall[[1]])
+        firstArgName <- names(mainCall)[2]
+        mainCall <- match.call(callFun, mainCall)
         if (is.null(firstArgName) || (firstArgName == ""))
-            if (!is.null(names(plot.call))) names(plot.call)[2] <- ""
-        playState$call <- plot.call
+            if (!is.null(names(mainCall))) names(mainCall)[2] <- ""
+        recursiveIndex(playState$call, main.call.index) <- mainCall
     }
     ## update address bar with current call
     updateAddressBar(playState)
@@ -410,13 +439,12 @@ playNewPlot <- function(playState)
     playState$is.ggplot <- (inherits(result, "ggplot"))
     if (playState$is.ggplot) playState$ggplot <- result
 
-    ## lattice needs subscripts argument to correctly identify points
+    ## lattice needs subscripts argument to correctly identify points.
     ## warn, and just show the within-panel indices unless subscripts=T
     if (playState$is.lattice &&
         playState$accepts.arguments &&
         prod(dim(playState$trellis)) > 1) {
-        plot.call <- playState$call
-        callName <- deparseOneLine(plot.call[[1]])
+        callName <- deparseOneLine(callArg(playState, 0))
         if (!(callName %in% c("splom", "cloud", "levelplot",
                               "contourplot", "wireframe", "parallel")) ) {
             if (is.null(callArg(playState, subscripts)))
@@ -941,6 +969,30 @@ copyArgsIntoEnv <-
         }
         ## leave constants alone
     }
+}
+
+recursiveIndex <- function(call, index) {
+    ## if index is simple...
+    if (length(index) == 1) {
+        ## if index is NA, use original call object
+        if (is.na(index)) return(call)
+        return(call[[index]])
+    }
+    getx <- paste("[[", index, "]]", sep="", collapse="")
+    eval(parse(text=paste("call", getx, sep="")))
+}
+
+"recursiveIndex<-" <- function(call, index, value) {
+    ## if index is simple...
+    if (length(index) == 1) {
+        ## if index is NA, use original call object
+        if (is.na(index)) return(value)
+        call[[index]] <- value
+        return(call)
+    }
+    getx <- paste("[[", index, "]]", sep="", collapse="")
+    eval(parse(text=paste("call", getx, " <- value", sep="")))
+    call
 }
 
 recursive.as.list.call <- function(x) {

@@ -41,7 +41,7 @@ annotate_handler <- function(widget, playState)
     wid <- list()
 
     ## TEXT AND JUST
-    labgroup <- gframe("<b>Label text</b>", markup=TRUE,
+    labgroup <- gframe("Label text",
                        horizontal=FALSE, container=wingroup)
     lay <- glayout(container=labgroup, spacing=2)
     wid$label <- gtext(width=200, height=50)
@@ -71,7 +71,7 @@ annotate_handler <- function(widget, playState)
     focus(wid$label) <- TRUE
 
     ## STYLE
-    stylegroup <- gframe("<b>Style</b>", markup=TRUE,
+    stylegroup <- gframe("Style",
                          horizontal=FALSE, container=wingroup)
     lay <- glayout(container=stylegroup, spacing=2)
     refStyle <- playState$label.style

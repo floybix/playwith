@@ -7,11 +7,9 @@
 
 toolConstructors$clear <- function(playState)
 {
-    if ((length(playState$call) == 1) &&
-        identical(playState$call[[1]], quote(`{`))) {
+    if (isBasicDeviceMode(playState))
         ## do not know the call; it cannot be redrawn (TODO?)
         return(NA)
-    }
     types <- c(
                if (length(playState$ids) > 0) "ids",
                if (length(playState$annotations) > 0) "annotations",

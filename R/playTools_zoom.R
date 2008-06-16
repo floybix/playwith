@@ -9,7 +9,7 @@ toolConstructors$zoom <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
     ## this tool does not work with "splom" or 3D plots
-    callName <- deparseOneLine(playState$call[[1]])
+    callName <- deparseOneLine(callArg(playState, 0))
     if (callName %in% c("splom", "cloud", "wireframe"))
         return(NA)
     ## add click event handler to plot -- always active
@@ -30,17 +30,62 @@ zoom_click_handler <- function(widget, event, playState)
 {
     ## bail out if another tool is handling the click
     ## TODO: is this a race condition? is there a better way?
-    if (playState$now.interacting) return(FALSE)
+    if (isTRUE(playState$now.interacting)) return(FALSE)
     x <- event$x
     y <- event$y
+    if (event[["button"]] == 1) {
+        zoomCore(playState, x, y)
+    }
+    if (event[["button"]] == 3) {
+        zoomoutCore(playState, x, y)
+    }
+    return(FALSE)
+}
+
+zoomCore <- function(playState, x0, y0)
+{
     xonly <- playState$time.mode && is.null(playState$time.vector)
     nav.x <- TRUE
     nav.y <- !xonly
     scales <- c( if (nav.x) "x", if (nav.y) "y" )
-    foo <- playClickOrDrag(playState, x0=x, y0=y, shape="rect", scales=scales)
-    if (foo$modifiers & GdkModifierType["button2-mask"])
-        zoomout_handler(NULL, playState)
-    else zoomCore(playState, foo)
+    foo <- playClickOrDrag(playState, x0=x0, y0=y0, shape="rect", scales=scales)
+    if (is.null(foo)) return()
+    if (is.null(foo$coords)) return()
+    if (foo$is.click) return()
+    xlim <- range(foo$coords$x)
+    ylim <- range(foo$coords$y)
+    ## reverse axis scales if needed
+    if (is.unsorted(rawXLim(playState, space=foo$space))) xlim <- rev(xlim)
+    if (is.unsorted(rawYLim(playState, space=foo$space))) ylim <- rev(ylim)
+    ## this converts from raw numeric to original format (including unlog)
+    if (nav.x) rawXLim(playState) <- xlim
+    if (nav.y) rawYLim(playState) <- ylim
+    playReplot(playState)
+}
+
+zoomoutCore <- function(playState, x0, y0)
+{
+    xonly <- playState$time.mode && is.null(playState$time.vector)
+    nav.x <- TRUE
+    nav.y <- !xonly
+    scales <- c( if (nav.x) "x", if (nav.y) "y" )
+    foo <- playClickOrDrag(playState, x0=x0, y0=y0)
+    if (is.null(foo)) return()
+    if (is.null(foo$coords)) return()
+    if (foo$is.click == FALSE) return()
+    ## find existing scales
+    xlim <- rawXLim(playState, space=foo$space)
+    ylim <- rawYLim(playState, space=foo$space)
+    ## centre on click location
+    xlim <- (xlim - mean(xlim)) + mean(foo$coords$x)
+    ylim <- (ylim - mean(ylim)) + mean(foo$coords$y)
+    ## zoom out: make range twice the size
+    if (nav.x) xlim <- xlim + diff(xlim) * c(-0.5, 0.5)
+    if (nav.y) ylim <- ylim + diff(ylim) * c(-0.5, 0.5)
+    ## this converts from raw numeric to original format (including unlog)
+    if (nav.x) rawXLim(playState) <- xlim
+    if (nav.y) rawYLim(playState) <- ylim
+    playReplot(playState)
 }
 
 zoom_handler <- function(widget, playState)
@@ -52,14 +97,6 @@ zoom_handler <- function(widget, playState)
     foo <- playRectInput(playState, prompt=paste(
                                     "Click and drag to define the new plot region.",
                                     "(Right-click to cancel)"), scales=scales)
-    zoomCore(foo)
-}
-
-zoomCore <- function(playState, foo)
-{
-    xonly <- playState$time.mode && is.null(playState$time.vector)
-    nav.x <- TRUE
-    nav.y <- !xonly
     if (is.null(foo)) return()
     if (is.null(foo$coords)) return()
     if (foo$is.click) return()
@@ -80,7 +117,7 @@ toolConstructors$zoomout <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
     ## this tool does not work with "splom" or 3D plots
-    callName <- deparseOneLine(playState$call[[1]])
+    callName <- deparseOneLine(callArg(playState, 0))
     if (callName %in% c("splom", "cloud", "wireframe"))
         return(NA)
 
@@ -125,7 +162,7 @@ zoomfit_handler <- function(widget, playState)
     xonly <- playState$time.mode && is.null(playState$time.vector)
     nav.x <- TRUE
     nav.y <- !xonly
-    callName <- deparseOneLine(playState$call[[1]])
+    callName <- deparseOneLine(callArg(playState, 0))
     nav.z <- (callName %in% c("cloud", "wireframe"))
     ## update scales
     if (nav.x) callArg(playState, xlim) <- NULL
@@ -139,7 +176,7 @@ zoomfit_postplot_action <- function(widget, playState)
     xonly <- playState$time.mode && is.null(playState$time.vector)
     nav.x <- TRUE
     nav.y <- !xonly
-    callName <- deparseOneLine(playState$call[[1]])
+    callName <- deparseOneLine(callArg(playState, 0))
     nav.z <- (callName %in% c("cloud", "wireframe"))
     nonfit <- FALSE
     if (nav.x && !is.null(callArg(playState, xlim))) nonfit <- TRUE

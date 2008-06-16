@@ -20,14 +20,16 @@ help_handler <- function(widget, playState)
         gmessage.error("Do not know the name of the plot function.")
         return()
     }
-    callName <- deparseOneLine(playState$call[[1]])
+    callName <- deparseOneLine(callArg(playState, 0))
     ## work out which (S3) method was called, if any
     methNames <- methods(callName)
-    if ((length(methNames) > 0) && length(playState$call > 1)) {
-        myClass <- class(callArg(playState, 1))
-        myMeth <- paste(callName, myClass, sep=".")
-        ok <- (myMeth %in% methNames)
-        if (any(ok)) callName <- myMeth[ok][1]
+    if (length(methNames) > 0) {
+        myClass <- try(class(callArg(playState, 1)), silent=TRUE)
+        if (!inherits(myClass, "try-error")) {
+            myMeth <- paste(callName, myClass, sep=".")
+            ok <- (myMeth %in% methNames)
+            if (any(ok)) callName <- myMeth[ok][1]
+        }
     }
     print(help(callName))
 }

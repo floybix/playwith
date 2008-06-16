@@ -9,7 +9,7 @@ toolConstructors$brush <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
     ## this tool only works with "splom" lattice plots
-    callName <- deparseOneLine(playState$call[[1]])
+    callName <- deparseOneLine(callArg(playState, 0))
     if ((callName %in% "splom") == FALSE)
         return(NA)
 

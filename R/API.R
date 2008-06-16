@@ -61,7 +61,8 @@ callArg <- function(playState, arg, name=NULL)
     getx <- if (is.numeric(arg)) paste("[[", arg+1, "]]", sep="")
     else if (is.symbol(arg)) paste('[["', arg, exactbit, sep="")
     else paste("$", deparseOneLine(arg), sep="")
-    expr <- eval(parse(text=paste("playState$call", getx, sep="")))
+    mainCall <- mainCall(playState)
+    expr <- eval(parse(text=paste("mainCall", getx, sep="")))
     if (mode(expr) == "expression") return(expr)
     eval(expr, envir=playState$env, enclos=parent.frame())
 }
@@ -82,9 +83,20 @@ callArg <- function(playState, arg, name=NULL)
     }
     getx <- if (is.numeric(arg)) paste("[[", arg+1, "]]", sep="")
     else paste("$", deparseOneLine(arg), sep="")
-    expr <- parse(text=paste("playState$call", getx, sep=""))[[1]]
+    mainCall <- mainCall(playState)
+    expr <- parse(text=paste("mainCall", getx, sep=""))[[1]]
     expr <- call("<-", expr, quote(value))
     eval(expr, enclos=parent.frame())
+    mainCall(playState) <- mainCall
+    playState
+}
+
+mainCall <- function(playState) {
+    recursiveIndex(playState$call, playState$main.call.index)
+}
+
+"mainCall<-" <- function(playState, value) {
+    recursiveIndex(playState$call, playState$main.call.index) <- value
     playState
 }
 
@@ -720,7 +732,7 @@ playLogBase <- function(playState, x.or.y=c("x", "y"))
 {
     x.or.y <- match.arg(x.or.y)
     if (playState$is.lattice) {
-        scalesArg <- playState$call$scales
+        scalesArg <- callArg(playState, scales)
         if (!is.null(scalesArg[[x.or.y]]$log)) {
             logBase <- latticeLogBase(scalesArg[[x.or.y]]$log)
             if (!is.na(logBase)) return(logBase)
@@ -729,7 +741,7 @@ playLogBase <- function(playState, x.or.y=c("x", "y"))
             if (!is.na(logBase)) return(logBase)
         }
     } else if (playState$is.ggplot) {
-        logArg <- playState$call$log
+        logArg <- callArg(playState, log)
         if (!is.null(logArg) &&
             (x.or.y %in% strsplit(logArg, split="")[[1]]))
             return(10)

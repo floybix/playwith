@@ -30,12 +30,14 @@ edit.call_handler <- function(widget, playState)
     theCall <- playState$call
     callTxt <- paste(deparse(theCall, control="showAttributes"), collapse="\n")
     repeat {
-        newTxt <- NULL
-        txtBox <- gtext(callTxt, font.attr=c(family="monospace"), wrap=FALSE, width=600)
-        gbasicdialog(title="Edit plot call", widget=txtBox,
-                     action=environment(), handler=function(h, ...)
-                     assign("newTxt", svalue(h[[1]]), env=h$action)
-                     )
+        newTxt <- guiTextInput(callTxt, title="Edit plot call",
+                               prompt="", accepts.tab=F)
+        ## possible with gWidgets, but way too slow.
+        #txtBox <- gtext(callTxt, font.attr=c(family="monospace"), wrap=FALSE, width=600)
+        #gbasicdialog(title="Edit plot call", widget=txtBox,
+        #             action=environment(), handler=function(h, ...)
+        #             assign("newTxt", svalue(h[[1]]), env=h$action)
+        #             )
         if (is.null(newTxt)) break
         callTxt <- newTxt
         tmp <- tryCatch(parse(text=callTxt), error=function(e)e)

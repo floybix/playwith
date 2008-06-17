@@ -43,6 +43,11 @@ playInteractionTools <-
 
 toolConstructors <-
     list(`--` = function(...) gtkSeparatorToolItem(),
+         `~~` = function(...) {
+             foo <- gtkSeparatorToolItem()
+             foo$setDraw(FALSE)
+             foo
+         },
          `---` = function(...) {
              foo <- gtkSeparatorToolItem()
              foo$setExpand(TRUE)
@@ -66,8 +71,8 @@ quickTool <-
 {
     x <- if (isToggle) gtkToggleToolButton(show=show)
     else gtkToolButton(show=show)
-    x["label"] <- label
-    x["icon-name"] <- icon.name
+    x[["label"]] <- label
+    x[["icon-name"]] <- icon.name
     if (!is.null(tooltip)) {
         result <- try(x$setTooltipText(tooltip), silent=TRUE)
         if (inherits(result, "try-error"))
@@ -83,3 +88,127 @@ quickTool <-
     x
 }
 
+parameterControlTool <-
+    function(playState, name, value,
+             label = name,
+             horizontal = TRUE,
+             spinbutton = FALSE)
+{
+    if (!is.logical(value))
+        label <- paste(label, ": ", sep="")
+    ## signal handlers
+    updateParamValue <- function(widget, playState) {
+        newval <- widget[["value"]]
+        oldval <- get(name, envir=playState$env)
+        if (identical(oldval, newval)) return()
+        assign(name, newval, envir=playState$env)
+        playReplot(playState)
+    }
+    updateParamText <- function(widget, playState) {
+        newval <- widget[["text"]]
+        oldval <- get(name, envir=playState$env)
+        if (identical(oldval, newval)) return()
+        assign(name, newval, envir=playState$env)
+        playReplot(playState)
+    }
+    updateParamCombobox <- function(widget, playState) {
+        ## signal also emitted on typing, ignore
+        if (widget$getActive() == -1) return()
+        newval <- widget$getActiveText()
+        oldval <- get(name, envir=playState$env)
+        if (identical(oldval, newval)) return()
+        assign(name, newval, envir=playState$env)
+        playReplot(playState)
+    }
+    updateParamActive <- function(widget, playState) {
+        newval <- widget[["active"]]
+        oldval <- get(name, envir=playState$env)
+        if (identical(oldval, newval)) return()
+        assign(name, newval, envir=playState$env)
+        playReplot(playState)
+    }
+    if (is.numeric(value)) {
+        if (length(value) == 1) {
+            ## only one value given -- make up a range
+            range <- 10 * (1 + abs(value)) ^ 2 * c(-1, 1)
+            step <- 10^round(log10(abs(value))-1)
+            if (value == 0) step <- 1
+        } else if (length(value) == 2) {
+            ## range given -- make up a step
+            range <- range(value)
+            step <- 10^round(log10(diff(range))-1)
+        } else {
+            ## explicit sequence given (but might not be regular)
+            range <- range(value)
+            step <- median(abs(diff(sort(value))))
+        }
+        digits <- max(0, 1 - round(log10(abs(value))))
+        if (spinbutton) {
+            ## spinbutton
+            box <- gtkVBox()
+            box$packStart(gtkLabel(label))
+            widget <- gtkSpinButton(min=min(range), max=max(range), step=step)
+            widget[["digits"]] <- digits
+        } else {
+            ## scale (slider)
+            box <- if (horizontal) gtkHBox() else gtkVBox()
+            box$packStart(gtkLabel(label), expand=FALSE)
+            widget <- if (horizontal)
+                gtkHScale(min=min(range), max=max(range), step=step)
+            else gtkVScale(min=min(range), max=max(range), step=step)
+        }
+        widget$setValue(get(name, envir=playState$env))
+        widget[["update-policy"]] <- GtkUpdateType["discontinuous"]
+        gSignalConnect(widget, "value-changed",
+                       updateParamValue, data=playState)
+        box$packStart(widget)
+        foo <- gtkToolItem()
+        foo$setExpand(TRUE)
+        foo$add(box)
+        return(foo)
+    }
+    if (is.character(value)) {
+        box <- gtkVBox()
+        box$packStart(gtkLabel(label))
+        if (length(value) == 1) {
+            ## text entry
+            widget <- gtkEntry()
+            widget[["text"]] <- get(name, envir=playState$env)
+            #widget["width-chars"] <- 30
+            gSignalConnect(widget, "activate",
+                           updateParamText, data=playState)
+        } else {
+            ## combo box
+            widget <- gtkComboBoxEntryNewText()
+            widget$show()
+            for (item in value)
+                widget$appendText(item)
+            #widget$setActiveText(get(name, envir=playState$env))
+            index <- match(get(name, envir=playState$env), value)
+            if (is.na(index)) index <- 1
+            widget[["active"]] <- (index - 1)
+            #gSignalConnect(widget, "editing-done",
+            gSignalConnect(widget$getChild(), "activate",
+                           updateParamText, data=playState)
+            gSignalConnect(widget, "changed",
+                           updateParamCombobox, data=playState)
+        }
+        box$packStart(widget)
+        foo <- gtkToolItem()
+        foo$add(box)
+        return(foo)
+    }
+    if (is.logical(value)) {
+        ## toggle button / checkbox
+        widget <- gtkCheckButton(label)
+        widget[["active"]] <- isTRUE(get(name, envir=playState$env))
+        gSignalConnect(widget, "clicked",
+                       updateParamActive, data=playState)
+        foo <- gtkToolItem()
+        foo$add(widget)
+        return(foo)
+    }
+    ## otherwise...
+    stop("do not know about ",
+         toString(class(value)), " objects")
+}

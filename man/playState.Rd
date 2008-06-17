@@ -3,7 +3,7 @@
 \alias{print.playState}
 \title{Object representing the plot, window and device.}
 \description{
-  This object is used by \code{\link{playwith}} to 
+  This object is used by \code{\link{playwith}} to
   represent the state of the plot, window and device.
   The playState object is central to the \link{playwith.API}.
   However, it may also be seen by users controlling the "device" with
@@ -35,8 +35,16 @@
 		\item{\code{is.lattice}}{
 			whether the current plot is a Lattice plot.
 		}
+		\item{\code{trellis}}{
+			the trellis object corresponding to the current plot,
+			if it is a Lattice plot.
+		}
 		\item{\code{is.ggplot}}{
 			whether the current plot is a ggplot plot.
+		}
+		\item{\code{ggplot}}{
+			the ggplot object corresponding to the current plot,
+			if it is a ggplot plot.
 		}
 		\item{\code{viewport}}{
 			a named list of viewport paths (or names).
@@ -54,10 +62,10 @@
 		}
 		\item{\code{ids}}{
 			a named list of currently labelled data points.
-			Each name corresponds to a "space", which can be "page" 
+			Each name corresponds to a "space", which can be "page"
 			(positioned on page) or "plot" (positioned in plot coordinates).
 			With Lattice graphics the space can be "packet 1" etc.
-			The numeric vector in each list element gives the indices 
+			The numeric vector in each list element gives the indices
 			of currently identified points in that space.
 		}
 		\item{\code{annotations}}{
@@ -75,7 +83,7 @@
 			is \code{drawingArea} (the plot device itself).
 			\preformatted{
 drawingArea
-topToolbar 
+topToolbar
 leftToolbar
 bottomToolbar
 rightToolbar
@@ -101,17 +109,18 @@ hbox
 		\item{\code{plot.ready}}{
 			whether the plot has been drawn and is ready for interaction.
 		}
-		\item{\code{trellis}}{
-			the trellis object corresponding to the current plot,
-			if it is a Lattice plot.
-		}
+		\item{\code{now.interacting}}{
+		  defined as TRUE while tool interaction is active
+		  (i.e. during playPointInput / playRectInput etc).
+		  This allows the default click / drag action to be suppressed.
+		  }
 	}
-	
+
 	Miscellaneous elements include:
-	\code{page, pages, time.vector, cur.index, on.close, 
+	\code{page, pages, time.vector, cur.index, on.close,
 	.args, deviceToSpace, baseViewports}.
-	
-	Other objects can be passed in through the \code{...} argument to 
+
+	Other objects can be passed in through the \code{...} argument to
 	\code{\link{playwith}}, or defined by tools.
 
 }

@@ -37,6 +37,7 @@ playwith <-
              left.tools = playInteractionTools,
              bottom.tools = list(),
              right.tools = list(),
+             parameters = list(),
              ...,
              show.call = TRUE,
              win.size = c(640, 500),
@@ -315,6 +316,12 @@ playwith <-
         env$cur.time <- playState$time.vector[env$cur.index]
         env$time.vector <- playState$time.vector
     }
+    ## set initial values of any parameters
+    for (i in seq_along(parameters)) {
+        parname <- names(parameters)[i]
+        parval <- parameters[[i]]
+        assign(parname, parval[1], envir=env)
+    }
     ## construct the state object (playState)
     playState$win <- myWin
     playState$dev <- dev.cur()
@@ -324,6 +331,7 @@ playwith <-
     playState$labels <- labels
     playState$data.points <- data.points
     playState$viewport <- viewport
+    playState$parameters <- parameters
     playState$show.call <- show.call
     playState$ids <- list()
     playState$brushed <- list()
@@ -497,6 +505,18 @@ playNewPlot <- function(playState)
             populateToolbar(bottomToolbar, bottom.tools)
             populateToolbar(rightToolbar, right.tools)
         })
+        paramToolbar <- playState$widgets$bottomToolbar
+        params <- playState$parameters
+        for (i in seq_along(params)) {
+            parname <- names(params)[i]
+            parval <- params[[i]]
+            newTool <- try(parameterControlTool(playState, name=parname,
+                                                value=parval))
+            if (inherits(newTool, "try-error")) next
+            if (i == 1) populateToolbar(paramToolbar, list("~~"))
+            paramToolbar$insert(newTool, -1)
+            populateToolbar(paramToolbar, list("~~"))
+        }
         for (tbar in tbars) {
             if (length(tbar$getChildren())) tbar$show()
             else tbar$hide()
@@ -511,6 +531,7 @@ playNewPlot <- function(playState)
 playReplot <- function(playState)
 {
     if (isTRUE(playState$skip.redraws)) return()
+    print(sys.calls())
     playState$plot.ready <- FALSE
     playDevSet(playState)
     grid.newpage()

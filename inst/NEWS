@@ -1,6 +1,9 @@
 
 Changes in Version 0.8-54
 
+  o argument `parameters`: automatically constructs
+    widgets to control parameter values appearing in the call.
+
   o concept of the "main call" which accepts typical plot
     arguments (xlim, ylim, main, etc) -- not necessarily the
     top-level call. By default, a depth-first search is used
@@ -8,9 +11,6 @@ Changes in Version 0.8-54
 
   o default action when dragging on the plot is zoom.
     default action on right-click is zoomout.
-
-  o playState$now.interacting defined as TRUE while tool
-    interaction is active (i.e. playPointInput / playRectInput etc).
 
   o restrict zooming to x axis in time.mode
     ONLY IF a time.vector was not specified.

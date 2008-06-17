@@ -9,191 +9,211 @@
   editing and annotating the plot, and saving to a file. New tools can be defined.
 }
 \usage{
-playwith(expr, 
+playwith(expr,
 	new = FALSE,
-	title = NULL, 
+	title = NULL,
 	time.mode = FALSE,
-	labels = NULL, 
-	data.points = NULL, 
-	viewport = NULL, 
-	top.tools = playApplicationTools, 
-	left.tools = playInteractionTools, 
+	labels = NULL,
+	data.points = NULL,
+	viewport = NULL,
+	top.tools = playApplicationTools,
+	left.tools = playInteractionTools,
 	bottom.tools = list(),
-	right.tools = list(), 
+	right.tools = list(),
+	parameters = list(),
 	...,
 	show.call = TRUE,
-	win.size = c(640, 500), 
+	win.size = c(640, 500),
 	modal = FALSE,
-	on.close = NULL, 
-	eval.args = NA, 
-	invert.match = FALSE, 
-	envir = parent.frame(), 
+	on.close = NULL,
+	eval.args = NA,
+	invert.match = FALSE,
+	envir = parent.frame(),
 	playState = if (!new) playDevCur(),
-	plot.call)
+	plot.call,
+	main.function)
 }
 \arguments{
-  \item{expr}{ an expression to create a plot, like \code{plot(mydata)}. 
-  	Note, this can have lots of arguments, just like a normal plot call (see examples).
-  	Can also be a chunk of code in \code{\{}braces\code{\}}, but that form does not allow interaction. }
+  \item{expr}{ an expression to create a plot, like \code{plot(mydata)}.
+    Note, this can have lots of arguments, just like a normal plot call (see examples).
+    Can also be a chunk of code in \code{\{}braces\code{\}}, but that form does not allow interaction. }
   \item{new}{ if \code{TRUE} open in a new window, otherwise replace the current window (if one exists). }
-  \item{title}{ optional window title. If a plot window exists with the same title, 
-  	the new plot will appear in that window, replacing the old plot. }
+  \item{title}{ optional window title. If a plot window exists with the same title,
+    the new plot will appear in that window, replacing the old plot. }
   \item{time.mode}{ whether the plot is to start in "time mode", with navigation along the x-axis. }
-  \item{labels}{ a character vector of labels for data points, for use in \code{\link{identify}}. 
-  	If missing, it will be guessed from the plot call arguments. }
+  \item{labels}{ a character vector of labels for data points, for use in \code{\link{identify}}.
+    If missing, it will be guessed from the plot call arguments. }
   \item{data.points}{ a data frame with elements "x" and "y" (or other suitable plotting structure)
-	giving locations of data points, in case these can not be guessed from the plot call arguments. }
+    giving locations of data points, in case these can not be guessed from the plot call arguments. }
   \item{viewport}{ name or \code{\link[grid]{vpPath}} of the \code{\link[grid]{viewport}}
-	representing the data space. This allows interaction with grid graphics plots 
-	(but ignore this for Lattice plots). }
+    representing the data space. This allows interaction with grid graphics plots
+    (but ignore this for Lattice plots). }
   \item{top.tools, left.tools, bottom.tools, right.tools}{
-	each a list of tools for toolbars at the top, left, bottom or right sides of the window.
-	Each list element should be the name of one of the pre-defined tools,
-	or a function to construct a \code{\link[RGtk2]{gtkToolItem}}. 
-  	See \link{playTools} for a description of the pre-defined tools,
-	and \link{playwith.API} for help on defining new tools. 
+    each a list of tools for toolbars at the top, left, bottom or right sides of the window.
+    Each list element should be the name of one of the pre-defined tools,
+    or a function to construct a \code{\link[RGtk2]{gtkToolItem}}.
+    See \link{playTools} for a description of the pre-defined tools,
+    and \link{playwith.API} for help on defining new tools.
+  }
+  \item{parameters}{
+    defines simple tools for controlling values of any parameters
+    appearing in the plot call. This must be a named list, where the value given for
+    each name defines the possible or initial values of that parameter. The
+    supported values are:
+    \itemize{
+      \item \code{numeric} scalar: creates a text entry box for
+      numeric values.
+      \item \code{numeric} vector: creates a slider with given range.
+      \item \code{character}: creates a text entry box.
+      \item \code{character} vector: creates a combo box (including
+      text entry).
+      \item \code{logical}: creates a checkbox.
   }
   \item{\dots}{ extra arguments are stored in the \code{\link{playState}} object.
-  	These can then be accessed by user-defined tools. The default tools will recognise the following
-	extra arguments:
-	\describe{
-		\item{\code{page}}{
-			In multi-page Lattice plots, this will set the initial page to display.
-		}
-		\item{\code{time.vector}}{
-			a vector defining discrete times, as numeric, 
-			\code{\link{Date}} or \code{\link[=DateTimeClasses]{POSIXt}}. 
-			It must be sorted, increasing.
-			If given, then the "time mode" is used to navigate
-			along these discrete times, rather than along the continuous x-axis.
-			Special objects \code{cur.index} and \code{cur.time} will be provided in the
-			plot environment, so the plot call can refer to these.
-			\code{cur.index} is the current time step, between \code{1} and \code{length(time.vector)}, 
-			and \code{cur.time} is \code{time.vector[cur.index]}.
-			In this case \code{time.mode} will be on by default.
-		}
-		\item{\code{cur.index}, \code{cur.time}, \code{time.mode.page.incr}}{
-			If \code{time.vector} is given, either of \code{cur.index}
-			or \code{cur.time} will set the initial time step.
-			\code{time.mode.page.incr} sets the number of steps to jump
-			if the user clicks on the scroll bar.
-		}
-		\item{\code{label.style}}{
-			output from \code{\link[grid]{gpar}}, specifying the style of labels.
-			e.g. \code{gpar(cex=1.5, fontface="italic", fontfamily="serif")}.
-		}
-		\item{\code{label.offset}}{
-			the distance from a data point to its identifying label. 
-			Can be numeric, in units of characters, or
-			a grid \code{\link[grid]{unit}}.
-			Default is 0.5, or \code{unit(0.5, "char")}.
-		}
-		\item{\code{arrow.style}}{
-			output from \code{\link[grid]{gpar}}, specifying the style of arrows. 
-			e.g. \code{gpar(lwd=2, col="red", alpha=0.5)}.
-		}
-		\item{\code{arrow.arrow}}{
-			output from \code{\link[grid]{arrow}}, specifying the type of arrows to draw.
-			e.g. \code{arrow(ends="both", type="closed")}.
-		}
-		\item{\code{annotation.mode}, \code{clip.annotations}, 
-			\code{keep}, \code{stay.on.top}}{
-			set the corresponding window options.
-			All are logical except \code{annotation.mode} which can be 
-			either \code{"page"} or \code{"plot"} (the default).
-		}
-	}
+    These can then be accessed by user-defined tools. The default tools will recognise the following
+    extra arguments:
+    \describe{
+      \item{\code{page}}{
+	In multi-page Lattice plots, this will set the initial page to display.
+      }
+      \item{\code{time.vector}}{
+	a vector defining discrete times, as numeric,
+	\code{\link{Date}} or \code{\link[=DateTimeClasses]{POSIXt}}.
+	It must be sorted, increasing.
+	If given, then the "time mode" is used to navigate
+	along these discrete times, rather than along the continuous x-axis.
+	Special objects \code{cur.index} and \code{cur.time} will be provided in the
+	plot environment, so the plot call can refer to these.
+	\code{cur.index} is the current time step, between \code{1} and \code{length(time.vector)},
+	and \code{cur.time} is \code{time.vector[cur.index]}.
+	In this case \code{time.mode} will be on by default.
+      }
+      \item{\code{cur.index}, \code{cur.time}, \code{time.mode.page.incr}}{
+	If \code{time.vector} is given, either of \code{cur.index}
+	or \code{cur.time} will set the initial time step.
+	\code{time.mode.page.incr} sets the number of steps to jump
+	if the user clicks on the scroll bar.
+      }
+      \item{\code{label.style}}{
+	output from \code{\link[grid]{gpar}}, specifying the style of labels.
+	e.g. \code{gpar(cex=1.5, fontface="italic", fontfamily="serif")}.
+      }
+      \item{\code{label.offset}}{
+	the distance from a data point to its identifying label.
+	Can be numeric, in units of characters, or
+	a grid \code{\link[grid]{unit}}.
+	Default is 0.5, or \code{unit(0.5, "char")}.
+      }
+      \item{\code{arrow.style}}{
+	output from \code{\link[grid]{gpar}}, specifying the style of arrows.
+	e.g. \code{gpar(lwd=2, col="red", alpha=0.5)}.
+      }
+      \item{\code{arrow.arrow}}{
+	output from \code{\link[grid]{arrow}}, specifying the type of arrows to draw.
+	e.g. \code{arrow(ends="both", type="closed")}.
+      }
+      \item{\code{annotation.mode}, \code{clip.annotations},
+	\code{keep}, \code{stay.on.top}}{
+	set the corresponding window options.
+	All are logical except \code{annotation.mode} which can be
+	either \code{"page"} or \code{"plot"} (the default).
+      }
+    }
   }
   \item{show.call}{ set to \code{FALSE} to hide the plot call text-box ("address bar") and associated buttons.}
   \item{win.size}{ default initial size of the plot window (width, height) in pixels. }
   \item{modal}{ whether the window is modal: if \code{TRUE}, the session will freeze until the window is closed. }
   \item{on.close}{ a function to be called when the user closes the plot window. The \code{\link{playState}} object
-	  will passed to the function. If the function returns \code{TRUE}, the window will not be closed. }
-  \item{eval.args}{ whether to evaluate the plot call arguments: can be \code{TRUE}, \code{FALSE}, \code{NA} (don't eval global vars) 
-	or a \link[=regex]{regular expression} matching symbols to evaluate. See below. }
+    will passed to the function. If the function returns \code{TRUE}, the window will not be closed. }
+  \item{eval.args}{ whether to evaluate the plot call arguments: can be \code{TRUE}, \code{FALSE}, \code{NA} (don't eval global vars)
+    or a \link[=regex]{regular expression} matching symbols to evaluate. See below. }
   \item{invert.match}{ whether to evaluate arguments that do NOT match the regular expression given in \code{eval.args}. }
   \item{envir}{ \code{\link{environment}} to use in evaluating the call arguments (see \code{eval.args}) }
   \item{playState}{ the \code{\link{playState}} object for an existing plot window.
-	If given, the new plot will appear in that window, replacing the old plot.
-	This over-rides the \code{new} argument.}
-  \item{plot.call}{ a plot call (\code{\link{call}} object), if given this is used instead of \code{expr}. }
+    If given, the new plot will appear in that window, replacing the old plot.
+    This over-rides the \code{new} argument.}
+  \item{plot.call}{ a plot call (\code{\link{call}} object), if given
+    this is used instead of \code{expr}. }
+  \item{main.function}{ the function (or its name) appearing in the call
+    which accepts typical plot arguments like \code{xlim} and
+    \code{main}. This will only be needed in unusual cases when the default fails.
 }
 \details{
-	This function opens a GTK+ window containing a plot device 
-	(from the \code{cairoDevice} package) and several toolbars. 
-	There is a call toolbar (similar to the "address bar" of a web browser) at the top,
-	showing the current plot call, which can also be edited in-place. 
-	Then there are up to four toolbars, one on each side of the plot.
-	The tools to be placed in these four toolbars can be specified 
-	if necessary.
-	
-	With the \code{\link{autoplay}} facility, \code{playwith} can function 
-	as a default graphics device (although it is not technically a 
-	graphics device itself, it is a wrapper around one).
-	
-	The pre-defined tools can be listed with \code{names(toolConstructors)}.
-	See \link{playTools} for a description of the pre-defined tools,
-	and \link{playwith.API} for help on defining new tools.
-	
-	Four types of plots are handled slightly differently: 
-	\itemize{
-		\item Lattice graphics: recognised by returning an object of class \code{trellis}.
-		\item ggplot graphics: recognised by returning an object of class \code{ggplot}.
-			This case is poorly supported.
-		\item other grid graphics: you must give the \code{viewport}
-			argument to enable interaction.
-		\item base graphics: this is the default case.
-	}
-	
-	It is important to be aware that \code{playwith} makes a lot of guesses 
-	about the plot, the data, and how to interact with them.
-	Some interaction is based on evaluating and changing arguments to the plot call.
-	This is designed to work in common cases, but could never work for all 
-	plots. For basic interaction, ensure that the call accepts \code{xlim}
-	and \code{ylim} arguments.
-	Generally, it can be expected to work best with Lattice plots.
-	
-	The locations and type of data points will be guessed from the plot call.
-	An attempt will also be made to construct labels to identify the data points.
-	These guesses may be wrong in complex cases, in which case 
-	you can pass the correct values in as \code{data.points} and/or \code{labels}.
-	Please also contact the maintainer to help improve the guesses.
-	\strong{NOTE:} The automatic subscripts used to identify points in Lattice plots
-	will be usually be the within-panel indices unless \code{subscripts=T} is
-	specified in the plot call: see \code{\link[lattice]{xyplot}}.
-  
-	In order to interact with a plot, its supporting data needs to be stored:
-	i.e. all variables appearing in the plot call must remain accessible.
-	By default, all non-global data is copied into an attached environment and stored.
-	
-	The default setting \code{eval.args=NA} causes variables appearing in the 
-	plot call to be evaluated and stored, except if they are defined in the 
-	global environment (i.e. user workspace). This method should work in most 
-	cases, but: Functions appearing in the plot call will be evaluated each 
-	time the plot is updated -- so random data as in \code{plot(rnorm(100))} 
-	will keep changing, with confusing consequences! You should therefore 
-	generate random data prior to the plot call. Changes to variables in the 
-	global environment will also cause inconsistencies in previously generated 
-	plots (e.g. labels on data points may be wrong).
-	
-	If \code{eval.args=TRUE} then variables appearing in the plot call will be 
-	evaluated and stored even if they are defined in the global environment. 
-	Use this if the global variables might change (or be removed) before the 
-	plot is destroyed.
-	
-	If a regular expression is given for \code{eval.args} then only variables 
-	whose names match it will be evaluated, and this includes global variables, 
-	as with \code{eval.args=TRUE}. In this case you can set \code{invert.match=TRUE} 
-	to evaluate variables that are not matched.
-	For example \code{eval.args="^tmp"} will evaluate variables whose names 
-	begin with "tmp"; \code{eval.args="^foo$", invert.match=TRUE} will evaluate 
-	everything except \code{foo}.
-	
-	If \code{eval.args=FALSE} then the plot call will be left alone 
-	(not evaluated until plot time).
+  This function opens a GTK+ window containing a plot device
+  (from the \code{cairoDevice} package) and several toolbars.
+  There is a call toolbar (similar to the "address bar" of a web browser) at the top,
+  showing the current plot call, which can also be edited in-place.
+  Then there are up to four toolbars, one on each side of the plot.
+  The tools to be placed in these four toolbars can be specified
+  if necessary.
+
+  With the \code{\link{autoplay}} facility, \code{playwith} can function
+  as a default graphics device (although it is not technically a
+  graphics device itself, it is a wrapper around one).
+
+  The pre-defined tools can be listed with \code{names(toolConstructors)}.
+  See \link{playTools} for a description of the pre-defined tools,
+  and \link{playwith.API} for help on defining new tools.
+
+  Four types of plots are handled slightly differently:
+  \itemize{
+    \item Lattice graphics: recognised by returning an object of class \code{trellis}.
+    \item ggplot graphics: recognised by returning an object of class \code{ggplot}.
+    This case is poorly supported.
+    \item other grid graphics: you must give the \code{viewport}
+    argument to enable interaction.
+    \item base graphics: this is the default case.
+  }
+
+  It is important to be aware that \code{playwith} makes a lot of guesses
+  about the plot, the data, and how to interact with them.
+  Some interaction is based on evaluating and changing arguments to the plot call.
+  This is designed to work in common cases, but could never work for all
+  plots. For basic interaction, ensure that the call accepts \code{xlim}
+  and \code{ylim} arguments.
+  Generally, it can be expected to work best with Lattice plots.
+
+  The locations and type of data points will be guessed from the plot call.
+  An attempt will also be made to construct labels to identify the data points.
+  These guesses may be wrong in complex cases, in which case
+  you can pass the correct values in as \code{data.points} and/or \code{labels}.
+  Please also contact the maintainer to help improve the guesses.
+  \strong{NOTE:} The automatic subscripts used to identify points in Lattice plots
+  will be usually be the within-panel indices unless \code{subscripts=T} is
+  specified in the plot call: see \code{\link[lattice]{xyplot}}.
+
+  In order to interact with a plot, its supporting data needs to be stored:
+  i.e. all variables appearing in the plot call must remain accessible.
+  By default, all non-global data is copied into an attached environment and stored.
+
+  The default setting \code{eval.args=NA} causes variables appearing in the
+  plot call to be evaluated and stored, except if they are defined in the
+  global environment (i.e. user workspace). This method should work in most
+  cases, but: Functions appearing in the plot call will be evaluated each
+  time the plot is updated -- so random data as in \code{plot(rnorm(100))}
+  will keep changing, with confusing consequences! You should therefore
+  generate random data prior to the plot call. Changes to variables in the
+  global environment will also cause inconsistencies in previously generated
+  plots (e.g. labels on data points may be wrong).
+
+  If \code{eval.args=TRUE} then variables appearing in the plot call will be
+  evaluated and stored even if they are defined in the global environment.
+  Use this if the global variables might change (or be removed) before the
+  plot is destroyed.
+
+  If a regular expression is given for \code{eval.args} then only variables
+  whose names match it will be evaluated, and this includes global variables,
+  as with \code{eval.args=TRUE}. In this case you can set \code{invert.match=TRUE}
+  to evaluate variables that are not matched.
+  For example \code{eval.args="^tmp"} will evaluate variables whose names
+  begin with "tmp"; \code{eval.args="^foo$", invert.match=TRUE} will evaluate
+  everything except \code{foo}.
+
+  If \code{eval.args=FALSE} then the plot call will be left alone
+  (not evaluated until plot time).
 }
 \value{
-	\code{playwith} invisibly returns the value from the plot call.
+  \code{playwith} invisibly returns the value from the plot call.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{ \code{\link{autoplay}}, \link{playTools}, \link{playwith.API} }
@@ -202,15 +222,15 @@ if (interactive()) {
 
 ## time series plot (base graphics)
 treering2 <- window(treering, start=1)
-playwith(plot(treering2, xlim=c(0,300)), 
+playwith(plot(treering2, xlim=c(0,300)),
 	time.mode = TRUE,
 	labels = paste(time(treering2), "CE"))
 
 library(lattice)
 
 ## multi-panel lattice plot
-playwith(xyplot(Income ~ log(Population / Area) | state.region, 
-	data = data.frame(state.x77)), 
+playwith(xyplot(Income ~ log(Population / Area) | state.region,
+	data = data.frame(state.x77)),
 	label.style = gpar(col="red", fontfamily="HersheySans",
 	cex=0.7))
 
@@ -257,8 +277,8 @@ confirmClose <- function(playState) {
 	} else TRUE # don't close
 }
 xy <- list(x=rnorm(20), y=rnorm(20))
-playwith(plot(xy), on.close=confirmClose, modal=TRUE, 
-	win.size=c(360, 360), show.call=FALSE, 
+playwith(plot(xy), on.close=confirmClose, modal=TRUE,
+	win.size=c(360, 360), show.call=FALSE,
 	top=NULL, left=subTools)
 
 ## local variables appearing in the plot call are stored

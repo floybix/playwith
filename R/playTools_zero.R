@@ -9,7 +9,7 @@ toolConstructors$zero <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
     ## this tool does not currently work with "splom" or 3D plots
-    callName <- deparseOneLine(callArg(playState, 0))
+    callName <- deparseOneLine(mainCall(playState)[[1]])
     if (callName %in% c("splom", "cloud", "wireframe"))
         return(NA)
 
@@ -33,7 +33,7 @@ zero_handler <- function(widget, playState)
         } else if (max(xlim) < 0) {
             xlim[which.max(xlim)] <- 0 + 0.07 * max(abs(xlim))
         }
-        callArg(playState, xlim) <- signif(xlim, 4)
+        callArg(playState, "xlim") <- signif(xlim, 4)
     }
     if (trans.y) {
         ylim <- rawYLim(playState)
@@ -42,7 +42,7 @@ zero_handler <- function(widget, playState)
         } else if (max(ylim) < 0) {
             ylim[which.max(ylim)] <- 0 + 0.07 * max(abs(ylim))
         }
-        callArg(playState, ylim) <- signif(ylim, 4)
+        callArg(playState, "ylim") <- signif(ylim, 4)
     }
     playReplot(playState)
 }

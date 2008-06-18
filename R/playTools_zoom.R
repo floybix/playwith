@@ -9,7 +9,7 @@ toolConstructors$zoom <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
     ## this tool does not work with "splom" or 3D plots
-    callName <- deparseOneLine(callArg(playState, 0))
+    callName <- deparseOneLine(mainCall(playState)[[1]])
     if (callName %in% c("splom", "cloud", "wireframe"))
         return(NA)
     ## add click event handler to plot -- always active
@@ -117,7 +117,7 @@ toolConstructors$zoomout <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
     ## this tool does not work with "splom" or 3D plots
-    callName <- deparseOneLine(callArg(playState, 0))
+    callName <- deparseOneLine(mainCall(playState)[[1]])
     if (callName %in% c("splom", "cloud", "wireframe"))
         return(NA)
 
@@ -162,12 +162,12 @@ zoomfit_handler <- function(widget, playState)
     xonly <- playState$time.mode && is.null(playState$time.vector)
     nav.x <- TRUE
     nav.y <- !xonly
-    callName <- deparseOneLine(callArg(playState, 0))
+    callName <- deparseOneLine(mainCall(playState)[[1]])
     nav.z <- (callName %in% c("cloud", "wireframe"))
     ## update scales
-    if (nav.x) callArg(playState, xlim) <- NULL
-    if (nav.y) callArg(playState, ylim) <- NULL
-    if (nav.z) callArg(playState, zlim) <- NULL
+    if (nav.x) callArg(playState, "xlim") <- NULL
+    if (nav.y) callArg(playState, "ylim") <- NULL
+    if (nav.z) callArg(playState, "zlim") <- NULL
     playReplot(playState)
 }
 
@@ -176,11 +176,11 @@ zoomfit_postplot_action <- function(widget, playState)
     xonly <- playState$time.mode && is.null(playState$time.vector)
     nav.x <- TRUE
     nav.y <- !xonly
-    callName <- deparseOneLine(callArg(playState, 0))
+    callName <- deparseOneLine(mainCall(playState)[[1]])
     nav.z <- (callName %in% c("cloud", "wireframe"))
     nonfit <- FALSE
-    if (nav.x && !is.null(callArg(playState, xlim))) nonfit <- TRUE
-    if (nav.y && !is.null(callArg(playState, ylim))) nonfit <- TRUE
-    if (nav.z && !is.null(callArg(playState, zlim))) nonfit <- TRUE
+    if (nav.x && !is.null(callArg(playState, "xlim"))) nonfit <- TRUE
+    if (nav.y && !is.null(callArg(playState, "ylim"))) nonfit <- TRUE
+    if (nav.z && !is.null(callArg(playState, "zlim"))) nonfit <- TRUE
     widget["visible"] <- nonfit
 }

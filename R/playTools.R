@@ -94,6 +94,7 @@ parameterControlTool <-
              horizontal = TRUE,
              spinbutton = FALSE)
 {
+    stopifnot(length(value) > 0)
     if (!is.logical(value))
         label <- paste(label, ": ", sep="")
     ## signal handlers
@@ -106,6 +107,15 @@ parameterControlTool <-
     }
     updateParamText <- function(widget, playState) {
         newval <- widget[["text"]]
+        oldval <- get(name, envir=playState$env)
+        if (identical(oldval, newval)) return()
+        assign(name, newval, envir=playState$env)
+        playReplot(playState)
+    }
+    updateParamTextNumeric <- function(widget, playState) {
+        newval <- try(as.numeric(widget[["text"]]))
+        if (inherits(newval, "try-error")) return()
+        if (is.na(newval)) return()
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
@@ -127,13 +137,48 @@ parameterControlTool <-
         assign(name, newval, envir=playState$env)
         playReplot(playState)
     }
-    if (is.numeric(value)) {
+    if (is.integer(value)) {
+        box <- gtkVBox()
+        box$packStart(gtkLabel(label))
         if (length(value) == 1) {
             ## only one value given -- make up a range
             range <- 10 * (1 + abs(value)) ^ 2 * c(-1, 1)
-            step <- 10^round(log10(abs(value))-1)
-            if (value == 0) step <- 1
-        } else if (length(value) == 2) {
+        } else {
+            ## range given
+            range <- range(value)
+        }
+        step <- min(diff(unique(sort(value))))
+        widget <- gtkSpinButton(min=min(range), max=max(range), step=step)
+        widget[["digits"]] <- 0
+        widget$setValue(get(name, envir=playState$env))
+        gSignalConnect(widget, "value-changed",
+                       updateParamValue, data=playState)
+        box$packStart(widget)
+        foo <- gtkToolItem()
+        foo$add(box)
+        return(foo)
+    }
+    if (is.numeric(value)) {
+        if (length(value) == 1) {
+            ## entry coercing to numeric
+            box <- gtkVBox()
+            box$packStart(gtkLabel(label))
+            widget <- gtkEntry()
+            widget[["text"]] <- toString(get(name, envir=playState$env))
+            widget["width-chars"] <- 6
+            gSignalConnect(widget, "activate",
+                           updateParamTextNumeric, data=playState)
+            box$packStart(widget)
+            foo <- gtkToolItem()
+            foo$add(box)
+            return(foo)
+            ## only one value given -- make up a range
+#            range <- 10 * (1 + abs(value)) ^ 2 * c(-1, 1)
+#            step <- 10^round(log10(abs(value))-1)
+#            if (value == 0) step <- 1
+        }
+        ## scale (slider)
+        if (length(value) == 2) {
             ## range given -- make up a step
             range <- range(value)
             step <- 10^round(log10(diff(range))-1)
@@ -142,22 +187,14 @@ parameterControlTool <-
             range <- range(value)
             step <- median(abs(diff(sort(value))))
         }
-        digits <- max(0, 1 - round(log10(abs(value))))
-        if (spinbutton) {
-            ## spinbutton
-            box <- gtkVBox()
-            box$packStart(gtkLabel(label))
-            widget <- gtkSpinButton(min=min(range), max=max(range), step=step)
-            widget[["digits"]] <- digits
-        } else {
-            ## scale (slider)
-            box <- if (horizontal) gtkHBox() else gtkVBox()
-            box$packStart(gtkLabel(label), expand=FALSE)
-            widget <- if (horizontal)
-                gtkHScale(min=min(range), max=max(range), step=step)
-            else gtkVScale(min=min(range), max=max(range), step=step)
-        }
+        digits <- max(0, - floor(log10(step)))
+        box <- if (horizontal) gtkHBox() else gtkVBox()
+        box$packStart(gtkLabel(label), expand=FALSE)
+        widget <- if (horizontal)
+            gtkHScale(min=min(range), max=max(range), step=step)
+        else gtkVScale(min=min(range), max=max(range), step=step)
         widget$setValue(get(name, envir=playState$env))
+        widget[["digits"]] <- digits
         widget[["update-policy"]] <- GtkUpdateType["discontinuous"]
         gSignalConnect(widget, "value-changed",
                        updateParamValue, data=playState)

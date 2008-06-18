@@ -51,42 +51,48 @@ cleanupStateEnv <- function()
     }
 }
 
-callArg <- function(playState, arg, name=NULL)
+callArg <- function(playState, arg, expr, data = NULL)
 {
-    if (missing(arg) && missing(name)) stop("give 'arg' or 'name'")
-    arg <- if (missing(arg)) parse(text=name)[[1]]
-    else substitute(arg)
+    if (missing(expr) == missing(arg)) stop("give 'arg' or 'expr'")
+    if (!missing(expr)) arg <- substitute(expr)
+    if (is.symbol(arg)) arg <- as.character(arg)
     ## work-around since the `exact` argument only appeared in R 2.6
     exactbit <- if (getRversion() <= "2.6") '"]]' else '", exact=TRUE]]'
-    getx <- if (is.numeric(arg)) paste("[[", arg+1, "]]", sep="")
-    else if (is.symbol(arg)) paste('[["', arg, exactbit, sep="")
+    getx <- if (is.numeric(arg)) paste('[[', arg+1, ']]', sep="")
+    else if (is.character(arg)) paste('[["', arg, exactbit, sep="")
     else paste("$", deparseOneLine(arg), sep="")
     mainCall <- mainCall(playState)
-    expr <- eval(parse(text=paste("mainCall", getx, sep="")))
-    if (mode(expr) == "expression") return(expr)
-    eval(expr, envir=playState$env, enclos=parent.frame())
+    zap <- eval(parse(text=paste("mainCall", getx, sep="")))
+    if (mode(zap) == "expression") return(zap)
+    if (is.null(data))
+        eval(zap, envir=playState$env, enclos=parent.frame())
+    else
+        eval(zap, envir=data, enclos=playState$env)
 }
 
-"callArg<-" <- function(playState, arg, name=NULL, value)
+"callArg<-" <- function(playState, arg, expr, value)
 {
-    if (missing(arg) && missing(name)) stop("give 'arg' or 'name'")
-    arg <- if (missing(arg)) parse(text=name)[[1]]
-    else substitute(arg)
+    if (missing(expr) == missing(arg)) stop("give 'arg' or 'expr'")
+    if (!missing(expr)) arg <- substitute(expr)
+    if (is.symbol(arg)) arg <- as.character(arg)
     if (is.null(arg)) return()
     ## instantiate implicit lists as language objects (so deparse is pretty)
-    xbits <- strsplit(deparseOneLine(arg), "$", fixed=TRUE)[[1]]
-    for (i in seq_len(length(xbits) - 1)) {
-        implicitList <- paste(xbits[1:i], collapse="$")
-        if (is.null(callArg(playState, name=implicitList))) {
-            callArg(playState, name=implicitList) <- quote(list())
+    if (is.language(arg)) {
+        xbits <- strsplit(deparseOneLine(arg), "$", fixed=TRUE)[[1]]
+        for (i in seq_len(length(xbits) - 1)) {
+            implicitList <- parse(text=paste(xbits[1:i], collapse="$"))[[1]]
+            if (is.null(callArg(playState, implicitList))) {
+                callArg(playState, implicitList) <- quote(list())
+            }
         }
     }
-    getx <- if (is.numeric(arg)) paste("[[", arg+1, "]]", sep="")
+    getx <- if (is.numeric(arg)) paste('[[', arg+1, ']]', sep="")
+    else if (is.character(arg)) paste("$", arg, sep="")
     else paste("$", deparseOneLine(arg), sep="")
     mainCall <- mainCall(playState)
-    expr <- parse(text=paste("mainCall", getx, sep=""))[[1]]
-    expr <- call("<-", expr, quote(value))
-    eval(expr, enclos=parent.frame())
+    zap <- parse(text=paste("mainCall", getx, sep=""))[[1]]
+    zap <- call("<-", zap, quote(value))
+    eval(zap, enclos=parent.frame())
     mainCall(playState) <- mainCall
     playState
 }
@@ -220,14 +226,14 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
         ##}
         ## convert new scale to factor levels if required
         if (is.factor(x.panel)) {
-            if (is.null(callArg(playState, scales[[x.or.y]]$labels))) {
-                callArg(playState, scales[[x.or.y]]$labels) <- levels(x.panel)
-                callArg(playState, scales[[x.or.y]]$at) <- 1:nlevels(x.panel)
+            if (is.null(callArg(playState, expr=scales[[x.or.y]]$labels))) {
+                callArg(playState, expr=scales[[x.or.y]]$labels) <- levels(x.panel)
+                callArg(playState, expr=scales[[x.or.y]]$at) <- 1:nlevels(x.panel)
             }
         }
     }
-    if (x.or.y == "x") callArg(playState, xlim) <- x
-    if (x.or.y == "y") callArg(playState, ylim) <- x
+    if (x.or.y == "x") callArg(playState, "xlim") <- x
+    if (x.or.y == "y") callArg(playState, "ylim") <- x
 }
 
 ## note space="page" means the root viewport
@@ -572,16 +578,23 @@ xyData <- function(playState, space="plot")
         }
         return(foo)
     }
-    callName <- deparseOneLine(playState$call[[1]])
+    if (playState$is.ggplot) {
+        datarg <- callArg(playState, "data")
+        x <- callArg(playState, 1, data=datarg)
+        y <- callArg(playState, "y", data=datarg)
+        xy <- xy.coords_with_class(playState, x, y)
+        return(xy)
+    }
+    callName <- deparseOneLine(mainCall(playState)[[1]])
     if (callName %in% c("qqnorm", "qqplot")) {
         ## these return plotted coordinates in a list
-        modCall <- playState$call
+        modCall <- mainCall(playState)
         modCall$plot <- FALSE
         foo <- eval(modCall, playState$env)
         return(foo)
     }
     x <- callArg(playState, 1)
-    y <- callArg(playState, name="y")
+    y <- callArg(playState, "y")
     xy.coords_with_class(playState, x, y)
 }
 
@@ -732,7 +745,7 @@ playLogBase <- function(playState, x.or.y=c("x", "y"))
 {
     x.or.y <- match.arg(x.or.y)
     if (playState$is.lattice) {
-        scalesArg <- callArg(playState, scales)
+        scalesArg <- callArg(playState, "scales")
         if (!is.null(scalesArg[[x.or.y]]$log)) {
             logBase <- latticeLogBase(scalesArg[[x.or.y]]$log)
             if (!is.na(logBase)) return(logBase)
@@ -741,7 +754,7 @@ playLogBase <- function(playState, x.or.y=c("x", "y"))
             if (!is.na(logBase)) return(logBase)
         }
     } else if (playState$is.ggplot) {
-        logArg <- callArg(playState, log)
+        logArg <- callArg(playState, "log")
         if (!is.null(logArg) &&
             (x.or.y %in% strsplit(logArg, split="")[[1]]))
             return(10)

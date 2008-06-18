@@ -10,7 +10,7 @@ toolConstructors$identify <- function(playState)
     if (is.null(playState$data.points)) {
         if (playState$accepts.arguments == FALSE) return(NA)
         ## does not currently work with "splom" or 3D plots (TODO)
-        callName <- deparseOneLine(callArg(playState, 0))
+        callName <- deparseOneLine(mainCall(playState)[[1]])
         if (callName %in% c("splom", "cloud", "wireframe"))
             return(NA)
     }
@@ -19,13 +19,13 @@ toolConstructors$identify <- function(playState)
     if (is.null(labels)) {
         if (is.null(playState$data.points)) {
             ## try to construct labels from the plot call
-            if (playState$is.lattice) {
-                tmp.data <- callArg(playState, data)
+            if (playState$is.lattice || playState$is.ggplot) {
+                tmp.data <- callArg(playState, "data")
                 if (!is.null(tmp.data))
                     labels <- makeLabels(tmp.data)
                 if (is.null(labels) && length(mainCall > 1)) {
                     ## try to make labels from first argument
-                    tmp.x <- callArg(playState, 1)
+                    tmp.x <- callArg(playState, 1, data=tmp.data)
                     if (inherits(tmp.x, "formula")) {
                         xObj <- if (length(tmp.x) == 2)
                             tmp.x[[2]] else tmp.x[[3]]
@@ -58,7 +58,7 @@ toolConstructors$identify <- function(playState)
                         labels <- makeLabels(tmp.x, orSeq=T)
                     }
                     ## exceptions...
-                    callName <- deparseOneLine(callArg(playState, 0))
+                    callName <- deparseOneLine(mainCall(playState)[[1]])
                     if (callName %in% c("qqplot")) {
                         tmp.y <- callArg(playState, 2)
                         x.lab <- makeLabels(tmp.x, orSeq=T)

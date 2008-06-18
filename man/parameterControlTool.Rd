@@ -14,8 +14,9 @@ parameterControlTool(playState, name, value,
   \item{playState}{ a \code{playState} object, as passed in to the constructor function. }
   \item{name}{ the parameter name as it appears in the plot call. }
   \item{value}{ the possible or starting values for the parameter.
-    Can be a single or vector value, of \code{numeric}, \code{character}
-    or \code{logical}. See \code{\link{playwith}} for details.
+    Can be a single or vector value, of
+    \code{integer}, \code{numeric}, \code{character} or \code{logical}.
+    See \code{\link{playwith}} for details. }
   \item{label}{ label for the widget. }
   \item{horizontal}{ FALSE to make a tool for a vertical toolbar. }
   \item{spinbutton}{ make a spinbutton rather than a slider for numerics. }

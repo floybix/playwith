@@ -9,7 +9,7 @@ toolConstructors$brush <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
     ## this tool only works with "splom" lattice plots
-    callName <- deparseOneLine(callArg(playState, 0))
+    callName <- deparseOneLine(mainCall(playState)[[1]])
     if ((callName %in% "splom") == FALSE)
         return(NA)
 
@@ -94,6 +94,7 @@ brush_postplot_action <- function(widget, playState)
         ## draw persistent brushing
         for (space in names(playState$brushed)) {
             pdata <- xyCoords(playState, space=space)
+            ids.sub <- playState$brushed[[space]]
             playDo(playState,
                    splom.drawBrushed(ids.sub, pargs=pdata),
                    space=space)

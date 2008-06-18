@@ -12,7 +12,6 @@
 playwith(expr,
 	new = FALSE,
 	title = NULL,
-	time.mode = FALSE,
 	labels = NULL,
 	data.points = NULL,
 	viewport = NULL,
@@ -36,11 +35,10 @@ playwith(expr,
 \arguments{
   \item{expr}{ an expression to create a plot, like \code{plot(mydata)}.
     Note, this can have lots of arguments, just like a normal plot call (see examples).
-    Can also be a chunk of code in \code{\{}braces\code{\}}, but that form does not allow interaction. }
+    Could also be a chunk of code in \code{\{}braces\code{\}}. }
   \item{new}{ if \code{TRUE} open in a new window, otherwise replace the current window (if one exists). }
   \item{title}{ optional window title. If a plot window exists with the same title,
     the new plot will appear in that window, replacing the old plot. }
-  \item{time.mode}{ whether the plot is to start in "time mode", with navigation along the x-axis. }
   \item{labels}{ a character vector of labels for data points, for use in \code{\link{identify}}.
     If missing, it will be guessed from the plot call arguments. }
   \item{data.points}{ a data frame with elements "x" and "y" (or other suitable plotting structure)
@@ -61,6 +59,7 @@ playwith(expr,
     each name defines the possible or initial values of that parameter. The
     supported values are:
     \itemize{
+      \item \code{integer}: creates a numeric spinbutton.
       \item \code{numeric} scalar: creates a text entry box for
       numeric values.
       \item \code{numeric} vector: creates a slider with given range.
@@ -68,6 +67,7 @@ playwith(expr,
       \item \code{character} vector: creates a combo box (including
       text entry).
       \item \code{logical}: creates a checkbox.
+    }
   }
   \item{\dots}{ extra arguments are stored in the \code{\link{playState}} object.
     These can then be accessed by user-defined tools. The default tools will recognise the following
@@ -75,6 +75,9 @@ playwith(expr,
     \describe{
       \item{\code{page}}{
 	In multi-page Lattice plots, this will set the initial page to display.
+      }
+      \item{\code{time.mode}}{ whether the plot is to start in "time mode",
+	with navigation along the x-axis.
       }
       \item{\code{time.vector}}{
 	a vector defining discrete times, as numeric,
@@ -136,7 +139,8 @@ playwith(expr,
     this is used instead of \code{expr}. }
   \item{main.function}{ the function (or its name) appearing in the call
     which accepts typical plot arguments like \code{xlim} and
-    \code{main}. This will only be needed in unusual cases when the default fails.
+    \code{main}. This will only be needed in unusual cases when the
+    default fails. }
 }
 \details{
   This function opens a GTK+ window containing a plot device
@@ -154,6 +158,8 @@ playwith(expr,
   The pre-defined tools can be listed with \code{names(toolConstructors)}.
   See \link{playTools} for a description of the pre-defined tools,
   and \link{playwith.API} for help on defining new tools.
+  For the special case of tools to control parameter values, it is possible
+  to create the tools automatically using the \code{parameters} argument.
 
   Four types of plots are handled slightly differently:
   \itemize{
@@ -179,7 +185,7 @@ playwith(expr,
   you can pass the correct values in as \code{data.points} and/or \code{labels}.
   Please also contact the maintainer to help improve the guesses.
   \strong{NOTE:} The automatic subscripts used to identify points in Lattice plots
-  will be usually be the within-panel indices unless \code{subscripts=T} is
+  will be usually be the within-panel indices unless \code{subscripts=TRUE} is
   specified in the plot call: see \code{\link[lattice]{xyplot}}.
 
   In order to interact with a plot, its supporting data needs to be stored:
@@ -223,21 +229,33 @@ if (interactive()) {
 ## time series plot (base graphics)
 treering2 <- window(treering, start=1)
 playwith(plot(treering2, xlim=c(0,300)),
-	time.mode = TRUE,
 	labels = paste(time(treering2), "CE"))
-
-library(lattice)
 
 ## multi-panel lattice plot
 playwith(xyplot(Income ~ log(Population / Area) | state.region,
-	data = data.frame(state.x77)),
+	data = data.frame(state.x77), subscripts=TRUE),
 	label.style = gpar(col="red", fontfamily="HersheySans",
 	cex=0.7))
 
-## scrollbar controlling a smoothing parameter
+## interactive control of a parameter with a slider
 xx <- rnorm(50)
-playwith(plot(density(xx, bw = cur.time), panel.last = rug(xx)),
-	time.vector = seq(0.1, 1, by=0.05))
+playwith(plot(density(xx, bw = bandwidth), panel.last = rug(xx)),
+	parameters = list(bandwidth = seq(0.05, 1, by=0.01)))
+
+## the same with a spinbutton (integer values only).
+## initial value is set as the first in the vector of values.
+playwith(plot(density(xx, bw = bw_100/100), panel.last = rug(xx)),
+	parameters = list(bw_100 = as.integer(c(10, 5:100))) )
+
+## more parameters
+playwith(stripplot(yield ~ site, data = barley,
+    jitter=TRUE, type=c("p","a"),
+    aspect=aspect, groups=barley[[groups]],
+    scales=list(abbreviate=abbrev),
+    par.settings=list(plot.line=list(col=linecol))),
+  parameters = list(abbrev=FALSE, aspect=0.5,
+                    groups=c("none", "year", "variety"),
+                    linecol="red"))
 
 ## brushing a multivariate scatterplot
 playwith(splom(environmental))
@@ -245,9 +263,10 @@ playwith(splom(environmental))
 ## simple spin and zoom for a 3D plot
 playwith(wireframe(volcano, drape=TRUE))
 
-## a simple ggplot (nothing more than qplot works)
+## ggplot (NOTE: only qplot()-based calls will work)
+## labels come from data frame automatically
 library(ggplot2)
-playwith(qplot(1:10, 11:20))
+playwith(qplot(qsec, wt, data=mtcars) + stat_smooth())
 
 ## a minimalist grid plot
 gridPlot <- function(x, y, xlim = NULL, ylim = NULL) {
@@ -281,15 +300,18 @@ playwith(plot(xy), on.close=confirmClose, modal=TRUE,
 	win.size=c(360, 360), show.call=FALSE,
 	top=NULL, left=subTools)
 
-## local variables appearing in the plot call are stored
-globalOne <- rnorm(100)
+## only local variables appearing in the plot call are stored
+## (use eval.args=TRUE to store all data)
+globalOne <- rnorm(1000)
 localStuff <- function() {
-	localOne <- rnorm(100)
+	localOne <- rnorm(1000)
 	playwith(plot(localOne, globalOne))
 }
 localStuff()
 ## list objects that have been copied and stored
 sapply(playDevCur()$env, object.size)
+## if global object is removed, redraws will fail
+rm(globalOne)
 
 ## see help(playwith.API) for examples of new tools.
 

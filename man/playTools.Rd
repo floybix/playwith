@@ -5,7 +5,7 @@
 \alias{playInteractionTools}
 \title{Built-in tools for playwith}
 \description{
-  This document describes the built-in tools that can be placed in 
+  This document describes the built-in tools that can be placed in
   a \code{\link{playwith}} window. The constructor functions themselves
   can be found in the named list \code{toolConstructors}.
 }
@@ -48,7 +48,7 @@
 			or through a speciefied time sequence.
 		}
 	}
-	
+
 	Tools in the set \code{playInteractionTools}, by default on the left toolbar:
 	\describe{
 		\item{\code{expand}}{
@@ -70,10 +70,12 @@
 			remove identifying labels, annotations and/or brushing.
 		}
 		\item{\code{zoom}}{
-			select a new plot region by dragging with the mouse.
+			select a new plot region by dragging with the
+			mouse. Note that this is the default action.
 		}
 		\item{\code{zoomout}}{
-			show 4x the plot area.
+		  show 4x the plot area.
+		  Note that this is the default action for a right-click.
 		}
 		\item{\code{zoomfit}}{
 			show all data (default scales).
@@ -85,7 +87,7 @@
 			this widget shows plot coordinates when you click on the plot.
 		}
 	}
-	
+
 	Tools in the set \code{playInteractionTools} that only work with 3D Lattice plots:
 	\describe{
 		\item{\code{zoomin.3d}}{
@@ -101,7 +103,7 @@
 			fly right.
 		}
 	}
-	
+
 	Tools in the set \code{playInteractionTools} that only work with Lattice \code{splom}:
 	\describe{
 		\item{\code{brush}}{
@@ -115,7 +117,7 @@
 \examples{
 if (interactive()) {
 
-toolSet <- c(list("stayontop", "keep", "save"), 
+toolSet <- c(list("stayontop", "keep", "save"),
 	playInteractionTools)
 unlist(toolSet)
 

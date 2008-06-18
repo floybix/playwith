@@ -29,7 +29,6 @@ playwith <-
     function(expr,
              new = FALSE,
              title = NULL,
-             time.mode = FALSE,
              labels = NULL,
              data.points = NULL,
              viewport = NULL,
@@ -257,7 +256,7 @@ playwith <-
     rightToolbar["toolbar-style"] <- GtkToolbarStyle["both"]
     myHBox$packStart(rightToolbar, expand=FALSE)
     ## create the time/index scrollbar
-    timeScrollBox <- gtkHBox(show=time.mode)
+    timeScrollBox <- gtkHBox(show=FALSE)#time.mode)
     myVBox$packStart(timeScrollBox, expand=FALSE)
     timeScrollBox$packStart(gtkLabel("Time"), expand=FALSE)
     timeEntry <- gtkEntry()
@@ -303,8 +302,11 @@ playwith <-
         if (arg == "") next
         playState[[arg]] <- dots[[arg]]
     }
+    time.mode <- dots$time.mode
+    missing_time.mode <- is.null(time.mode)
+    if (is.null(time.mode)) time.mode <- FALSE
     if (!is.null(playState$time.vector)) {
-        if (missing(time.mode)) time.mode <- TRUE
+        if (missing_time.mode) time.mode <- TRUE
         ## set current state variables
         env$cur.index <-
             if (!is.null(playState$cur.index)) {
@@ -366,6 +368,7 @@ playwith <-
                             right.tools = right.tools,
                             missing_top.tools = missing_top.tools,
                             missing_left.tools = missing_left.tools,
+                            missing_time.mode = missing_time.mode,
                             data.points = data.points,
                             labels = labels,
                             title = title,
@@ -399,6 +402,7 @@ playNewPlot <- function(playState)
     for (foo in names(argfoo)) assign(foo, argfoo[[foo]])
     ## find which component of the call takes arguments (xlim etc)
     main.call.index <- NULL
+    main.function <- playState$main.function
     tmpCall <- playState$call
     okCallPath <- function(tmpCall) {
         tmpFun <- eval(tmpCall[[1]])
@@ -452,11 +456,13 @@ playNewPlot <- function(playState)
     if (playState$is.lattice &&
         playState$accepts.arguments &&
         prod(dim(playState$trellis)) > 1) {
-        callName <- deparseOneLine(callArg(playState, 0))
+        callName <- deparseOneLine(mainCall(playState)[[1]])
         if (!(callName %in% c("splom", "cloud", "levelplot",
                               "contourplot", "wireframe", "parallel")) ) {
-            if (is.null(callArg(playState, subscripts)))
-                warning("may need subscripts=TRUE to correctly identify points")
+            if (is.null(callArg(playState, "subscripts")))
+                gmessage("Call may need subscripts=TRUE to correctly identify points.",
+                         title="Warning", icon="warning")
+                #warning("may need subscripts=TRUE to correctly identify points")
         }
     }
 
@@ -531,7 +537,6 @@ playNewPlot <- function(playState)
 playReplot <- function(playState)
 {
     if (isTRUE(playState$skip.redraws)) return()
-    print(sys.calls())
     playState$plot.ready <- FALSE
     playDevSet(playState)
     grid.newpage()
@@ -610,7 +615,8 @@ playPostPlot <- function(result, playState)
             }
         }
         ## the pages scrollbar
-        pages_post.plot.action(widg$pageScrollBox, playState=playState)
+        pages_post.plot.action(playState$widgets$pageScrollBox,
+                               playState=playState)
     })
     invisible(result)
 }
@@ -648,8 +654,8 @@ generateSpaces <- function(playState)
     if (!is.null(playState$viewport)) {
         ## grid graphics plot
         for (space in names(playState$viewport)) {
-            playState$deviceToSpace[[space]] <- playDo(playState,
-                                                       deviceToUserCoordsFunction(), space=space)
+            playState$deviceToSpace[[space]] <-
+                playDo(playState, deviceToUserCoordsFunction(), space=space)
         }
     }
     else if (playState$is.lattice) {
@@ -657,8 +663,8 @@ generateSpaces <- function(playState)
         packets <- trellis.currentLayout(which="packet")
         for (pn in packets[packets > 0]) {
             space <- paste("packet", pn)
-            playState$deviceToSpace[[space]] <- playDo(playState,
-                                                       deviceToUserCoordsFunction(), space=space)
+            playState$deviceToSpace[[space]] <-
+                playDo(playState, deviceToUserCoordsFunction(), space=space)
         }
     }
     else {
@@ -687,8 +693,8 @@ generateSpaces <- function(playState)
                               clip="off"))
         playState$baseViewports$plot.clip.off <- current.vpPath()
         upViewport(4)
-        playState$deviceToSpace[["plot"]] <- playDo(playState,
-                                                    deviceToUserCoordsFunction(), space="plot")
+        playState$deviceToSpace[["plot"]] <-
+            playDo(playState, deviceToUserCoordsFunction(), space="plot")
     }
     ## check if we are working as options(device="playwith")
     if ((length(playState$call) == 1) &&

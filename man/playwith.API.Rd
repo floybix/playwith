@@ -9,18 +9,22 @@
 	a graphical-user-interface widget (a \code{\link[RGtk2]{gtkToolItem}}).
 	That widget may also have functions attached to it, which are run in
 	response to user interaction, or every time the plot is drawn.
-	
+
 	Constructors should use the
 	convenience function \code{\link{quickTool}} where possible.
 	If the constructor function returns \code{NA}, that tool is skipped.
 	So one should check whether the tool can work with the current plot,
 	and skip it otherwise.
-	
+
+	Simple tools to control parameters can be created with
+	the convenience function \code{\link{parameterControlTool}},
+	corresponding to the \code{parameters} argument of \code{\link{playwith}}.
+
 	Following is a table of the API functions that can be used by tools.
 	See the links to specific help pages for details.
 	In case these are inadequate, you may work with the \code{\link{playState}} object
 	itself.
-	
+
 \preformatted{
 \link{playDevCur}()
 \link{playDevList}()
@@ -30,8 +34,8 @@
 \link{playNewPlot}(playState)
 \link{playReplot}(playState)
 
-\link{callArg}(playState, arg, name = NULL)
-\link{callArg}(playState, arg, name = NULL) <- value
+\link{callArg}(playState, arg, expr, data = NULL)
+\link{callArg}(playState, arg, expr) <- value
 
 \link{playDo}(playState, expr, space = "plot", clip.off = FALSE)
 
@@ -51,7 +55,7 @@
 \link{dataCoordsToSpaceCoords}(playState, xy)
 
 \link{whichSpace}(playState, x.device, y.device)
-\link{deviceCoordsToSpace}(playState, x.device, y.device, 
+\link{deviceCoordsToSpace}(playState, x.device, y.device,
 	space = "plot")
 
 \link{playPrompt}(playState, text = NULL)
@@ -59,7 +63,7 @@
 \link{playThawGUI}(playState)
 \link{blockRedraws}(expr, playState = playDevCur())
 }
-  
+
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
 \seealso{ \code{\link{playwith}} }
@@ -72,7 +76,7 @@ if (interactive()) {
 helloTool <- function(playState) {
 	quickTool(playState,
 		label = "Greeting",
-		icon = "gtk-yes", 
+		icon = "gtk-yes",
 		tooltip = "Draw 'Hello world' text",
 		f = hello_handler,
 		post.plot.action = hello_postplot_action,
@@ -110,7 +114,7 @@ subsetTool <- function(playState) {
 	playState$subsetTool <- list()
 	quickTool(playState,
 		label = "Data subset",
-		icon = "gtk-justify-fill", 
+		icon = "gtk-justify-fill",
 		tooltip = "Select a subset of data points for stats",
 		f = subset_handler,
 		post.plot.action = subset_postplot_action)
@@ -139,21 +143,21 @@ drawSubsetBox <- function(playState, foo) {
 			gp=gpar(alpha=0.3), clip="off"))
 		grid.rect(gp=gpar(fill="yellow"))
 		## draw sample size text
-		grid.text(paste("n=", length(x), sep=""), 
+		grid.text(paste("n=", length(x), sep=""),
 			x=unit(0.98, "npc"), y=unit(0.98, "npc"),
 			just=c("right", "top"), gp=gpar(cex=1.5))
 		## histogram of x values, outside x-axis
 		h <- hist(x, plot=FALSE)
 		hval <- unit(4 * h$counts / length(x), "cm")
-		grid.rect(x=h$breaks[-1], y=unit(0, "npc"), 
-			height=hval, width=diff(h$breaks), 
+		grid.rect(x=h$breaks[-1], y=unit(0, "npc"),
+			height=hval, width=diff(h$breaks),
 			just=c("right", "top"), default.units="native",
 			gp=gpar(fill="purple"))
 		## histogram of y values, outside y-axis
 		h <- hist(y, plot=FALSE)
 		hval <- unit(4 * h$counts / length(x), "cm")
-		grid.rect(y=h$breaks[-1], x=unit(0, "npc"), 
-			height=diff(h$breaks), width=hval, 
+		grid.rect(y=h$breaks[-1], x=unit(0, "npc"),
+			height=diff(h$breaks), width=hval,
 			just=c("right", "top"), default.units="native",
 			gp=gpar(fill="purple"))
 		popViewport()
@@ -177,7 +181,7 @@ playwith(xyplot(temperature ~ radiation, environmental),
 addTool <- function(playState) {
 	quickTool(playState,
 		label = "Add points",
-		icon = "gtk-add", 
+		icon = "gtk-add",
 		tooltip = "Add data points by clicking",
 		f = function(widget, playState) repeat {
 			foo <- playSelectData(playState, prompt=paste(
@@ -200,21 +204,21 @@ addTool <- function(playState) {
 			if (playState$is.lattice) {
 				## lattice plot: use `data` argument
 				callArg(playState, 1) <- quote(y ~ x)
-				callArg(playState, data) <- quote(localxy)
+				callArg(playState, "data") <- quote(localxy)
 			} else {
 				## otherwise set first argument to plot
 				callArg(playState, 1) <- quote(localxy)
-				callArg(playState, y) <- NULL
+				callArg(playState, "y") <- NULL
 			}
 			playReplot(playState)
 		})
 }
 ydata <- c(1:4, 2:1, 5:8)
-playwith(xyplot(ydata ~ 1:10, type=c("p", "smooth"), pch=8), 
+playwith(xyplot(ydata ~ 1:10, type=c("p", "smooth"), pch=8),
 	left=list(addTool))
 
 
-## 4. A more complex toolbar item: a "spinbutton" to 
+## 4. A more complex toolbar item: a "spinbutton" to
 ##    group the data into `n` clusters (in plot or xyplot).
 
 ## constructor function
@@ -244,11 +248,11 @@ cluster_handler <- function(widget, playState) {
 	## avoid a big vector inline in the call, store in local env
 	if (playState$is.lattice) {
 		playState$env$auto.groups <- groups
-		callArg(playState, groups) <- quote(auto.groups)
+		callArg(playState, "groups") <- quote(auto.groups)
 	} else {
 		playState$env$auto.groups <- unclass(groups)
-		callArg(playState, col) <- quote(auto.groups)
-		if (is.null(groups)) callArg(playState, col) <- NULL
+		callArg(playState, "col") <- quote(auto.groups)
+		if (is.null(groups)) callArg(playState, "col") <- NULL
 	}
 	playReplot(playState)
 }
@@ -257,8 +261,8 @@ cluster_handler <- function(widget, playState) {
 xdata <- rnorm(100)
 ydata <- rnorm(100) * xdata / 2
 ## works with lattice::xyplot
-playwith(xyplot(ydata ~ xdata, aspect="iso", 
-	auto.key=list(space="right")), 
+playwith(xyplot(ydata ~ xdata, aspect="iso",
+	auto.key=list(space="right")),
 	left=list(clusterTool))
 ## same tool works with graphics::plot
 playwith(plot(ydata ~ xdata), left=list(clusterTool))

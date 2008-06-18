@@ -1,22 +1,33 @@
 
-Changes in Version 0.8-54
+Changes in Version 0.8-55
 
   o argument `parameters`: automatically constructs
     widgets to control parameter values appearing in the call.
-
-  o concept of the "main call" which accepts typical plot
-    arguments (xlim, ylim, main, etc) -- not necessarily the
-    top-level call. By default, a depth-first search is used
-    to find a function that accepts `xlim` or `...`.
 
   o default action when dragging on the plot is zoom.
     default action on right-click is zoomout.
 
   o restrict zooming to x axis in time.mode
-    ONLY IF a time.vector was not specified.
+    only if a time.vector was not specified.
+
+  o whether to start in time.mode is determined by looking at
+    the data: TRUE if the x data has a 'ts' or 'zoo' class.
+
+  o concept of the "main function" which accepts typical plot
+    arguments (xlim, ylim, main, etc) -- not necessarily the
+    top-level call. By default, a depth-first search is used
+    to find a function that accepts `xlim` or `...`.
+
+  o use of relevant lattice plots without subscripts=TRUE
+    will give a warning that identified points may be wrong.
+
+  o callArg() now uses standard evaluation by default, rather than
+    quoting its argument. Old code will need to be changed!
 
   o use RGtk2 rather than gWidgets for edit.call and edit.annotations
     because gWidgets is very slow.
+
+  o reasonable guess for data points and labels with ggplot::qplot()
 
   o enabled pretty ggplot2 plots (print.ggplot with pretty=TRUE)
     if using grid package version >= 2.7

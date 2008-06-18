@@ -38,8 +38,6 @@ quickTool(
   It is not intended to be called directly.
 
   This is just a convenient way to make a \code{\link[RGtk2]{gtkToolButton}}.
-  The \code{post.plot.action} is attached to the returned object as attribute
-  "post.plot.action".
 }
 \value{
 	a \code{\link[RGtk2]{gtkToolButton}}.

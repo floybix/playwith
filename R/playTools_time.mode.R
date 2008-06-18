@@ -7,6 +7,16 @@
 
 toolConstructors$time.mode <- function(playState)
 {
+    ## sensible default for time.mode based on data
+    if (playState$.args$missing_time.mode) {
+        dat <- xyData(playState, space="page")
+        playState$time.mode <-
+            (inherits(dat$x, "ts") ||
+             inherits(dat$x, "zoo"))
+        ## once only!
+        playState$.args$missing_time.mode <- FALSE
+    }
+
     with (playState$widgets, {
         timeScrollbar["sensitive"] <- playState$time.mode
         timeEntry["sensitive"] <- playState$time.mode
@@ -145,6 +155,6 @@ time.mode_entry_handler <- function(widget, playState)
     if ("POSIXt" %in% cls) newLim <- as.POSIXct(newLim)
     else if ("Date" %in% cls) newLim <- as.Date(newLim)
     else if ("integer" %in% cls) newLim <- as.integer(newLim)
-    callArg(playState, xlim) <- as.numeric(newLim)
+    callArg(playState, "xlim") <- as.numeric(newLim)
     playReplot(playState)
 }

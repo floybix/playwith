@@ -13,7 +13,7 @@ settings_handler <- function(widget, playState)
     wid <- list()
 
     ## convenience extractor
-    arg <- function(x) do.call(callArg, list(playState, substitute(x)))
+    arg <- function(x) callArg(playState, x)
 
     ## TODO: LEGEND / KEY
 
@@ -27,7 +27,7 @@ settings_handler <- function(widget, playState)
     rownum <- 1
     for (nm in c("main", "sub", "xlab", "ylab")) {
         argVal <- if (playState$is.lattice) playState$trellis[[nm]]
-        else callArg(playState, name=nm)
+        else callArg(playState, nm)
         isExpr <- is.language(argVal)
         if (isExpr) argVal <- deparse(as.expression(argVal)[[1]])
         wid[[nm]] <- gedit(toString(argVal), width=60)
@@ -43,32 +43,32 @@ settings_handler <- function(widget, playState)
     ## AXES
     axisgroup <- gframe("Axes", horizontal=FALSE, container=annTab)
     lay <- glayout(container=axisgroup)
-    wid$xaxis.show <- gcheckbox("visible", checked=!(
-                                                     any(arg(scales$x$draw) == FALSE) ||
-                                                     any(arg(scales$draw) == FALSE) ||
-                                                     any(arg(axes) == FALSE) ||
-                                                     any(arg(xaxt) == "n")
-                                                     ))
-    wid$yaxis.show <- gcheckbox("visible", checked=!(
-                                                     any(arg(scales$y$draw) == FALSE) ||
-                                                     any(arg(scales$draw) == FALSE) ||
-                                                     any(arg(axes) == FALSE) ||
-                                                     any(arg(yaxt) == "n")
-                                                     ))
-    wid$xaxis.log <- gcheckbox("logarithmic", checked=(
-                                                       any(as.character(arg(scales$x$log)) != "FALSE") ||
-                                                       any(as.character(arg(scales$log)) != "FALSE") ||
-                                                       any(grep("x", arg(log)))
-                                                       ))
-    wid$yaxis.log <- gcheckbox("logarithmic", checked=(
-                                                       any(as.character(arg(scales$y$log)) != "FALSE") ||
-                                                       any(as.character(arg(scales$log)) != "FALSE") ||
-                                                       any(grep("y", arg(log)))
-                                                       ))
-    wid$aspect.iso <- gcheckbox("isometric scale", checked=(
-                                                            any(arg(aspect) == "iso") ||
-                                                            any(arg(asp) == 1)
-                                                            ))
+    wid$xaxis.show <-
+        gcheckbox("visible", checked=!(any(arg("scales")$x$draw == FALSE) ||
+                                       any(arg("scales")$draw == FALSE) ||
+                                       any(arg("axes") == FALSE) ||
+                                       any(arg("xaxt") == "n")
+                                       ))
+    wid$yaxis.show <-
+        gcheckbox("visible", checked=!(any(arg("scales")$y$draw == FALSE) ||
+                                       any(arg("scales")$draw == FALSE) ||
+                                       any(arg("axes") == FALSE) ||
+                                       any(arg("yaxt") == "n")
+                                       ))
+    wid$xaxis.log <-
+        gcheckbox("logarithmic", checked=(any(as.character(arg("scales")$x$log) != "FALSE") ||
+                                          any(as.character(arg("scales")$log) != "FALSE") ||
+                                          any(grep("x", arg("log")))
+                                          ))
+    wid$yaxis.log <-
+        gcheckbox("logarithmic", checked=(any(as.character(arg("scales")$y$log) != "FALSE") ||
+                                          any(as.character(arg("scales")$log) != "FALSE") ||
+                                          any(grep("y", arg("log")))
+                                          ))
+    wid$aspect.iso <-
+        gcheckbox("isometric scale", checked=(any(arg("aspect") == "iso") ||
+                                              any(arg("asp") == 1)
+                                              ))
     lay[1,1] <- "x-axis:"
     lay[1,2] <- wid$xaxis.show
     lay[1,3] <- wid$xaxis.log
@@ -172,7 +172,7 @@ settings_handler <- function(widget, playState)
     stylegroup <- gframe("Plot style", horizontal=FALSE, container=styleTab)
     enabled(stylegroup) <- FALSE
     ## type
-    arg_type <- callArg(playState, type)
+    arg_type <- callArg(playState, "type")
     hasPoints <- (is.null(arg_type) || any(c("p","b","o") %in% arg_type))
     hasLines <- any(c("l","b","o") %in% arg_type)
     hasDroplines <- any("h" %in% arg_type)
@@ -185,7 +185,7 @@ settings_handler <- function(widget, playState)
     add(typegroup, wid$droplines)
     lay <- glayout(container=stylegroup)
     ## cex
-    wid$cex <- gedit(toString(callArg(playState, cex)), width=5,
+    wid$cex <- gedit(toString(callArg(playState, "cex")), width=5,
                      coerce.with=as.numeric)
     lay[1,1] <- "Expansion factor:"
     lay[1,2] <- wid$cex
@@ -203,14 +203,15 @@ settings_handler <- function(widget, playState)
              `cross (x)`=4,
              `dot (.)`="."
              )
-    which_pch <- which(sapply(pchList, identical, callArg(playState, pch)))
+    which_pch <- which(sapply(pchList, identical,
+                              callArg(playState, "pch")))
     if (length(which_pch) == 0) which_pch <- 0
     wid$pch <- gdroplist(names(pchList), selected=which_pch)
     lay[2,1] <- "Plot symbol:"
     lay[2,2] <- wid$pch
     ## col
     colList <- c(palette(), trellis.par.get("superpose.symbol")$col)
-    arg_col <- callArg(playState, col)
+    arg_col <- callArg(playState, "col")
     which_col <- if (is.numeric(arg_col)) which(arg_col == seq_along(colList))
     else which(sapply(colList, identical, arg_col))
     if (length(which_col) == 0) which_col <- 0
@@ -219,7 +220,7 @@ settings_handler <- function(widget, playState)
     lay[3,2] <- wid$col
     ## lty
     ltyList <- c("solid", "dashed", "dotted", "dotdash", "longdash")
-    arg_lty <- callArg(playState, lty)
+    arg_lty <- callArg(playState, "lty")
     which_lty <- if (is.numeric(arg_lty)) which(arg_lty == seq_along(ltyList))
     else which(sapply(ltyList, identical, arg_lty))
     if (length(which_lty) == 0) which_lty <- 0
@@ -227,7 +228,7 @@ settings_handler <- function(widget, playState)
     lay[4,1] <- "Line type:"
     lay[4,2] <- wid$lty
     ## lwd
-    wid$lwd <- gedit(toString(callArg(playState, lwd)), width=5,
+    wid$lwd <- gedit(toString(callArg(playState, "lwd")), width=5,
                      coerce.with=as.numeric)
     lay[5,1] <- "Line width:"
     lay[5,2] <- wid$lwd
@@ -275,36 +276,36 @@ settings_handler <- function(widget, playState)
                 newVal <- parse(text=newVal, srcfile=NULL)
             newVal
         }
-        callArg(playState, main) <- argExpr(wid$main, wid$main.expr)
-        callArg(playState, sub) <- argExpr(wid$sub, wid$sub.expr)
-        callArg(playState, xlab) <- argExpr(wid$xlab, wid$xlab.expr)
-        callArg(playState, ylab) <- argExpr(wid$ylab, wid$ylab.expr)
+        callArg(playState, "main") <- argExpr(wid$main, wid$main.expr)
+        callArg(playState, "sub") <- argExpr(wid$sub, wid$sub.expr)
+        callArg(playState, "xlab") <- argExpr(wid$xlab, wid$xlab.expr)
+        callArg(playState, "ylab") <- argExpr(wid$ylab, wid$ylab.expr)
 
         ## AXES
         if (playState$is.lattice) {
             newXdraw <- if (svalue(wid$xaxis.show)) NULL else FALSE
             newYdraw <- if (svalue(wid$yaxis.show)) NULL else FALSE
-            callArg(playState, scales$x$draw) <- newXdraw
-            callArg(playState, scales$y$draw) <- newYdraw
+            callArg(playState, expr=scales$x$draw) <- newXdraw
+            callArg(playState, expr=scales$y$draw) <- newYdraw
             newXlog <- if (svalue(wid$xaxis.log)) TRUE else NULL
             newYlog <- if (svalue(wid$yaxis.log)) TRUE else NULL
-            callArg(playState, scales$x$log) <- newXlog
-            callArg(playState, scales$y$log) <- newYlog
+            callArg(playState, expr=scales$x$log) <- newXlog
+            callArg(playState, expr=scales$y$log) <- newYlog
             newAspect <- if (svalue(wid$aspect.iso)) "iso" else NULL
-            callArg(playState, aspect) <- newAspect
+            callArg(playState, "aspect") <- newAspect
         } else {
             ## base graphics plot
             newXaxt <- if (svalue(wid$xaxis.show)) NULL else "n"
             newYaxt <- if (svalue(wid$yaxis.show)) NULL else "n"
-            callArg(playState, xaxt) <- newXaxt
-            callArg(playState, yaxt) <- newYaxt
+            callArg(playState, "xaxt") <- newXaxt
+            callArg(playState, "yaxt") <- newYaxt
             newLog <- paste(c(if (svalue(wid$xaxis.log)) "x",
                               if (svalue(wid$yaxis.log)) "y"),
                             collapse="")
             if (newLog == "") newLog <- NULL
-            callArg(playState, log) <- newLog
+            callArg(playState, "log") <- newLog
             newAsp <- if (svalue(wid$aspect.iso)) 1 else NULL
-            callArg(playState, asp) <- newAsp
+            callArg(playState, "asp") <- newAsp
         }
 
         ## REFERENCE LINES
@@ -334,7 +335,7 @@ settings_handler <- function(widget, playState)
         wid$refline_lwd
 
         ## STYLE
-        ## lattice: use callArg(playState, par.settings) <-
+        ## lattice: use callArg(playState, "par.settings") <-
         ## list(superpose.symbol=list(pch=c(22, 23),cex=c(1.7,1.6),col="black"))
         wid$points
         wid$lines
@@ -474,9 +475,6 @@ makeLayersMenuButton <- function()
     itemIdx <- user.data$index
     itemID <- user.data$ID
     layerType <- user.data$layerType
-    ## disable other plot buttons until this is over
-    plotAndPlayGetToolbar()$setSensitive(F)
-    on.exit(plotAndPlayGetToolbar()$setSensitive(T))
 
     if (is.null(itemID)) {
         menuItems <- user.data$menu$getChildren()
@@ -494,7 +492,7 @@ makeLayersMenuButton <- function()
             menuItems[[i]]['active'] <- newStates[i]
         }
         StateEnv[[name]]$skip.updates <- F
-        plotAndPlayUpdate()
+        #plotAndPlayUpdate()
         return()
     }
     ## a single menu item toggled
@@ -528,7 +526,7 @@ makeLayersMenuButton <- function()
         }
         eval(parse(text=cmd))
     }
-    plotAndPlayUpdate()
+    #plotAndPlayUpdate()
 }
 
 toIndexStr <- function(x) paste('[[', x ,']]', sep='', collapse='')

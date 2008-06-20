@@ -4,6 +4,9 @@ Changes in Version 0.8-56
   o arguments to `parameters` can use I() to force a spinbutton
     rather than slider.
 
+  o plot call is initially evaluated in a try() block;
+    hoping this will avoid "margins too small" error on linux.
+
 Changes in Version 0.8-55
 
   o argument `parameters`: automatically constructs

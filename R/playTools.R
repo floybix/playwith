@@ -74,9 +74,10 @@ quickTool <-
     x[["label"]] <- label
     x[["icon-name"]] <- icon.name
     if (!is.null(tooltip)) {
-        result <- try(x$setTooltipText(tooltip), silent=TRUE)
-        if (inherits(result, "try-error"))
-            x$setTooltip(gtkTooltips(), tooltip) ## deprecated
+        result <- try(x[["tooltip-text"]] <- tooltip)
+        #result <- try(x$setTooltipText(tooltip), silent=TRUE)
+        #if (inherits(result, "try-error"))
+        #    x$setTooltip(gtkTooltips(), tooltip) ## deprecated
     }
     if (!is.null(f)) {
         if (is.null(data)) data <- playState

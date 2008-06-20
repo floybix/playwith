@@ -287,8 +287,6 @@ playwith <-
     if (length(left.tools)) initTbar(leftToolbar, horiz=FALSE)
     if (length(right.tools)) initTbar(rightToolbar, horiz=FALSE)
     ## store the state of this plot window in a new environment
-    missing_top.tools <- missing(top.tools)
-    missing_left.tools <- missing(left.tools)
     ## set defaults -- these can be replaced by extra arguments
     ## TODO: toolbar style? = "both"
     playState$page <- 1
@@ -339,41 +337,37 @@ playwith <-
     playState$brushed <- list()
     playState$annotations <- list()
     playState$tools <- list()
-    playState$widgets <- list(
-                              drawingArea = myDA,
-                              topToolbar = topToolbar,
-                              leftToolbar = leftToolbar,
-                              bottomToolbar = bottomToolbar,
-                              rightToolbar = rightToolbar,
-                              callToolbar = callToolbar,
-                              callEntry = callEntry,
-                              undoButton = undoButton,
-                              redoButton = redoButton,
-                              pageEntry = pageEntry,
-                              pageScrollbar = pageScrollbar,
-                              pageScrollBox = pageScrollBox,
-                              timeEntry = timeEntry,
-                              timeScrollbar = timeScrollbar,
-                              timeScrollBox = timeScrollBox,
-                              promptBox = promptBox,
-                              promptLabel = promptLabel,
-                              vbox = myVBox,
-                              hbox = myHBox
-                              )
+    playState$widgets <-
+        list(drawingArea = myDA,
+             topToolbar = topToolbar,
+             leftToolbar = leftToolbar,
+             bottomToolbar = bottomToolbar,
+             rightToolbar = rightToolbar,
+             callToolbar = callToolbar,
+             callEntry = callEntry,
+             undoButton = undoButton,
+             redoButton = redoButton,
+             pageEntry = pageEntry,
+             pageScrollbar = pageScrollbar,
+             pageScrollBox = pageScrollBox,
+             timeEntry = timeEntry,
+             timeScrollbar = timeScrollbar,
+             timeScrollBox = timeScrollBox,
+             promptBox = promptBox,
+             promptLabel = promptLabel,
+             vbox = myVBox,
+             hbox = myHBox)
     playState$on.close <- on.close
-    playState$.args <- list(
-                            top.tools = top.tools,
-                            left.tools = left.tools,
-                            bottom.tools = bottom.tools,
-                            right.tools = right.tools,
-                            missing_top.tools = missing_top.tools,
-                            missing_left.tools = missing_left.tools,
-                            missing_time.mode = missing_time.mode,
-                            data.points = data.points,
-                            labels = labels,
-                            title = title,
-                            main.function = main.function
-                            )
+    playState$.args <-
+        list(top.tools = top.tools,
+             left.tools = left.tools,
+             bottom.tools = bottom.tools,
+             right.tools = right.tools,
+             missing_time.mode = missing_time.mode,
+             data.points = data.points,
+             labels = labels,
+             title = title,
+             main.function = main.function)
     ## do the plot
     invisible(playNewPlot(playState))
 }
@@ -397,11 +391,7 @@ playNewPlot <- function(playState)
         removeWidgetNicely(playState, playState$widgets$pageScrollBox,
                            horiz=FALSE)
     }
-    ## get access to some of the original arguments
-    argfoo <- playState$.args
-    for (foo in names(argfoo)) assign(foo, argfoo[[foo]])
     ## find which component of the call takes arguments (xlim etc)
-    main.call.index <- NULL
     main.function <- playState$main.function
     tmpCall <- playState$call
     okCallPath <- function(tmpCall) {
@@ -423,27 +413,27 @@ playNewPlot <- function(playState)
         return(NULL)
     }
     main.call.index <- okCallPath(tmpCall)
-    if (isTRUE(main.call.index)) main.call.index <- NA
+    if (isTRUE(main.call.index)) main.call.index <- NA ## top-level
     playState$main.call.index <- main.call.index
     ## check whether the called function accepts arguments
     playState$accepts.arguments <- !is.null(playState$main.call.index)
         #((typeof(callFun) == "closure") && !is.null(formals(callFun)))
     ## put call into canonical form, but with first argument un-named
     if (playState$accepts.arguments) {
-        mainCall <- recursiveIndex(playState$call, main.call.index)
+        mainCall <- mainCall(playState)
         callFun <- eval(mainCall[[1]])
         firstArgName <- names(mainCall)[2]
         mainCall <- match.call(callFun, mainCall)
         if (is.null(firstArgName) || (firstArgName == ""))
             if (!is.null(names(mainCall))) names(mainCall)[2] <- ""
-        recursiveIndex(playState$call, main.call.index) <- mainCall
+        mainCall(playState) <- mainCall
     }
     ## update address bar with current call
     updateAddressBar(playState)
     ## eval plot call
     ## (NOTE this will draw the plot UNLESS it is lattice or ggplot)
-    ## (NOTE this might throw an error!)
-    result <- eval(playState$call, playState$env)
+    result <- try(eval(playState$call, playState$env))
+    init.eval.failed <- (inherits(result, "try-error"))
     ## detect lattice
     playState$is.lattice <- (inherits(result, "trellis"))
     if (playState$is.lattice) playState$trellis <- result
@@ -506,10 +496,10 @@ playNewPlot <- function(playState)
             for (x in rev(tbar$getChildren())) x$destroy()
         }
         with(playState$widgets, {
-            populateToolbar(topToolbar, top.tools)
-            populateToolbar(leftToolbar, left.tools)
-            populateToolbar(bottomToolbar, bottom.tools)
-            populateToolbar(rightToolbar, right.tools)
+            populateToolbar(topToolbar, playState$.args$top.tools)
+            populateToolbar(leftToolbar, playState$.args$left.tools)
+            populateToolbar(bottomToolbar, playState$.args$bottom.tools)
+            populateToolbar(rightToolbar, playState$.args$right.tools)
         })
         paramToolbar <- playState$widgets$bottomToolbar
         params <- playState$parameters
@@ -530,6 +520,9 @@ playNewPlot <- function(playState)
     })
     if (playState$is.lattice || playState$is.ggplot) eval(doToolbars)
     else blockRedraws(eval(doToolbars), playState)
+    ## redo failed plot call -- assuming "margins too small"
+    ## (NOTE this might throw an error!)
+    if (init.eval.failed) result <- eval(playState$call, playState$env)
     ## continue
     playPostPlot(result, playState)
 }

@@ -59,7 +59,7 @@ playwith(expr,
     each name defines the possible or initial values of that parameter. The
     supported values are:
     \itemize{
-      \item \code{integer}: creates a numeric spinbutton.
+      \item \code{integer} or \code{AsIs}: creates a numeric spinbutton.
       \item \code{numeric} scalar: creates a text entry box for
       numeric values.
       \item \code{numeric} vector: creates a slider with given range.
@@ -242,10 +242,10 @@ xx <- rnorm(50)
 playwith(plot(density(xx, bw = bandwidth), panel.last = rug(xx)),
 	parameters = list(bandwidth = seq(0.05, 1, by=0.01)))
 
-## the same with a spinbutton (integer values only).
+## the same with a spinbutton (use I() to force spinbutton).
 ## initial value is set as the first in the vector of values.
-playwith(plot(density(xx, bw = bw_100/100), panel.last = rug(xx)),
-	parameters = list(bw_100 = as.integer(c(10, 5:100))) )
+playwith(plot(density(xx, bw = bandwidth), panel.last = rug(xx)),
+	parameters = list(bandwidth = I(c(0.1, 5:100/100))) )
 
 ## more parameters
 playwith(stripplot(yield ~ site, data = barley,

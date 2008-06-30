@@ -1,4 +1,16 @@
 
+Changes in Version 0.8-57
+
+  o new function playGetIDs() gets currently identified points.
+
+  o warning about lattice subscripts now checks the panelArgs
+    (it was warning spuriously, eg xyplot.zoo).
+
+  o attempt to set GTK tooltips is now a *silent* try(), again.
+
+  o zoom and identify tools check par("mfrow") in case it is a
+    multi-figure base graphics plot, and omit themselves if so.
+
 Changes in Version 0.8-56
 
   o arguments to `parameters` can use I() to force a spinbutton

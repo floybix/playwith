@@ -7,6 +7,10 @@
 
 toolConstructors$identify <- function(playState)
 {
+    ## this tool does not work with multiple base graphics plots
+    if (!playState$is.lattice && is.null(playState$viewport)) {
+        if (any(par("mfrow") > 1)) return(NA)
+    }
     if (is.null(playState$data.points)) {
         if (playState$accepts.arguments == FALSE) return(NA)
         ## does not currently work with "splom" or 3D plots (TODO)

@@ -31,6 +31,8 @@
 \link{playDevSet}(playState)
 \link{playDevOff}(playState = playDevCur())
 
+\link{playGetIDs}(playState = playDevCur(), labels = FALSE)
+
 \link{playNewPlot}(playState)
 \link{playReplot}(playState)
 

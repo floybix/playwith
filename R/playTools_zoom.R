@@ -8,6 +8,10 @@
 toolConstructors$zoom <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
+    ## this tool does not work with multiple base graphics plots
+    if (!playState$is.lattice && is.null(playState$viewport)) {
+        if (any(par("mfrow") > 1)) return(NA)
+    }
     ## this tool does not work with "splom" or 3D plots
     callName <- deparseOneLine(mainCall(playState)[[1]])
     if (callName %in% c("splom", "cloud", "wireframe"))
@@ -116,6 +120,10 @@ zoom_handler <- function(widget, playState)
 toolConstructors$zoomout <- function(playState)
 {
     if (playState$accepts.arguments == FALSE) return(NA)
+    ## this tool does not work with multiple base graphics plots
+    if (!playState$is.lattice && is.null(playState$viewport)) {
+        if (any(par("mfrow") > 1)) return(NA)
+    }
     ## this tool does not work with "splom" or 3D plots
     callName <- deparseOneLine(mainCall(playState)[[1]])
     if (callName %in% c("splom", "cloud", "wireframe"))

@@ -29,6 +29,12 @@ playDevOff <- function(playState = playDevCur())
     cleanupStateEnv()
 }
 
+playGetIDs <- function(playState = playDevCur(), labels = FALSE)
+{
+    ids <- do.call(rbind, playState$ids)$which
+    if (labels) playState$labels[ids] else ids
+}
+
 print.playState <- function(x, ...)
 {
     stopifnot(inherits(x, "playState"))

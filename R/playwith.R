@@ -445,11 +445,9 @@ playNewPlot <- function(playState)
     ## warn, and just show the within-panel indices unless subscripts=T
     if (playState$is.lattice &&
         playState$accepts.arguments &&
-        prod(dim(playState$trellis)) > 1) {
-        callName <- deparseOneLine(mainCall(playState)[[1]])
-        if (!(callName %in% c("splom", "cloud", "levelplot",
-                              "contourplot", "wireframe", "parallel")) ) {
-            if (is.null(callArg(playState, "subscripts")))
+        prod(dim(playState$trellis)) > 1)
+    {
+        if (is.null(playState$trellis$panel.args[[1]]$subscripts)) {
                 gmessage("Call may need subscripts=TRUE to correctly identify points.",
                          title="Warning", icon="warning")
                 #warning("may need subscripts=TRUE to correctly identify points")

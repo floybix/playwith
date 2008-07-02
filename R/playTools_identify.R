@@ -127,12 +127,9 @@ drawLabels <- function(playState, which, space="plot", pos=1)
     }
     annots <- expression()
     pos <- rep(pos, length=length(labels))
-    offset <- unit(0.5, "char")
-    if (!is.null(playState$label.offset)) {
-        offset <- playState$label.offset
-        if (!inherits(offset, "unit"))
-            offset <- unit(offset, "char")
-    }
+    offset <- playState$label.offset
+    if (!inherits(offset, "unit"))
+        offset <- unit(offset, "char")
     ## TODO: do this without a loop
     for (i in seq_along(labels)) {
         ux <- unit(x[i], "native")

@@ -1,4 +1,8 @@
 
+Changes in Version 0.9-0
+
+  o user settings: playwith.options / playwith.getOption.
+
 Changes in Version 0.8-57
 
   o now works on Linux!

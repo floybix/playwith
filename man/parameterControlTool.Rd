@@ -7,8 +7,7 @@
 \usage{
 ## Note: this is only to be called inside a tool constructor function.
 parameterControlTool(playState, name, value,
-                     label = name, horizontal = TRUE,
-                     spinbutton = FALSE)
+                     label = name, horizontal = TRUE)
 }
 \arguments{
   \item{playState}{ a \code{playState} object, as passed in to the constructor function. }
@@ -19,7 +18,6 @@ parameterControlTool(playState, name, value,
     See \code{\link{playwith}} for details. }
   \item{label}{ label for the widget. }
   \item{horizontal}{ FALSE to make a tool for a vertical toolbar. }
-  \item{spinbutton}{ make a spinbutton rather than a slider for numerics. }
 }
 \details{
   Note: this is only to be called inside a tool constructor function.

@@ -1,13 +1,9 @@
 
-import(lattice)
-import(grid)
 import(graphics)
 import(gridBase)
 import(grDevices)
 import(RGtk2)
 import(cairoDevice)
-import(gWidgets)
-import(gWidgetsRGtk2)
 # note cairoDevice::asCairoDevice calls require(RGtk2)
 
 # the main function
@@ -16,11 +12,10 @@ export(
 	autoplay
 )
 
-# built-in tool set
+# options
 export(
-	toolConstructors,
-	playApplicationTools,
-	playInteractionTools
+       playwith.options,
+       playwith.getOption
 )
 
 # API
@@ -60,9 +55,4 @@ export(
        )
 
 S3method(print, playState)
-
-# misc
-export(
-	plotadd
-)
 

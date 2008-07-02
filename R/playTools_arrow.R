@@ -7,8 +7,6 @@
 
 toolConstructors$arrow <- function(playState)
 {
-    if (is.null(playState$arrow.arrow))
-        playState$arrow.arrow <- quote(arrow(length=unit(0.15, "inches")))
     quickTool(playState,
               label = "Arrow",
               icon = "gtk-connect",

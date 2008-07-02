@@ -79,7 +79,7 @@ toolConstructors$options <- function(playState)
                                         #for (x in names(styleItems)) {
                                         #	styleItems[[x]]["group"] <- styleItems[[1]]["group"]
                                         #}
-    styleItems$both["active"] <- TRUE
+    styleItems[[playwith.getOption("toolbar.style")]]["active"] <- TRUE
     toolbarStyleHandler <- function(widget, user.data)
     {
         if (widget["active"] == FALSE) return()

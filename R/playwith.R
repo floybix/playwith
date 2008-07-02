@@ -38,10 +38,12 @@ playwith <-
              right.tools = list(),
              parameters = list(),
              ...,
-             show.call = TRUE,
-             win.size = c(640, 500),
+             width = 6,
+             height = 6,
+             pointsize = 10,
              modal = FALSE,
              on.close = NULL,
+             show.call = TRUE,
              eval.args = NA,
              invert.match = FALSE,
              envir = parent.frame(),
@@ -99,22 +101,28 @@ playwith <-
                             invert.match=invert.match))
     }
     ## check whether the window already exists
+    doResize <- !missing(width) || !missing(height)
+    width <- max(width, 1)
+    height <- max(height, 1)
     if (!is.null(myWin <- playState$win) &&
         inherits(myWin, "GtkWindow")) {
         ## remove everything
         playState$devoff <- TRUE ## to avoid trigger close
         myWin$getChild()$destroy()
         myWin$present()
+        if (doResize) myWin$resize(width * 96, height * 96)
     } else {
         ## create a new window
         myWin <- gtkWindow(show=FALSE)
-        if (!inherits(myWin, "GtkWindow")) stop(paste(
-                                                      "Could not create the GTK window.",
-                                                      "Make sure you have recent versions of",
-                                                      "RGtk2 and the GTK+ libraries.",
-                                                      "See http://www.ggobi.org/rgtk2/"))
-        myWin["default-width"] <- win.size[1]
-        myWin["default-height"] <- win.size[2]
+        if (!inherits(myWin, "GtkWindow"))
+          stop(paste("Could not create the GTK window.",
+                     "Make sure you have recent versions of",
+                     "RGtk2 and the GTK+ libraries.",
+                     "See http://www.ggobi.org/rgtk2/"))
+        ## set approx window size; NOTE: device size is adjusted below
+        doResize <- TRUE
+        myWin["default-width"] <- width * 96
+        myWin["default-height"] <- height * 96
         myWin["modal"] <- modal
         myWin$show()
         gSignalConnect(myWin, "delete-event",  window.close_handler,
@@ -189,6 +197,9 @@ playwith <-
     promptBox$modifyBg(GtkStateType["normal"], "yellow")
     promptLabel$modifyFg(GtkStateType["normal"], "black")
     toolbarPromptHBox$packStart(promptBox)
+    ## try to force resize
+    gdkWindowProcessAllUpdates()
+    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
     promptBox["height-request"] <-
         callToolbar$getAllocation()$height
     if (show.call == FALSE) {
@@ -209,19 +220,34 @@ playwith <-
     myHBox$packStart(leftToolbar, expand=FALSE)
     ## create the plot area
     myDA <- gtkDrawingArea()
+    myDA$addEvents(GdkEventMask["enter-notify-mask"]
+                   + GdkEventMask["button-press-mask"]
+                   + GdkEventMask["button-release-mask"]
+                   + GdkEventMask["exposure-mask"])
     myHBox$packStart(myDA)
-    myHBox["resize-mode"] <- GtkResizeMode["queue"] ## does nothing?
-    asCairoDevice(myDA)
+    if (doResize)
+      myDA$setSizeRequest(width * 96, height * 96)
+      #myDA$queueResize()
+      #myWin$queueResize()
+      #gdkWindowProcessAllUpdates()
+      #while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
+    asCairoDevice(myDA, pointsize=pointsize)
     ## need to regenerate coord spaces after resize
     gSignalConnect(myDA, "configure-event", configure_handler,
                    data=playState)
-    myDA$addEvents(GdkEventMask["enter-notify-mask"])
-                   # + GdkEventMask["leave-notify-mask"])
-    gSignalConnect(myDA, "enter-notify-event",  auto.reconfig_handler,
+    gSignalConnect(myDA, "enter-notify-event", auto.reconfig_handler,
                    data=playState)
     gSignalConnect(myHBox, "remove", devoff_handler,
                    data=playState, after=TRUE)
-    trellis.device(new=F)
+    ## switch to GTK event loop while the window is in focus (for tooltips)
+    myWin$addEvents(GdkEventMask["focus-change-mask"])
+    gSignalConnect(myWin, "focus-in-event", gtkmain_handler,
+                   data=playState)
+    gSignalConnect(myWin, "focus-out-event", gtkmainquit_handler,
+                   data=playState)
+    gSignalConnect(myWin, "delete-event", gtkmainquit_handler,
+                   data=playState)
+    trellis.device(new=FALSE)
     ## create the page scrollbar
     pageScrollBox <- gtkVBox(show=FALSE)
     myHBox$packStart(pageScrollBox, expand=FALSE)
@@ -279,6 +305,9 @@ playwith <-
         tbar$show()
         tbar$insert(quickTool(playState, label="Loading...",
                               icon="gtk-execute"), -1)
+        ## try to force resize
+        gdkWindowProcessAllUpdates()
+        while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
         if (horiz) tbar$setSizeRequest(-1, tbar$getAllocation()$height)
         else tbar$setSizeRequest(tbar$getAllocation()$width, -1)
     }
@@ -286,6 +315,9 @@ playwith <-
     if (length(bottom.tools)) initTbar(bottomToolbar, horiz=TRUE)
     if (length(left.tools)) initTbar(leftToolbar, horiz=FALSE)
     if (length(right.tools)) initTbar(rightToolbar, horiz=FALSE)
+    myHBox["resize-mode"] <- GtkResizeMode["queue"] ## does nothing?
+    ## after resize, remove minimum size from device
+    myDA$setSizeRequest(-1, -1)
     ## store the state of this plot window in a new environment
     ## set defaults -- these can be replaced by extra arguments
     ## TODO: toolbar style? = "both"
@@ -294,6 +326,7 @@ playwith <-
     playState$clip.annotations <- FALSE
     playState$is.lattice <- FALSE
     playState$is.ggplot <- FALSE
+    playState$show.tooltips <- FALSE
     ## store extra arguments (...) in the state object (playState)
     dots <- list(...)
     for (arg in names(dots)) {
@@ -518,6 +551,9 @@ playNewPlot <- function(playState)
     })
     if (playState$is.lattice || playState$is.ggplot) eval(doToolbars)
     else blockRedraws(eval(doToolbars), playState)
+    ## try to force redraw
+    gdkWindowProcessAllUpdates()
+    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
     ## redo failed plot call -- assuming "margins too small"
     ## (NOTE this might throw an error!)
     if (init.eval.failed) result <- eval(playState$call, playState$env)
@@ -754,11 +790,12 @@ configure_handler <- function(widget, event, playState)
 
 auto.reconfig_handler <- function(widget, event, playState)
 {
+    if (length(playState$is.lattice) == 0) return(FALSE)
     if (playState$.need.reconfig) {
         generateSpaces(playState)
                                         #playReplot(playState)
     }
-    return(TRUE)
+    return(FALSE)
 }
 
 devoff_handler <- function(widget, event, playState)
@@ -772,6 +809,28 @@ devoff_handler <- function(widget, event, playState)
     return(FALSE)
 }
 
+gtkmain_handler <- function(widget, event, playState)
+{
+  if (!isTRUE(playState$show.tooltips))
+    return(gtkmainquit_handler(widget, event, playState))
+  ## switch to GTK event loop while the window is in focus (for tooltips)
+  if (!isTRUE(playState$.gtkMain)) {
+    playState$.gtkMain <- TRUE
+    gtkMain()
+  }
+  return(FALSE)
+}
+
+gtkmainquit_handler <- function(widget, event, playState)
+{
+  if (isTRUE(playState$.gtkMain)) {
+    playState$.gtkMain <- FALSE
+    gtkMainQuit()
+  }
+  return(FALSE)
+}
+
+        
 ### Automatic playwith support
 
 autoplay <-

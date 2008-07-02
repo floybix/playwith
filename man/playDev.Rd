@@ -13,8 +13,6 @@ playDevCur()
 playDevList()
 playDevSet(playState)
 playDevOff(playState = playDevCur())
-
-playGetIDs(playState = playDevCur(), labels = FALSE)
 }
 \arguments{
   \item{playState}{ a \code{\link{playState}} object representing the plot, window and device. }

@@ -1,6 +1,5 @@
 \name{playwith}
 \alias{playwith}
-\alias{plotAndPlay}
 \title{An interactive plot GUI}
 \description{
   Open a graphical user interface for viewing and interacting with \R plots.
@@ -21,10 +20,12 @@ playwith(expr,
 	right.tools = list(),
 	parameters = list(),
 	...,
-	show.call = TRUE,
-	win.size = c(640, 500),
+        width = 6,
+        height = 6,
+        pointsize = 10,
 	modal = FALSE,
 	on.close = NULL,
+	show.call = TRUE,
 	eval.args = NA,
 	invert.match = FALSE,
 	envir = parent.frame(),
@@ -73,6 +74,10 @@ playwith(expr,
     These can then be accessed by user-defined tools. The default tools will recognise the following
     extra arguments:
     \describe{
+      \item{\code{show.tooltips}}{
+	show tooltips for toolbar items. This uses the GTK event loop,
+	which might, occasionally, cause the R terminal to freeze.
+      }
       \item{\code{page}}{
 	In multi-page Lattice plots, this will set the initial page to display.
       }
@@ -123,11 +128,13 @@ playwith(expr,
       }
     }
   }
-  \item{show.call}{ set to \code{FALSE} to hide the plot call text-box ("address bar") and associated buttons.}
-  \item{win.size}{ default initial size of the plot window (width, height) in pixels. }
+  \item{width, height}{ initial size of the plot device in inches. }
+  \item{pointsize}{ default point size for text, used in the
+    \code{\link[cairoDevice]{Cairo}} device. }
   \item{modal}{ whether the window is modal: if \code{TRUE}, the session will freeze until the window is closed. }
   \item{on.close}{ a function to be called when the user closes the plot window. The \code{\link{playState}} object
     will passed to the function. If the function returns \code{TRUE}, the window will not be closed. }
+  \item{show.call}{ set to \code{FALSE} to hide the plot call text-box ("address bar") and associated buttons.}
   \item{eval.args}{ whether to evaluate the plot call arguments: can be \code{TRUE}, \code{FALSE}, \code{NA} (don't eval global vars)
     or a \link[=regex]{regular expression} matching symbols to evaluate. See below. }
   \item{invert.match}{ whether to evaluate arguments that do NOT match the regular expression given in \code{eval.args}. }
@@ -140,7 +147,7 @@ playwith(expr,
   \item{main.function}{ the function (or its name) appearing in the call
     which accepts typical plot arguments like \code{xlim} and
     \code{main}. This will only be needed in unusual cases when the
-    default fails. }
+    default guess fails. }
 }
 \details{
   This function opens a GTK+ window containing a plot device
@@ -227,9 +234,18 @@ playwith(expr,
 if (interactive()) {
 
 ## time series plot (base graphics)
-treering2 <- window(treering, start=1)
-playwith(plot(treering2, xlim=c(0,300)),
-	labels = paste(time(treering2), "CE"))
+## click and drag to zoom; right-click to zoomout
+tt <- time(treering)
+treeyears <- paste(abs(tt) + (tt <= 0),
+                  ifelse(tt > 0, "CE", "BCE"))
+playwith(plot(treering, xlim = c(1000, 1300)),
+	labels = treeyears)
+
+## time series plot (lattice)
+## date-time range can be entered directly in time mode
+library(zoo)
+playwith(xyplot(sunspots ~ yearmon(time(sunspots)),
+                xlim=c(1900, 1930), type="l"))
 
 ## multi-panel lattice plot
 playwith(xyplot(Income ~ log(Population / Area) | state.region,
@@ -244,6 +260,7 @@ playwith(plot(density(xx, bw = bandwidth), panel.last = rug(xx)),
 
 ## the same with a spinbutton (use I() to force spinbutton).
 ## initial value is set as the first in the vector of values.
+xx <- rnorm(50)
 playwith(plot(density(xx, bw = bandwidth), panel.last = rug(xx)),
 	parameters = list(bandwidth = I(c(0.1, 5:100/100))) )
 
@@ -289,15 +306,13 @@ subTools <- list("identify", "clear", "zoom", "zoomout", "zoomfit")
 confirmClose <- function(playState) {
 	if (gWidgets::gconfirm("Close window and report IDs?")) {
 		cat("Indices of identified data points:\n")
-		print(rbind(playState$ids)$which)
-		all.ids <- do.call(rbind, playState$ids)$which
-		print(all.ids)
+		print(playGetIDs(playState))
 		return(FALSE)
-	} else TRUE # don't close
+	} else TRUE ## don't close
 }
 xy <- list(x=rnorm(20), y=rnorm(20))
 playwith(plot(xy), on.close=confirmClose, modal=TRUE,
-	win.size=c(360, 360), show.call=FALSE,
+	width=4, height=3.5, show.call=FALSE,
 	top=NULL, left=subTools)
 
 ## only local variables appearing in the plot call are stored

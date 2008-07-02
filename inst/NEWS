@@ -1,10 +1,27 @@
 
 Changes in Version 0.8-57
 
-  o new function playGetIDs() gets currently identified points.
+  o now works on Linux!
+    (had problems related to event loop -- sizing widgets etc).
+
+  o new function playGetIDs() gives currently identified points.
+
+  o device size, rather than window size, can now be specifed.
+    This matches other devices. Also pointsize can now be set.
+
+  o option to show tooltips for toolbar buttons (uses gtkMain()).
+
+  o mouse clicks better distinguished from drags: time <= 1/4 sec.
+
+  o xlim/ylim and time mode now handles date-time classes better,
+    including "yearmon" and "yearqtr" from the zoo package.
+
+  o zooming now tries to account for axis padding.
+
+  o "clear" button now shows a graphical dialog under linux.
 
   o warning about lattice subscripts now checks the panelArgs
-    (it was warning spuriously, eg xyplot.zoo).
+    (it was warning spuriously before, eg xyplot.zoo).
 
   o attempt to set GTK tooltips is now a *silent* try(), again.
 

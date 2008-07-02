@@ -34,8 +34,16 @@ clear_handler <- function(widget, playState)
     if (length(types) == 0) { widget$hide(); return() }
     clear.types <- types
     if (length(types) > 1) {
-        clear.types <- select.list(types, preselect = types, multiple = TRUE,
-                                   title = "Clear what?")
+      
+      clear.types <- NULL
+      widg <- gcheckboxgroup(types, checked=TRUE)
+      result <- gbasicdialog(title="Clear what?", widget=widg,
+                             handler=function(...)
+                               clear.types <<- svalue(widg) )
+      if (result == FALSE) return()
+      
+#        clear.types <- select.list(types, preselect = types, multiple = TRUE,
+#                                   title = "Clear what?")
     }
     for (x in clear.types)
         playState[[x]] <- list()
@@ -49,3 +57,4 @@ clear_handler <- function(widget, playState)
     }
     playReplot(playState)
 }
+

@@ -10,6 +10,19 @@ toolConstructors$options <- function(playState)
     myButton <- gtkButton("Options...")
     myMenu <- gtkMenu()
 
+    ## OPTIONS: show tooltips
+    tipsItem <- gtkCheckMenuItem("Show tooltips")
+    tipsItem["active"] <- isTRUE(playState$show.tooltips)
+    myMenu$append(tipsItem)
+    gSignalConnect(tipsItem, "activate",
+                   function(widget, playState) {
+                     playState$show.tooltips <- widget["active"]
+                     ## start it
+                     gtkmain_handler(playState=playState)
+                   },
+                   data=playState)
+    myMenu$append(gtkSeparatorMenuItem())
+
     ## OPTIONS: set label style
     labelStyleItem <- gtkMenuItem("Set label style...")
     myMenu$append(labelStyleItem)

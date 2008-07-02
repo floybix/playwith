@@ -12,8 +12,9 @@ toolConstructors$time.mode <- function(playState)
         dat <- xyData(playState, space="page")
         playState$time.mode <-
             (inherits(dat$x, "ts") ||
-             inherits(dat$x, "zoo"))
-        ## once only!
+             inherits(dat$x, "zoo") ||
+             is.somesortoftime(dat$x))
+        ## once only ## TODO: better to wait for manual switch
         playState$.args$missing_time.mode <- FALSE
     }
 
@@ -45,7 +46,7 @@ time.mode_handler <- function(widget, playState)
     if (playState$time.mode) {
         if (is.null(playState$time.vector)) {
             xy <- xyData(playState, space="page")
-            playState$time.mode.x.range <- extendrange(as.numeric(xy$x))
+            playState$time.mode.x.range <- range(as.numeric(xy$x))
             playState$time.mode.x.attr <- attributes(xy$x)
         }
     }
@@ -68,6 +69,8 @@ time.mode_postplot_action <- function(widget, playState)
             x.jump <- playState$time.mode.page.incr
             if (is.null(x.jump)) x.jump <- round(log2(x.max))
             cur.time <- playState$env$cur.time
+            if (inherits(cur.time, "yearqtr"))
+              cur.time <- as.yearmon(cur.time)
             widg$timeEntry["text"] <- toString(cur.time)
             widg$timeScrollbar["adjustment"] <-
                 gtkAdjustment(value=x.pos, lower=1, upper=x.max+1,
@@ -85,8 +88,12 @@ time.mode_postplot_action <- function(widget, playState)
         ## format x limits for text box
         xlim <- signif(x.lim, 6)
         class(x.lim) <- playState$time.mode.x.attr$class
+        if ("yearmon" %in% class(x.lim))
+            x.lim <- as.yearmon(x.lim) ## to round correctly
+        if ("yearqtr" %in% class(x.lim))
+            x.lim <- as.yearmon(x.lim) ## to format as "%b %Y"
         if ("POSIXt" %in% class(x.lim))
-            attr(x.lim, "tz") <- playState$time.mode.x.attr$tz
+            attr(x.lim, "tzone") <- playState$time.mode.x.attr$tzone
         if ("factor" %in% class(x.lim))
             attr(x.lim, "levels") <- playState$time.mode.x.attr$levels
                                         #mostattributes(x.lim) <- playState$time.mode.x.attr
@@ -127,6 +134,8 @@ time.mode_entry_handler <- function(widget, playState)
         cls <- class(time.vector)
         if ("POSIXt" %in% cls) newLim <- try(as.POSIXct(newLim))
         else if ("Date" %in% cls) newLim <- try(as.Date(newLim))
+        else if ("yearmon" %in% cls) newLim <- try(as.yearmon(newLim, "%b %Y"))
+        else if ("yearqtr" %in% cls) newLim <- try(as.yearqtr(as.yearmon(newLim, "%b %Y")))
         if (inherits(newLim, "try-error")) {
             ## treat it as an index into time.vector
             cur.index <- try(as.integer(widget["text"]), silent=TRUE)
@@ -154,7 +163,9 @@ time.mode_entry_handler <- function(widget, playState)
     cls <- x.attr$class
     if ("POSIXt" %in% cls) newLim <- as.POSIXct(newLim)
     else if ("Date" %in% cls) newLim <- as.Date(newLim)
+    else if ("yearmon" %in% cls) newLim <- as.yearmon(newLim, "%b %Y")
+    else if ("yearqtr" %in% cls) newLim <- as.yearqtr(as.yearmon(newLim, "%b %Y"))
     else if ("integer" %in% cls) newLim <- as.integer(newLim)
-    callArg(playState, "xlim") <- as.numeric(newLim)
+    rawXLim(playState) <- as.numeric(newLim)
     playReplot(playState)
 }

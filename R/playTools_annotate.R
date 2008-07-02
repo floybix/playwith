@@ -140,7 +140,8 @@ annotate_handler <- function(widget, playState)
             newVal <- svalue(wid)
             if (newVal == "") return(NULL)
             if (svalue(expr.wid))
-                newVal <- parse(text=newVal, srcfile=NULL)
+                newVal <- try(parse(text=newVal, srcfile=NULL))
+            if (inherits(newVal, "try-error")) return(NULL)
             newVal
         }
         isExpr <- svalue(wid$label.expr)

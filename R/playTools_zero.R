@@ -29,20 +29,20 @@ zero_handler <- function(widget, playState)
     if (trans.x) {
         xlim <- rawXLim(playState)
         if (min(xlim) > 0) {
-            xlim[which.min(xlim)] <- 0 - 0.07 * max(abs(xlim))
+            xlim[which.min(xlim)] <- 0# - 0.07 * max(abs(xlim))
         } else if (max(xlim) < 0) {
-            xlim[which.max(xlim)] <- 0 + 0.07 * max(abs(xlim))
+            xlim[which.max(xlim)] <- 0# + 0.07 * max(abs(xlim))
         }
-        callArg(playState, "xlim") <- signif(xlim, 4)
+        rawXLim(playState) <- xlim
     }
     if (trans.y) {
         ylim <- rawYLim(playState)
         if (min(ylim) > 0) {
-            ylim[which.min(ylim)] <- 0 - 0.07 * max(abs(ylim))
+            ylim[which.min(ylim)] <- 0# - 0.07 * max(abs(ylim))
         } else if (max(ylim) < 0) {
-            ylim[which.max(ylim)] <- 0 + 0.07 * max(abs(ylim))
+            ylim[which.max(ylim)] <- 0# + 0.07 * max(abs(ylim))
         }
-        callArg(playState, "ylim") <- signif(ylim, 4)
+        rawYLim(playState) <- ylim
     }
     playReplot(playState)
 }

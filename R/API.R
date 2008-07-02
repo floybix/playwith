@@ -215,31 +215,69 @@ rawXYLim <- function(playState, space="plot")
     playState
 }
 
+is.somesortoftime <- function(x) {
+  inherits(x, "Date") ||
+  inherits(x, "POSIXt") ||
+  inherits(x, "yearmon") ||
+  inherits(x, "yearqtr")
+}
+
 setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
 {
     playDevSet(playState)
     x.or.y <- match.arg(x.or.y)
-    ## convert back from log scale if required
-    x <- spaceCoordsToDataCoordsXY(playState, x, x.or.y=x.or.y)
     ## round digits conservatively
     x <- round(x, digits=6)
     if (playState$is.lattice) {
         ## TODO: this really sucks
         x.panel <- xyData(playState, space="page")[[x.or.y]]
-        ## convert new scale to appropriate date time class if required
-        ##if (inherits(x.panel, "Date") || inherits(x.panel, "POSIXt")) {
-        ##	mostattributes(x) <- attributes(x.panel)
-        ##}
-        ## convert new scale to factor levels if required
+        ## set factor labels explicitly, othewise is coerced to numeric
         if (is.factor(x.panel)) {
             if (is.null(callArg(playState, expr=scales[[x.or.y]]$labels))) {
                 callArg(playState, expr=scales[[x.or.y]]$labels) <- levels(x.panel)
                 callArg(playState, expr=scales[[x.or.y]]$at) <- 1:nlevels(x.panel)
             }
         }
+        else if (is.somesortoftime(x.panel)) {
+          if (inherits(x.panel, "Date"))
+            x <- round(x, digits=1)
+          if (inherits(x.panel, "POSIXct"))
+            x <- round(x)
+          if (inherits(x.panel, "yearmon"))
+            x <- as.yearmon(x)
+          class(x) <- class(x.panel)
+        }
+        else {
+          isExtended <- switch(x.or.y,
+                               x = playState$trellis$x.scales$axs == "r",
+                               y = playState$trellis$y.scales$axs == "r")
+          f <- lattice.getOption("axis.padding")$numeric
+          if (isExtended) x <- shrinkrange(x, f=f)
+        }
     }
+    else if (!is.null(playState$viewport)) {
+      ## non-lattice grid plot
+      ## (do not know if the range is extended or not).
+    }
+    else {
+      ## base graphics plot
+      isExtended <- switch(x.or.y,
+                           x = (par("xaxs") == "r"),
+                           y = (par("yaxs") == "r"))
+      if (isExtended) x <- shrinkrange(x, f=0.04)
+    }
+    ## convert back from log scale if required
+    x <- spaceCoordsToDataCoordsXY(playState, x, x.or.y=x.or.y)
     if (x.or.y == "x") callArg(playState, "xlim") <- x
     if (x.or.y == "y") callArg(playState, "ylim") <- x
+}
+
+shrinkrange <- function(r, f = 0.1)
+{
+  stopifnot(length(r) == 2)
+  orig.d <- diff(r) / (1 + 2*f)
+  orig.r <- r - c(-f, f) * orig.d
+  orig.r
 }
 
 ## note space="page" means the root viewport
@@ -493,22 +531,25 @@ handleClickOrDrag <-
         wd <- xx[2] - xx[1]
         ht <- yy[2] - yy[1]
         switch(env$shape,
-               line=gdkDrawLine(event$window, gc=env$gc,
-               x1=env$px0$x, y1=env$px0$y,
-               x2=env$px00$x, y2=env$px00$y),
-               rect=gdkDrawRectangle(event$window, gc=env$gc, filled=FALSE,
-               x=xx[1], yy[1], width=wd, height=ht)
+               line = gdkDrawLine(event$window, gc=env$gc,
+                 x1=env$px0$x, y1=env$px0$y,
+                 x2=env$px00$x, y2=env$px00$y),
+               rect = gdkDrawRectangle(event$window, gc=env$gc, filled=FALSE,
+                 x=xx[1], yy[1], width=wd, height=ht)
                )
         return(TRUE) ## stop event here
     }
     tmpSigE <- gSignalConnect(da, "expose-event", expose_handler, data=environment())
     tmpSigR <- gSignalConnect(da, "button-release-event", release_handler, data=environment())
+    init_time <- proc.time()[3]
     repeat {
         ## px1 is the final drag location, set by event handler
         if (exists("px1", inherits=FALSE)) break
         px00.prev <- px00
         px00 <- da$window$getPointer()
-        if (is.null(px00$retval)) break
+        ## check that pointer is inside the window
+        ## TODO -- fails on linux?
+#        if (is.null(px00$retval)) break
         if ((as.flag(px00$mask) & GdkModifierType["button1-mask"]) == 0) {
             ## mouse button was released
             px1 <- px00
@@ -523,6 +564,10 @@ handleClickOrDrag <-
         ht <- yy[2] - yy[1] + 2
         da$window$invalidateRect(list(x=xx[1], y=yy[1], width=wd, height=ht),
                                  invalidate.children=FALSE)
+        ## try to force redraw
+        gdkWindowProcessAllUpdates()
+        while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
+
     }
     gSignalHandlerDisconnect(da, tmpSigR)
     gSignalHandlerDisconnect(da, tmpSigE)
@@ -535,9 +580,11 @@ handleClickOrDrag <-
     da$window$invalidateRect(invalidate.children=FALSE)
     if (!exists("px1", inherits=FALSE)) return(NULL)
     dc <- list(x=c(px0$x, px1$x), y=c(px0$y, px1$y))
-    ## was it a click or a drag? (threshold 3 pixels)
-    ## TODO: better to use timing
-    is.click <- ((abs(diff(dc$x)) <= 3) && (abs(diff(dc$y)) <= 3))
+    ## was it a click or drag? (click = no slower than 1/4 second)
+    is.click <- (proc.time()[3] - init_time) <= 0.25
+    ## alternative criteria for click: moved no more than 3 pixels
+    is.click <- is.click ||
+                ((abs(diff(dc$x)) <= 3) && (abs(diff(dc$y)) <= 3))
     ndc <- list(x=dc$x / da.w, y=(da.h - dc$y) / da.h)
     list(dc=dc, ndc=ndc, is.click=is.click, modifiers=modifiers)
 }

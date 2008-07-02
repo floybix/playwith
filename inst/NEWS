@@ -18,10 +18,15 @@ Changes in Version 0.8-57
 
   o zooming now tries to account for axis padding.
 
+  o plot call is now deparsed without showAttributes option (for
+    clarity). Call objects are used to maintain date time classes.
+
   o "clear" button now shows a graphical dialog under linux.
 
   o warning about lattice subscripts now checks the panelArgs
     (it was warning spuriously before, eg xyplot.zoo).
+
+  o more use of locks to try to avoid multi-thread conflicts.
 
   o attempt to set GTK tooltips is now a *silent* try(), again.
 
@@ -32,9 +37,6 @@ Changes in Version 0.8-56
 
   o arguments to `parameters` can use I() to force a spinbutton
     rather than slider.
-
-  o plot call is initially evaluated in a try() block;
-    hoping this will avoid "margins too small" error on linux.
 
 Changes in Version 0.8-55
 

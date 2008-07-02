@@ -32,6 +32,7 @@ toolConstructors$zoom <- function(playState)
 
 zoom_click_handler <- function(widget, event, playState)
 {
+    if (!isTRUE(playState$plot.ready)) return(FALSE)
     ## bail out if another tool is handling the click
     ## TODO: is this a race condition? is there a better way?
     if (isTRUE(playState$now.interacting)) return(FALSE)

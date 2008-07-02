@@ -23,6 +23,8 @@ if (!exists("StateEnv", environment(), inherits=FALSE)) {
     StateEnv <- new.env()
 }
 
+playwithDeparseOpts <- c("keepInteger")
+
 ### This is the high-level function: create the GUI
 
 playwith <-
@@ -465,8 +467,7 @@ playNewPlot <- function(playState)
     updateAddressBar(playState)
     ## eval plot call
     ## (NOTE this will draw the plot UNLESS it is lattice or ggplot)
-    result <- try(eval(playState$call, playState$env))
-    init.eval.failed <- (inherits(result, "try-error"))
+    result <- eval(playState$call, playState$env)
     ## detect lattice
     playState$is.lattice <- (inherits(result, "trellis"))
     if (playState$is.lattice) playState$trellis <- result
@@ -554,9 +555,6 @@ playNewPlot <- function(playState)
     ## try to force redraw
     gdkWindowProcessAllUpdates()
     while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
-    ## redo failed plot call -- assuming "margins too small"
-    ## (NOTE this might throw an error!)
-    if (init.eval.failed) result <- eval(playState$call, playState$env)
     ## continue
     playPostPlot(result, playState)
 }
@@ -654,7 +652,7 @@ updateAddressBar <- function(playState)
     callTxt <- ""
     if (object.size(playState$call) < 50000) {
         widg <- playState$widgets
-        callTxt <- deparseOneLine(playState$call, control="showAttributes")
+        callTxt <- deparseOneLine(playState$call, control=playwithDeparseOpts)
         if (is.null(playState$.args$title)) playState$win["title"] <-
             toString(callTxt, width=34)
         oldCallTxt <- widg$callEntry$getActiveText()
@@ -790,7 +788,9 @@ configure_handler <- function(widget, event, playState)
 
 auto.reconfig_handler <- function(widget, event, playState)
 {
+    ## avoid weird stack smash
     if (length(playState$is.lattice) == 0) return(FALSE)
+    if (!isTRUE(playState$plot.ready)) return(FALSE)
     if (playState$.need.reconfig) {
         generateSpaces(playState)
                                         #playReplot(playState)

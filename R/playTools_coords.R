@@ -23,6 +23,7 @@ toolConstructors$coords <- function(playState)
 
 coords_click_handler <- function(widget, event, playState)
 {
+    if (!isTRUE(playState$plot.ready)) return(FALSE)
     if (playState$.need.reconfig) generateSpaces(playState)
     x <- event$x
     y <- event$y

@@ -83,15 +83,15 @@ callArg <- function(playState, arg, expr, data = NULL)
     if (is.symbol(arg)) arg <- as.character(arg)
     if (is.null(arg)) return()
     ## instantiate implicit lists as language objects (so deparse is pretty)
-    if (is.language(arg)) {
-        xbits <- strsplit(deparseOneLine(arg), "$", fixed=TRUE)[[1]]
-        for (i in seq_len(length(xbits) - 1)) {
-            implicitList <- parse(text=paste(xbits[1:i], collapse="$"))[[1]]
-            if (is.null(callArg(playState, implicitList))) {
-                callArg(playState, implicitList) <- quote(list())
-            }
-        }
-    }
+#    if (is.language(arg)) {
+#        xbits <- strsplit(deparseOneLine(arg), "$", fixed=TRUE)[[1]]
+#        for (i in seq_len(length(xbits) - 1)) {
+#            implicitList <- parse(text=paste(xbits[1:i], collapse="$"))[[1]]
+#            if (is.null(callArg(playState, implicitList))) {
+#                callArg(playState, implicitList) <- quote(list())
+#            }
+#        }
+#    }
     getx <- if (is.numeric(arg)) paste('[[', arg+1, ']]', sep="")
     else if (is.character(arg)) paste("$", arg, sep="")
     else paste("$", deparseOneLine(arg), sep="")
@@ -227,7 +227,7 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
     playDevSet(playState)
     x.or.y <- match.arg(x.or.y)
     ## round digits conservatively
-    x <- round(x, digits=6)
+    x <- signif(x, digits=8)
     if (playState$is.lattice) {
         ## TODO: this really sucks
         x.panel <- xyData(playState, space="page")[[x.or.y]]
@@ -239,20 +239,25 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
             }
         }
         else if (is.somesortoftime(x.panel)) {
-          if (inherits(x.panel, "Date"))
-            x <- round(x, digits=1)
-          if (inherits(x.panel, "POSIXct"))
-            x <- round(x)
-          if (inherits(x.panel, "yearmon"))
-            x <- as.yearmon(x)
           class(x) <- class(x.panel)
+          if (inherits(x.panel, "Date"))
+            x <- call("as.Date", format(x))
+          if (inherits(x.panel, "POSIXct"))
+            x <- call("as.POSIXct", format(x))
+          if (inherits(x.panel, "yearmon"))
+            x <- call("as.yearmon", format(as.Date(x)))
+          if (inherits(x.panel, "yearqtr"))
+            x <- call("as.yearqtr", format(as.Date(x)))
         }
         else {
+          ## numeric
           isExtended <- switch(x.or.y,
                                x = playState$trellis$x.scales$axs == "r",
                                y = playState$trellis$y.scales$axs == "r")
           f <- lattice.getOption("axis.padding")$numeric
           if (isExtended) x <- shrinkrange(x, f=f)
+          ## round digits conservatively
+          x <- signif(x, digits=8)
         }
     }
     else if (!is.null(playState$viewport)) {
@@ -265,6 +270,8 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
                            x = (par("xaxs") == "r"),
                            y = (par("yaxs") == "r"))
       if (isExtended) x <- shrinkrange(x, f=0.04)
+      ## round digits conservatively
+      x <- signif(x, digits=8)
     }
     ## convert back from log scale if required
     x <- spaceCoordsToDataCoordsXY(playState, x, x.or.y=x.or.y)
@@ -291,7 +298,7 @@ playDo <- function(playState, expr, space="plot", clip.off=FALSE)
         ## user / plot coordinates
         if (!is.null(playState$viewport)) {
             ## grid graphics plot
-            depth <- downViewport(playState$viewport[[space]])
+            depth <- try(downViewport(playState$viewport[[space]]))
             if (inherits(depth, "try-error")) {
                 stop(paste("Viewport", playState$viewport, "not found"))
             }
@@ -315,7 +322,7 @@ playDo <- function(playState, expr, space="plot", clip.off=FALSE)
             myCol <- col(packets)[whichOne]
             myRow <- row(packets)[whichOne]
             myVp <- trellis.vpname("panel", myCol, myRow, clip.off=clip.off)
-            depth <- downViewport(myVp)
+            depth <- try(downViewport(myVp))
             on.exit(upViewport(depth), add=TRUE)
             ## TODO: should focus panel or just go to viewport?
             ## (if focus, will destroy any previous focus)
@@ -330,6 +337,7 @@ playDo <- function(playState, expr, space="plot", clip.off=FALSE)
             on.exit(upViewport(depth), add=TRUE)
         }
     }
+    if (inherits(depth, "try-error")) return()
     if (!is.null(cur.vp)) on.exit(downViewport(cur.vp), add=TRUE)
     ## do the stuff and return the result
     ##if (is.list(stuff)) lapply(stuff, eval, parent.frame(), playState$env)

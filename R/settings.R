@@ -28,6 +28,7 @@
          "annotate",
          "arrow",
          "edit.annotations",
+         "undo.annotation",
          "brush",
          "clear",
          "--",
@@ -45,7 +46,7 @@
          bottom.tools = list(),
          right.tools = list(),
          width = 6,
-         height = 6,
+         height = 5,
          pointsize = 10,
          eval.args = NA,
          ## implicit arguments to playwith():

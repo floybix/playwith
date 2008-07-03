@@ -674,13 +674,6 @@ updateAddressBar <- function(playState)
     }
 }
 
-playRefresh <- function(playState)
-{
-    replayPlot(recordPlot())
-    ## TODO: no, should be a configure event? grid.refresh?
-                                        #playState$widgets$drawingArea$window$invalidateRect(invalidate.children=FALSE)
-}
-
 generateSpaces <- function(playState)
 {
     playState$deviceToSpace <- list()
@@ -728,14 +721,6 @@ generateSpaces <- function(playState)
         upViewport(4)
         playState$deviceToSpace[["plot"]] <-
             playDo(playState, deviceToUserCoordsFunction(), space="plot")
-    }
-    ## check if we are working as options(device="playwith")
-    if ((length(playState$call) == 1) &&
-        identical(playState$call[[1]], quote(`{`))) {
-        ## do not know when the plot is updated
-        ## so need to keep regenerating data space
-        ##playState$.need.reconfig <- TRUE
-        ##return()
     }
     playState$.need.reconfig <- FALSE
 }
@@ -786,10 +771,6 @@ window.close_handler <- function(widget, event, playState)
 
 configure_handler <- function(widget, event, playState)
 {
-                                        #oldsize <- playState$.device.size
-                                        #playState$.device.size <- c(event$width, event$height)
-                                        #if (is.null(oldsize) || all(oldsize == playState$.device.size))
-                                        #	return(FALSE)
     playState$.need.reconfig <- TRUE
     return(FALSE)
 }
@@ -799,6 +780,11 @@ auto.reconfig_handler <- function(widget, event, playState)
     ## avoid weird stack smash
     if (length(playState$is.lattice) == 0) return(FALSE)
     if (!isTRUE(playState$plot.ready)) return(FALSE)
+    if (isBasicDeviceMode(playState)) {
+        ## do not know when the plot is updated
+        ## so need to keep regenerating data space
+        playState$.need.reconfig <- TRUE
+    }
     if (playState$.need.reconfig) {
         generateSpaces(playState)
     }

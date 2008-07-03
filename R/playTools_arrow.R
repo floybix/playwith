@@ -38,17 +38,23 @@ arrow_handler <- function(widget, playState)
         style <- quote(do.call(gpar, trellis.par.get("add.line")))
     }
     if (!is.null(style)) annot$gp <- style
+    originalPlot <- if (isBasicDeviceMode(playState))
+        try(recordPlot())
     ## draw it
     playDo(playState, eval(annot), space=space,
            clip.off=identical(playState$clip.annotations, FALSE))
     ## store it
     playState$annotations[[space]] <-
         c(playState$annotations[[space]], annot)
+    if (isBasicDeviceMode(playState))
+        playState$.recorded.plot <- originalPlot
     ## update other tool states
     with(playState$tools, {
-        if (exists("edit.annotations", inherits=F))
-            edit.annotations["visible"] <- TRUE
         if (exists("clear", inherits=F))
             clear["visible"] <- TRUE
+        if (exists("edit.annotations", inherits=F))
+            edit.annotations["visible"] <- TRUE
+        if (exists("undo.annotation", inherits=F))
+            undo.annotation["visible"] <- TRUE
     })
 }

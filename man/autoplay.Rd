@@ -1,6 +1,5 @@
 \name{autoplay}
 \alias{autoplay}
-\alias{setAutoPlaywith}
 \title{ Set playwith to run automatically. }
 \description{
 	Set \code{playwith} to run automatically with Lattice graphics and/or base graphics.
@@ -19,31 +18,32 @@ autoplay(on = NA, lattice.on = on, base.on = on, grid.on = on, ask = FALSE)
 		(the call stack) when automatically starting a base graphics plot. }
 }
 \details{
-	When \code{lattice.on} is \code{TRUE}, the \code{\link[lattice]{print.trellis}} function, 
-	which is typically called implicitly to create lattice plots, will trigger 
-	\code{\link{playwith}}, passing the original high-level call. 
+	When \code{lattice.on} is \code{TRUE}, the \code{\link[lattice]{print.trellis}} function,
+	which is typically called implicitly to create lattice plots, will trigger
+	\code{\link{playwith}}, passing the original high-level call.
 	So for lattice plots only, this is like changing your default plot device.
 	It only replaces the screen device: plotting to a file device will work as normal.
 	This feature requires \code{lattice} package version \code{0.17-1} or later.
-	
-	When \code{base.on} is \code{TRUE}, any new base graphics plot will trigger 
+
+	When \code{base.on} is \code{TRUE}, any new base graphics plot will trigger
 	\code{\link{playwith}} (via a hook in \code{\link{plot.new}}), and the high-level
 	plot call is taken to be the first call (to a named function) on the call stack.
 	The usual base graphics paradigm of building up a plot incrementally will not work well,
-	because only the initial plot call is recorded, so any further additions will be lost when the plot is redrawn. 
+	because only the initial plot call is recorded, so any further additions will be lost when the plot is redrawn.
 	For similar reasons, multiple-figure plots may not be redrawn correctly.
 	The high-level plot will be called twice initially, due to constraints of the mechanism.
-	
-	The \code{grid.on} argument is analogous to \code{base.on} for grid graphics, 
+
+	The \code{grid.on} argument is analogous to \code{base.on} for grid graphics,
 	using a hook in \code{\link[grid]{grid.newpage}}.
-	
+
 	Note that this automatic behaviour is not a full replacement for calling
 	\code{\link{playwith}} directly, since it does not allow to you specify any of the
 	optional arguments.
-	
+
 	Another possibility is \code{options(device="playwith")}.
-	This will act as a default device
-	but without interactivity. This is not well tested.
+	This will act as a default device but without most of the
+	interactive features. The plot can still be annotated with text and
+	arrows in this case.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{ \code{\link{playwith}} }

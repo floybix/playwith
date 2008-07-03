@@ -1,8 +1,8 @@
 Package: playwith
 Type: Package
 Title: A GUI for interactive plots using GTK+
-Version: 0.9-1
-Date: 2008-07-03
+Version: 0.9-2
+Date: 2008-07-04
 Author: Felix Andrews <felix@nfrac.org>
 Maintainer: Felix Andrews <felix@nfrac.org>
 Depends: R (>= 2.5.0), lattice (>= 0.16), grid, gWidgets, gWidgetsRGtk2, cairoDevice

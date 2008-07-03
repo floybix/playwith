@@ -7,6 +7,7 @@
 
 toolConstructors$edit.annotations <- function(playState)
 {
+    if (isBasicDeviceMode(playState)) return(NA)
     quickTool(playState,
               label = "Edit ann.",
               icon = "gtk-edit",

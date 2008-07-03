@@ -127,8 +127,10 @@ annotate_handler <- function(widget, playState)
 
     ## OPTIONS
                                         #optionsgroup <- gframe("Options", horizontal=FALSE, container=wingroup)
-    ## TODO: option to set as default style
+    ## TODO: option to set as default style?
 
+    originalPlot <- if (isBasicDeviceMode(playState))
+        try(recordPlot())
     showingPreview <- FALSE
 
     annot_handler <- function(h, ...)
@@ -236,31 +238,22 @@ annotate_handler <- function(widget, playState)
         }
 
         if (showingPreview) {
-            ## handle basic device mode: can't replot
-            if ((length(playState$call) == 1) &&
-                identical(playState$call[[1]], quote(`{`))) {
-                ## do not know the call; it cannot be redrawn
-                playRefresh(playState)
+            ## remove preview (i.e. redraw original plot)
+            if (isBasicDeviceMode(playState)) {
+                ## handle basic device mode: can't replot
+                ## depends on engine.display.list / grid.display.list
+                try(replayPlot(originalPlot))
+                generateSpaces(playState)
             }
             else playReplot(playState)
         }
 
         if (h$action == "preview") {
+            ## echo annotation code to console
             print(annot)
-                                        # preview only (refresh, grid.draw)
-                                        #annot$name <- "tmp.preview"
-                                        # refresh to remove any old preview
-                                        #grid.refresh()
-                                        #playRefresh(playState)
-                                        # draw it
-                                        # engine.display.list / grid.display.list
-                                        #foo <- grid.grabExpr(eval(annot))
-                                        #foo2 <- quote(grid.draw(foo, recording=FALSE))
-                                        #foo2 <- quote(grid:::drawGrob(foo))
+            ## draw it
             playDo(playState, eval(annot), space=space,
                    clip.off=identical(playState$clip.annotations, FALSE))
-                                        # and remove without redraw
-                                        #grid.gremove("tmp.preview", redraw=FALSE)
             showingPreview <<- TRUE
             return()
         }
@@ -270,12 +263,16 @@ annotate_handler <- function(widget, playState)
         ## store it
         playState$annotations[[space]] <-
             c(playState$annotations[[space]], annot)
+        if (isBasicDeviceMode(playState))
+            playState$.recorded.plot <- originalPlot
         ## update other tool states
         with(playState$tools, {
-            if (exists("edit.annotations", inherits=F))
-                edit.annotations["visible"] <- TRUE
             if (exists("clear", inherits=F))
                 clear["visible"] <- TRUE
+            if (exists("edit.annotations", inherits=F))
+                edit.annotations["visible"] <- TRUE
+            if (exists("undo.annotation", inherits=F))
+                undo.annotation["visible"] <- TRUE
         })
 
         dispose(h$obj)
@@ -289,8 +286,18 @@ annotate_handler <- function(widget, playState)
     prebutt <- gbutton("Preview", handler=annot_handler,
                        action="preview", container=buttgroup)
     canbutt <- gbutton("Cancel", handler=function(h, ...) {
-        if (showingPreview) playReplot(playState); dispose(h$obj) },
-                       container=buttgroup)
+        if (showingPreview) {
+            ## remove preview (i.e. redraw original plot)
+            if (isBasicDeviceMode(playState)) {
+                ## handle basic device mode: can't replot
+                ## depends on engine.display.list / grid.display.list
+                try(replayPlot(originalPlot))
+                generateSpaces(playState)
+            }
+            else playReplot(playState)
+        }
+        dispose(h$obj)
+    }, container=buttgroup)
     size(okbutt) <- size(prebutt) <- size(canbutt) <- c(80, 30)
 
     return()

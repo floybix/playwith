@@ -1,4 +1,10 @@
 
+Changes in Version 0.9-2
+
+  o improvements to basic device mode (options(device="playwith")):
+    preview button in annotation tool now works; and there is an
+    "undo annotation" tool, allowing last annotation to be removed.
+
 Changes in Version 0.9-1
 
   o cairoDevice package in Depends rather than Imports, since

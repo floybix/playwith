@@ -9,29 +9,29 @@
 }
 \usage{
 playwith(expr,
-	new = FALSE,
-	title = NULL,
-	labels = NULL,
-	data.points = NULL,
-	viewport = NULL,
-	top.tools = playApplicationTools,
-	left.tools = playInteractionTools,
-	bottom.tools = list(),
-	right.tools = list(),
-	parameters = list(),
-	...,
-        width = 6,
-        height = 6,
-        pointsize = 10,
-	modal = FALSE,
-	on.close = NULL,
-	show.call = TRUE,
-	eval.args = NA,
-	invert.match = FALSE,
-	envir = parent.frame(),
-	playState = if (!new) playDevCur(),
-	plot.call,
-	main.function)
+         new = playwith.getOption("new"),
+         title = NULL,
+         labels = NULL,
+         data.points = NULL,
+         viewport = NULL,
+         top.tools = playwith.getOption("top.tools"),
+         left.tools = playwith.getOption("left.tools"),
+         bottom.tools = playwith.getOption("bottom.tools"),
+         right.tools = playwith.getOption("right.tools"),
+         parameters = list(),
+         ...,
+         width = playwith.getOption("width"),
+         height = playwith.getOption("height"),
+         pointsize = playwith.getOption("pointsize"),
+         modal = FALSE,
+         on.close = NULL,
+         show.call = TRUE,
+         eval.args = playwith.getOption("eval.args"),
+         invert.match = FALSE,
+         envir = parent.frame(),
+         playState = if (!new) playDevCur(),
+         plot.call,
+         main.function)
 }
 \arguments{
   \item{expr}{ an expression to create a plot, like \code{plot(mydata)}.
@@ -60,7 +60,8 @@ playwith(expr,
     each name defines the possible or initial values of that parameter. The
     supported values are:
     \itemize{
-      \item \code{integer} or \code{AsIs}: creates a numeric spinbutton.
+      \item \code{integer} or \code{AsIs} (\code{I()}):
+      creates a numeric spinbutton.
       \item \code{numeric} scalar: creates a text entry box for
       numeric values.
       \item \code{numeric} vector: creates a slider with given range.
@@ -162,7 +163,6 @@ playwith(expr,
   as a default graphics device (although it is not technically a
   graphics device itself, it is a wrapper around one).
 
-  The pre-defined tools can be listed with \code{names(toolConstructors)}.
   See \link{playTools} for a description of the pre-defined tools,
   and \link{playwith.API} for help on defining new tools.
   For the special case of tools to control parameter values, it is possible
@@ -191,9 +191,10 @@ playwith(expr,
   These guesses may be wrong in complex cases, in which case
   you can pass the correct values in as \code{data.points} and/or \code{labels}.
   Please also contact the maintainer to help improve the guesses.
-  \strong{NOTE:} The automatic subscripts used to identify points in Lattice plots
+  The automatic subscripts used to identify points in Lattice plots
   will be usually be the within-panel indices unless \code{subscripts=TRUE} is
   specified in the plot call: see \code{\link[lattice]{xyplot}}.
+  If so a warning dialog box will be shown.
 
   In order to interact with a plot, its supporting data needs to be stored:
   i.e. all variables appearing in the plot call must remain accessible.
@@ -229,7 +230,8 @@ playwith(expr,
   \code{playwith} invisibly returns the value from the plot call.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
-\seealso{ \code{\link{autoplay}}, \link{playTools}, \link{playwith.API} }
+\seealso{ \code{\link{autoplay}}, \link{playTools}, \link{playwith.API},
+  \code{\link{playwith.options}} }
 \examples{
 if (interactive()) {
 
@@ -248,6 +250,7 @@ playwith(xyplot(sunspots ~ yearmon(time(sunspots)),
                 xlim=c(1900, 1930), type="l"))
 
 ## multi-panel lattice plot
+## note label style can also be set with playwith.options()
 playwith(xyplot(Income ~ log(Population / Area) | state.region,
 	data = data.frame(state.x77), subscripts=TRUE),
 	label.style = gpar(col="red", fontfamily="HersheySans",

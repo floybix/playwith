@@ -476,6 +476,7 @@ playClickOrDrag <-
              shape=c("rect", "line"),
              scales=c("x", "y"))
 {
+    playDevSet(playState)
     foo <- handleClickOrDrag(playState$widgets$drawingArea,
                              x0=x0, y0=y0, shape=shape, scales=scales)
     if (is.null(foo)) return(NULL)

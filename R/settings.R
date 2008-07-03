@@ -3,8 +3,13 @@
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
-playApplicationTools <-
-    list("options",
+
+.defaultPlaywithOptions <- function()
+    list(
+         ## named arguments to playwith():
+         new = FALSE,
+         top.tools = list(
+         "options",
          "stayontop",
          "keep",
          "save",
@@ -16,10 +21,9 @@ playApplicationTools <-
          "theme",
          "---",
          "time.mode"
-         )
-
-playInteractionTools <-
-    list("expand",
+         ),
+         left.tools = list(
+         "expand",
          "identify",
          "annotate",
          "arrow",
@@ -37,14 +41,7 @@ playInteractionTools <-
          "zero",
          "---",
          "coords"
-         )
-
-.defaultPlaywithOptions <- function()
-    list(
-         ## named arguments to playwith():
-         new = FALSE,
-         top.tools = playApplicationTools,
-         left.tools = playInteractionTools,
+         ),
          bottom.tools = list(),
          right.tools = list(),
          width = 6,
@@ -57,7 +54,7 @@ playInteractionTools <-
          annotation.mode = "plot",
          clip.annotations = FALSE,
          label.style = NULL,
-         label.offset = unit(0.5, "char"),
+         label.offset = 0.5,
          arrow.style = NULL,
          arrow.arrow = quote(arrow(length=unit(0.15, "inches"))),
          ## global:

@@ -1,16 +1,13 @@
 \name{playTools}
 \alias{playTools}
-\alias{toolConstructors}
-\alias{playApplicationTools}
-\alias{playInteractionTools}
 \title{Built-in tools for playwith}
 \description{
   This document describes the built-in tools that can be placed in
   a \code{\link{playwith}} window. The constructor functions themselves
-  can be found in the named list \code{toolConstructors}.
+  can be found in the (un-exported) list \code{playwith:::toolConstructors}.
 }
 \details{
-	Tools in the set \code{playApplicationTools}, by default on the top toolbar:
+	Tools by default on the top toolbar:
 	\describe{
 		\item{\code{options}}{
 			set interface options, such as toolbar style and annotation mode.
@@ -49,7 +46,7 @@
 		}
 	}
 
-	Tools in the set \code{playInteractionTools}, by default on the left toolbar:
+	Tools by default on the left toolbar:
 	\describe{
 		\item{\code{expand}}{
 			choose only one lattice panel to show.
@@ -88,7 +85,7 @@
 		}
 	}
 
-	Tools in the set \code{playInteractionTools} that only work with 3D Lattice plots:
+	Tools on the left that only work with 3D Lattice plots:
 	\describe{
 		\item{\code{zoomin.3d}}{
 			zoom in.
@@ -104,7 +101,7 @@
 		}
 	}
 
-	Tools in the set \code{playInteractionTools} that only work with Lattice \code{splom}:
+	Tools on the left that only work with Lattice \code{splom}:
 	\describe{
 		\item{\code{brush}}{
 			brush data points, similar to \code{\link[lattice]{panel.brush.splom}}.
@@ -118,7 +115,7 @@
 if (interactive()) {
 
 toolSet <- c(list("stayontop", "keep", "save"),
-	playInteractionTools)
+	playwith.getOption("left.tools"))
 unlist(toolSet)
 
 playwith(plot(1:10), top=toolSet, left=NULL)

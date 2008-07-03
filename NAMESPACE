@@ -1,10 +1,11 @@
 
-import(graphics)
-import(gridBase)
-import(grDevices)
 import(RGtk2)
 import(cairoDevice)
 # note cairoDevice::asCairoDevice calls require(RGtk2)
+import(gridBase)
+import(graphics)
+import(grDevices)
+importFrom(utils, head, modifyList)
 
 # the main function
 export(
@@ -12,7 +13,7 @@ export(
 	autoplay
 )
 
-# options
+# settings
 export(
        playwith.options,
        playwith.getOption

@@ -1,4 +1,9 @@
 
+Changes in Version 0.9-1
+
+  o cairoDevice package in Depends rather than Imports, since
+    it sets options(device="Cairo"), which is bad if not attached!
+
 Changes in Version 0.9-0
 
   o user settings: playwith.options / playwith.getOption.

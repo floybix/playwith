@@ -208,7 +208,7 @@ id_click_handler <- function(widget, event, playState)
     if (space == "page") return(FALSE)
     xy <- deviceCoordsToSpace(playState, x, y, space=space)
     xy <- spaceCoordsToDataCoords(playState, xy)
-    data <- xyCoords(playState, space=foo$space)
+    data <- xyCoords(playState, space=space)
     if (length(data$x) == 0) return(FALSE)
     x <- xy$x
     y <- xy$y

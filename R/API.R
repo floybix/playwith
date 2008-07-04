@@ -591,9 +591,9 @@ handleClickOrDrag <-
     dc <- list(x=c(px0$x, px1$x), y=c(px0$y, px1$y))
     ## was it a click or drag? (click = no slower than 1/4 second)
     is.click <- (proc.time()[3] - init_time) <= 0.25
-    ## alternative criteria for click: moved no more than 3 pixels
+    ## alternative criteria for click: moved less than 10 pixels
     is.click <- is.click ||
-                ((abs(diff(dc$x)) <= 3) && (abs(diff(dc$y)) <= 3))
+                ((abs(diff(dc$x)) < 10) && (abs(diff(dc$y)) < 10))
     ndc <- list(x=dc$x / da.w, y=(da.h - dc$y) / da.h)
     list(dc=dc, ndc=ndc, is.click=is.click, modifiers=modifiers)
 }

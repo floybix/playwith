@@ -224,10 +224,8 @@ id_click_handler <- function(widget, event, playState)
     which <- which.min(pdists)
     lab <- playState$labels[which]
     da["tooltip-text"] <- lab
-    ## only in GTK >= 2.12
-    try(gtkTooltipTriggerTooltipQuery(gdkDisplayGetDefault()), silent=TRUE)
     ## try to force update
-    gdkWindowProcessAllUpdates()
+    da$window$processUpdates(FALSE)
     while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
     return(FALSE)
 }
@@ -237,8 +235,6 @@ id_unclick_handler <- function(widget, event, playState)
     if (!isTRUE(playState$plot.ready)) return(FALSE)
     da <- playState$widgets$drawingArea
     result <- try(da["tooltip-text"] <- NULL, silent=TRUE)
-    ## only in GTK >= 2.12
-    try(gtkTooltipTriggerTooltipQuery(gdkDisplayGetDefault()), silent=TRUE)
     ## try to force update
     gdkWindowProcessAllUpdates()
     while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)

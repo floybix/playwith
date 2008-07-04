@@ -49,11 +49,11 @@ playwith <-
     if (!missing(plot.call) && !missing(expr))
         stop("give only one of 'expr' and 'plot.call'")
     if (missing(plot.call) && missing(expr)) {
+        ## basic device mode
         expr <- quote({})
-        if (identical(getOption("device"), "playwith")) {
-            if (missing(title)) title <- "playwith (basic device mode)"
-            show.call <- FALSE
-        }
+        if (missing(title))
+            title <- "playwith (basic device mode)"
+        show.call <- FALSE
     }
     if (missing(plot.call)) plot.call <- substitute(expr)
     if (is.expression(plot.call)) {
@@ -433,9 +433,9 @@ playNewPlot <- function(playState)
                            horiz=FALSE)
     }
     ## find which component of the call takes arguments (xlim etc)
-    main.function <- playState$main.function
+    main.function <- playState$.args$main.function
     tmpCall <- playState$call
-    okCallPath <- function(tmpCall) {
+    okCallPath <- function(tmpCall, main.function) {
         tmpFun <- eval(tmpCall[[1]])
         if (!is.null(main.function)) {
             ok <- identical(tmpFun, main.function)
@@ -447,13 +447,21 @@ playNewPlot <- function(playState)
         if (length(tmpCall) > 1)
             for (i in seq(2, length(tmpCall)))
                 if (is.call(tmpCall[[i]])) {
-                    tmpPath <- okCallPath(tmpCall[[i]])
+                    tmpPath <- okCallPath(tmpCall[[i]], main.function)
                     if (isTRUE(tmpPath)) return(i)
                     if (!is.null(tmpPath)) return(c(i, tmpPath))
                 }
         return(NULL)
     }
-    main.call.index <- okCallPath(tmpCall)
+    main.call.index <- okCallPath(tmpCall, main.function)
+    if (is.null(main.function)) {
+        ## look for a call to "plot"
+        main.call.index.plot <- okCallPath(tmpCall, plot)
+        if (!is.null(main.call.index.plot)) {
+            ## found "plot" call
+            main.call.index <- main.call.index.plot
+        }
+    }
     if (isTRUE(main.call.index)) main.call.index <- NA ## top-level
     playState$main.call.index <- main.call.index
     ## check whether the called function accepts arguments

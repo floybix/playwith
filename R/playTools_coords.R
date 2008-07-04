@@ -11,8 +11,8 @@ toolConstructors$coords <- function(playState)
     coordsLabel$setMarkup("<tt>     </tt>")
     playState$widgets$coordsLabel <- coordsLabel
     ## add click event handler to plot -- always active
-    if (is.null(playState$widgets$plotClickEventSig)) {
-        playState$widgets$plotClickEventSig <-
+    if (is.null(playState$widgets$plotCoordsEventSig)) {
+        playState$widgets$plotCoordsEventSig <-
             gSignalConnect(playState$widgets$drawingArea,
                            "button-press-event", coords_click_handler, data=playState)
     }

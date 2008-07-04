@@ -235,6 +235,14 @@ playwith(expr,
 \examples{
 if (interactive()) {
 
+## scatterplot (base graphics)
+## identifying labels taken from rownames of data.
+## click and hold mouse button to see point labels.
+rownames(USArrests) <- state.name
+playwith(plot(Assault ~ UrbanPop, data=USArrests,
+  xlab="Percent urban population, 1973",
+  ylab="Assault arrests (per 100,000), 1973"))
+
 ## time series plot (base graphics)
 ## click and drag to zoom; right-click to zoomout
 tt <- time(treering)

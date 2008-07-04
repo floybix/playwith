@@ -640,13 +640,8 @@ xyData <- function(playState, space="plot")
         }
         return(foo)
     }
-    if (playState$is.ggplot) {
-        datarg <- callArg(playState, "data")
-        x <- callArg(playState, 1, data=datarg)
-        y <- callArg(playState, "y", data=datarg)
-        xy <- xy.coords_with_class(playState, x, y)
-        return(xy)
-    }
+    ## otherwise...
+    ## hard-coded exceptions
     callName <- deparseOneLine(mainCall(playState)[[1]])
     if (callName %in% c("qqnorm", "qqplot")) {
         ## these return plotted coordinates in a list
@@ -655,8 +650,14 @@ xyData <- function(playState, space="plot")
         foo <- eval(modCall, playState$env)
         return(foo)
     }
-    x <- callArg(playState, 1)
-    y <- callArg(playState, "y")
+    datarg <- callArg(playState, "data") ## may be NULL
+    if (is.null(datarg)) {
+        ## objects may also come from a with() block
+        if (identical(playState$call[[1]], as.symbol("with")))
+            datarg <- eval(playState$call[[2]], playState$env)
+    }
+    x <- callArg(playState, 1, data=datarg)
+    y <- callArg(playState, "y", data=datarg)
     xy.coords_with_class(playState, x, y)
 }
 

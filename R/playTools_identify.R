@@ -23,12 +23,25 @@ toolConstructors$identify <- function(playState)
     if (is.null(labels)) {
         if (is.null(playState$data.points)) {
             ## try to construct labels from the plot call
-            if (playState$is.lattice || playState$is.ggplot) {
+            if (length(mainCall > 1)) {
+                ## check for named "data" argument
                 tmp.data <- callArg(playState, "data")
                 if (!is.null(tmp.data))
                     labels <- makeLabels(tmp.data)
-                if (is.null(labels) && length(mainCall > 1)) {
-                    ## try to make labels from first argument
+                ## hard-coded exceptions...
+                callName <- deparseOneLine(mainCall(playState)[[1]])
+                if (callName %in% c("qqplot")) {
+                    tmp.x <- callArg(playState, 1)
+                    tmp.y <- callArg(playState, 2)
+                    x.lab <- makeLabels(tmp.x, orSeq=T)
+                    y.lab <- makeLabels(tmp.y, orSeq=T)
+                    labels <- paste(sep="",
+                                    x.lab[order(tmp.x)], ",",
+                                    y.lab[order(tmp.y)])
+                }
+                ## otherwise: default handler...
+                if (is.null(labels)) {
+                    ## look at first argument (tmp.data may be NULL)
                     tmp.x <- callArg(playState, 1, data=tmp.data)
                     if (inherits(tmp.x, "formula")) {
                         xObj <- if (length(tmp.x) == 2)
@@ -37,22 +50,9 @@ toolConstructors$identify <- function(playState)
                         while (is.call(xObj) && toString(xObj[[1]]) %in%
                                c("|", "*", "+"))
                             xObj <- xObj[[2]]
-                        xObj <- eval(xObj, tmp.data,
-                                     environment(tmp.x))
-                        labels <- makeLabels(xObj, orSeq=T)
-                    } else {
-                        labels <- makeLabels(tmp.x, orSeq=T)
-                    }
-                }
-            } else {
-                ## base graphics
-                if (length(mainCall > 1)) {
-                    tmp.x <- callArg(playState, 1)
-                    if (inherits(tmp.x, "formula")) {
-                        xObj <- if (length(tmp.x) == 2)
-                            tmp.x[[2]] else tmp.x[[3]]
-                        xObj <- eval(xObj, environment(tmp.x),
-                                     playState$env)
+                        xObj <- if (!is.null(tmp.data))
+                            eval(xObj, tmp.data, environment(tmp.x))
+                        else eval(xObj, environment(tmp.x), playState$env)
                         labels <- makeLabels(xObj, orSeq=T)
                     } else {
                         if (is.null(row.names(tmp.x)) &&
@@ -60,16 +60,6 @@ toolConstructors$identify <- function(playState)
                             all(c("x","y") %in% names(tmp.x)))
                             tmp.x <- tmp.x$x
                         labels <- makeLabels(tmp.x, orSeq=T)
-                    }
-                    ## exceptions...
-                    callName <- deparseOneLine(mainCall(playState)[[1]])
-                    if (callName %in% c("qqplot")) {
-                        tmp.y <- callArg(playState, 2)
-                        x.lab <- makeLabels(tmp.x, orSeq=T)
-                        y.lab <- makeLabels(tmp.y, orSeq=T)
-                        labels <- paste(sep="",
-                                        x.lab[order(tmp.x)], ",",
-                                        y.lab[order(tmp.y)])
                     }
                 }
             }
@@ -84,6 +74,17 @@ toolConstructors$identify <- function(playState)
         }
     }
     playState$labels <- labels
+    ## add click event handler to plot -- always active
+    if (is.null(playState$widgets$plotIDEventSig)) {
+        playState$widgets$plotIDEventSig <-
+            gSignalConnect(playState$widgets$drawingArea,
+                           "button-press-event", id_click_handler, data=playState)
+    }
+    if (is.null(playState$widgets$plotUnIDEventSig)) {
+        playState$widgets$plotUnIDEventSig <-
+            gSignalConnect(playState$widgets$drawingArea,
+                           "button-release-event", id_unclick_handler, data=playState)
+    }
     ## make the widget
     quickTool(playState,
               label = "Identify",
@@ -191,4 +192,55 @@ identify_postplot_action <- function(widget, playState)
         drawLabels(playState, which=idInfo$which, space=space,
                    pos=idInfo$pos)
     }
+}
+
+id_click_handler <- function(widget, event, playState)
+{
+    if (!isTRUE(playState$plot.ready)) return(FALSE)
+    ## coords handler already does this:
+    #if (playState$.need.reconfig) generateSpaces(playState)
+    da <- playState$widgets$drawingArea
+    result <- try(da["tooltip-text"] <- NULL, silent=TRUE)
+    if (inherits(result, "try-error")) return(FALSE)
+    x <- event$x
+    y <- event$y
+    space <- whichSpace(playState, x, y)
+    if (space == "page") return(FALSE)
+    xy <- deviceCoordsToSpace(playState, x, y, space=space)
+    xy <- spaceCoordsToDataCoords(playState, xy)
+    data <- xyCoords(playState, space=foo$space)
+    if (length(data$x) == 0) return(FALSE)
+    x <- xy$x
+    y <- xy$y
+    ppxy <- playDo(playState, list(
+                                   lx=convertX(unit(x, "native"), "points", TRUE),
+                                   ly=convertY(unit(y, "native"), "points", TRUE),
+                                   px=convertX(unit(data$x, "native"), "points", TRUE),
+                                   py=convertY(unit(data$y, "native"), "points", TRUE)),
+                   space=space)
+    pdists <- with(ppxy, sqrt((px - lx)^2 + (py - ly)^2))
+    if (min(pdists, na.rm = TRUE) > 18)
+        return(FALSE)
+    which <- which.min(pdists)
+    lab <- playState$labels[which]
+    da["tooltip-text"] <- lab
+    ## only in GTK >= 2.12
+    try(gtkTooltipTriggerTooltipQuery(gdkDisplayGetDefault()), silent=TRUE)
+    ## try to force update
+    gdkWindowProcessAllUpdates()
+    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
+    return(FALSE)
+}
+
+id_unclick_handler <- function(widget, event, playState)
+{
+    if (!isTRUE(playState$plot.ready)) return(FALSE)
+    da <- playState$widgets$drawingArea
+    result <- try(da["tooltip-text"] <- NULL, silent=TRUE)
+    ## only in GTK >= 2.12
+    try(gtkTooltipTriggerTooltipQuery(gdkDisplayGetDefault()), silent=TRUE)
+    ## try to force update
+    gdkWindowProcessAllUpdates()
+    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
+    return(FALSE)
 }

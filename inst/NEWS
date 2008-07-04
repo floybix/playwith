@@ -1,9 +1,16 @@
 
 Changes in Version 0.9-2
 
+  o tooltips show labels for points when click and hold mouse button.
+
   o improvements to basic device mode (options(device="playwith")):
     preview button in annotation tool now works; and there is an
     "undo annotation" tool, allowing last annotation to be removed.
+    (still some problems with mixing base and grid graphics).
+
+  o improved code for guessing xy coordinates and labels.
+
+  o improved code for guessing main function (assume "plot" if found).
 
 Changes in Version 0.9-1
 

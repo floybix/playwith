@@ -355,6 +355,7 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
     ## convert from log scale if necessary
     coords <- spaceCoordsToDataCoords(playState, coords)
     data <- xyCoords(playState, space=foo$space)
+
     if (length(data$x) == 0) {
         gmessage.error(paste("Sorry, can not guess the data point coordinates.",
                              "Please contact the maintainer with suggestions."))
@@ -365,11 +366,11 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
     if (foo$is.click) {
         x <- coords$x[1]
         y <- coords$y[1]
-        ppxy <- playDo(playState, list(
-                                       lx=convertX(unit(x, "native"), "points", TRUE),
-                                       ly=convertY(unit(y, "native"), "points", TRUE),
-                                       px=convertX(unit(data$x, "native"), "points", TRUE),
-                                       py=convertY(unit(data$y, "native"), "points", TRUE)),
+        ppxy <- playDo(playState,
+                       list(lx=convertX(unit(x, "native"), "points", TRUE),
+                            ly=convertY(unit(y, "native"), "points", TRUE),
+                            px=convertX(unit(data$x, "native"), "points", TRUE),
+                            py=convertY(unit(data$y, "native"), "points", TRUE)),
                        space=foo$space)
         pdists <- with(ppxy, sqrt((px - lx)^2 + (py - ly)^2))
         if (min(pdists, na.rm = TRUE) > 18)
@@ -377,8 +378,7 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
             which <- integer(0)
         else {
             which <- which.min(pdists)
-            pos <- with(ppxy, lattice:::getTextPosition(
-                                                        x = lx - px[which], y = ly - py[which]))
+            pos <- with(ppxy, lattice:::getTextPosition(x = lx - px[which], y = ly - py[which]))
         }
     }
     else {
@@ -388,6 +388,7 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
         which <- which(ok)
     }
     c(list(which=which, x=data$x[which], y=data$y[which],
+           subscripts=data$subscripts[which],
            pos=pos, is.click=foo$is.click),
       foo)
 }

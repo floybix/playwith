@@ -141,14 +141,21 @@ makeLabels <- function(x, orSeq=FALSE)
 drawLabels <- function(playState, which, space="plot", pos=1)
 {
     playDevSet(playState)
-    xy <- xyCoords(playState, space=space)
-    xy <- dataCoordsToSpaceCoords(playState, xy)
-    x <- xy$x[which]
-    y <- xy$y[which]
+    data <- xyCoords(playState, space=space)
+    if (length(data$x) == 0) return(FALSE)
+    if (length(data$y) == 0) return(FALSE)
+    data <- dataCoordsToSpaceCoords(playState, data)
+    x <- data$x[which]
+    y <- data$y[which]
+    if (playState$is.lattice && !is.null(data$subscripts)) {
+        subwhich <- findInterval(which, data$subscripts)
+        x <- data$x[subwhich]
+        y <- data$y[subwhich]
+    }
     labels <- playState$labels
-    if (playState$is.lattice && !is.null(xy$subscripts) &&
-        (length(labels) > length(xy$subscripts)))
-        labels <- labels[ xy$subscripts ]
+    #if (playState$is.lattice && !is.null(data$subscripts) &&
+    #    (length(labels) > length(data$subscripts)))
+    #    labels <- labels[ data$subscripts ]
     labels <- labels[which]
     style <- eval(playState$label.style)
     if (is.null(playState$label.style)) {
@@ -194,6 +201,8 @@ identify_handler <- function(widget, playState)
                               "Click or drag to identify points. Right-click to end.")
         if (is.null(foo)) break
         if (length(foo$which) == 0) next
+        if (!is.null(foo$subscripts))
+            foo$which <- foo$subscripts
         with(foo, {
             if (!is.click) pos <- 1
             ## store newly identified points in playState
@@ -235,13 +244,14 @@ id_click_handler <- function(widget, event, playState)
     y <- event$y
     space <- whichSpace(playState, x, y)
     if (space == "page") return(FALSE)
-    xy <- deviceCoordsToSpace(playState, x, y, space=space)
-    xy <- spaceCoordsToDataCoords(playState, xy)
     data <- xyCoords(playState, space=space)
     if (length(data$x) == 0) return(FALSE)
     if (length(data$y) == 0) return(FALSE)
-    x <- xy$x
-    y <- xy$y
+    click.xy <- deviceCoordsToSpace(playState, x, y, space=space)
+    ## convert from log scale if necessary
+    click.xy <- spaceCoordsToDataCoords(playState, click.xy)
+    x <- click.xy$x
+    y <- click.xy$y
     ppxy <- playDo(playState,
                    list(lx=convertX(unit(x, "native"), "points", TRUE),
                         ly=convertY(unit(y, "native"), "points", TRUE),
@@ -249,13 +259,18 @@ id_click_handler <- function(widget, event, playState)
                         py=convertY(unit(data$y, "native"), "points", TRUE)),
                    space=space)
     pdists <- with(ppxy, sqrt((px - lx)^2 + (py - ly)^2))
-    if (min(pdists, na.rm = TRUE) > 18)
+    if (min(pdists, na.rm = TRUE) > 30) ## needs to be quite tolerant -- bugs lurking?
         return(FALSE)
     which <- which.min(pdists)
-    lab <- playState$labels[which]
+    labels <- playState$labels
+    if (playState$is.lattice && !is.null(data$subscripts) &&
+        (length(labels) > length(data$subscripts)))
+        labels <- labels[ data$subscripts ]
+    lab <- labels[which]
     da["tooltip-text"] <- lab
     ## try to force update
     da$window$processUpdates(FALSE)
+    da$window$invalidateRect(invalidate.children=FALSE)
     while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
     return(FALSE)
 }

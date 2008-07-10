@@ -5,6 +5,12 @@ Changes in Version 0.9-5
 
   o reorderByFreq()
 
+  o fix click-and-hold identify, to account for lattice subscripts.
+
+  o playGetIDs() now returns subscripts into original data from
+    multi-panel lattice plots (was indexing data in each panel).
+    (And the internal representation is now as lattice subscripts).
+
 Changes in Version 0.9-4
 
   o latticist!

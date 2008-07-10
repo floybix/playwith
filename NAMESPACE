@@ -12,6 +12,12 @@ export(
 	autoplay
 )
 
+# latticist
+export(
+       latticist,
+       marginals,
+       reorderByFreq)
+
 # settings
 export(
        playwith.options,

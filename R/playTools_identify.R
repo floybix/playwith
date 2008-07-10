@@ -13,15 +13,38 @@ toolConstructors$identify <- function(playState)
     }
     if (is.null(playState$data.points)) {
         if (playState$accepts.arguments == FALSE) return(NA)
-        ## does not currently work with "splom" or 3D plots (TODO)
         callName <- deparseOneLine(mainCall(playState)[[1]])
-        if (callName %in% c("splom", "cloud", "wireframe"))
-            return(NA)
+        ## detect plots that this will not work with
+        ## TODO: check that xyData() has x and y coords!
+        ## lattice package:
+        if (callName %in%
+            c("splom", "cloud", "wireframe",
+              "contourplot", "levelplot",
+              "histogram", "densityplot", "barchart")) return(NA)
+        ## what about parellel?
+        ## from graphics package:
+        if (callName %in%
+            c("hist", "barplot", "spineplot", "mosaic",
+              "assocplot", "fourfoldplot",
+              "coplot", "image", "contour", "persp",
+              "pie", "pairs")) return(NA)
+
     }
     mainCall <- mainCall(playState)
     labels <- playState$.args$labels
     if (is.null(labels)) {
         if (is.null(playState$data.points)) {
+            ## try to construct labels from the plot call
+
+
+
+
+
+
+
+
+
+
             ## try to construct labels from the plot call
             if (length(mainCall > 1)) {
                 ## check for named "data" argument
@@ -44,6 +67,11 @@ toolConstructors$identify <- function(playState)
                     ## look at first argument (tmp.data may be NULL)
                     tmp.x <- callArg(playState, 1, data=tmp.data)
                     if (inherits(tmp.x, "formula")) {
+                        ## if 1st arg is formula, 2nd is `data`
+                        if (is.null(tmp.data) &&
+                              (is.null(names(mainCall)) ||
+                               identical(names(mainCall)[[3]], "")))
+                            tmp.data <- callArg(playState, 2)
                         xObj <- if (length(tmp.x) == 2)
                             tmp.x[[2]] else tmp.x[[3]]
                         ## get left-most term in formula
@@ -51,8 +79,9 @@ toolConstructors$identify <- function(playState)
                                c("|", "*", "+"))
                             xObj <- xObj[[2]]
                         xObj <- if (!is.null(tmp.data))
-                            eval(xObj, tmp.data, environment(tmp.x))
+                            eval(xObj, tmp.data, playState$env) #environment(tmp.x))
                         else eval(xObj, environment(tmp.x), playState$env)
+                        ## TODO: make playState$env inherit from .GlobalEnv?
                         labels <- makeLabels(xObj, orSeq=T)
                     } else {
                         if (is.null(row.names(tmp.x)) &&
@@ -210,13 +239,14 @@ id_click_handler <- function(widget, event, playState)
     xy <- spaceCoordsToDataCoords(playState, xy)
     data <- xyCoords(playState, space=space)
     if (length(data$x) == 0) return(FALSE)
+    if (length(data$y) == 0) return(FALSE)
     x <- xy$x
     y <- xy$y
-    ppxy <- playDo(playState, list(
-                                   lx=convertX(unit(x, "native"), "points", TRUE),
-                                   ly=convertY(unit(y, "native"), "points", TRUE),
-                                   px=convertX(unit(data$x, "native"), "points", TRUE),
-                                   py=convertY(unit(data$y, "native"), "points", TRUE)),
+    ppxy <- playDo(playState,
+                   list(lx=convertX(unit(x, "native"), "points", TRUE),
+                        ly=convertY(unit(y, "native"), "points", TRUE),
+                        px=convertX(unit(data$x, "native"), "points", TRUE),
+                        py=convertY(unit(data$y, "native"), "points", TRUE)),
                    space=space)
     pdists <- with(ppxy, sqrt((px - lx)^2 + (py - ly)^2))
     if (min(pdists, na.rm = TRUE) > 18)

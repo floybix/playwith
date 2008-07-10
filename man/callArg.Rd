@@ -8,7 +8,7 @@
   Part of the \code{\link{playwith}} Application Programming Interface.
 }
 \usage{
-callArg(playState, arg, expr, data = NULL)
+callArg(playState, arg, expr, eval = TRUE, data = NULL)
 callArg(playState, arg, expr) <- value
 
 mainCall(playState)
@@ -23,6 +23,9 @@ mainCall(playState) <- value
   \item{expr}{ an alternative way to specify \code{arg}: as a raw
     expression. This is evaluated in the calling environment, so can
     refer to local variables (e.g. \code{data[[myname]]}). }
+  \item{eval}{ whether to evaluate the argument before returning it.
+    Otherwise, just return the quoted expression that appears in the
+    call. }
   \item{data}{ a list or environment in which to evaluate the argument.
     Typically this will be the "data" argument to lattice or qplot functions. }
   \item{value}{ the value to assign. }

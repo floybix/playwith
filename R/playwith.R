@@ -81,11 +81,6 @@ playwith <-
     if (!is.null(playState)) {
         stopifnot(inherits(playState, "playState"))
         if (is.null(title)) title <- playState$title
-    } else {
-        ID <- title
-        if (!is.null(ID) && exists(ID, StateEnv, inherits=FALSE)) {
-            playState <- StateEnv[[ID]]
-        }
     }
     if (is.null(playState) || isTRUE(playState$keep)) {
         playState <- new.env()

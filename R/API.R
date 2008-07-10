@@ -57,7 +57,7 @@ cleanupStateEnv <- function()
     }
 }
 
-callArg <- function(playState, arg, expr, data = NULL)
+callArg <- function(playState, arg, expr, eval = TRUE, data = NULL)
 {
     if (missing(expr) == missing(arg)) stop("give 'arg' or 'expr'")
     if (!missing(expr)) arg <- substitute(expr)
@@ -69,6 +69,7 @@ callArg <- function(playState, arg, expr, data = NULL)
     else paste("$", deparseOneLine(arg), sep="")
     mainCall <- mainCall(playState)
     zap <- eval(parse(text=paste("mainCall", getx, sep="")))
+    if (eval == FALSE) return(zap)
     if (mode(zap) == "expression") return(zap)
     if (is.null(data))
         eval(zap, envir=playState$env, enclos=parent.frame())
@@ -482,12 +483,12 @@ playClickOrDrag <-
     if (is.null(foo)) return(NULL)
     dc <- foo$dc
     coords <- NULL
-    space <- whichSpace(playState, dc$x[1], dc$y[1])
+    ## work out which space the drag was in: try the mid-point first
+    space <- whichSpace(playState, mean(dc$x), mean(dc$y))
+    ## otherwise, try start of drag
+    if (space == "page") space <- whichSpace(playState, dc$x[1], dc$y[1])
+    ## otherwise, try end of drag
     if (space == "page") space <- whichSpace(playState, dc$x[2], dc$y[2])
-    if (space == "page") {
-        ## corners of drag not inside a defined space: try the mid-point
-        space <- whichSpace(playState, mean(dc$x), mean(dc$y))
-    }
     if (space != "page") {
         xy0 <- deviceCoordsToSpace(playState, dc$x[1], dc$y[1], space=space)
         xy1 <- deviceCoordsToSpace(playState, dc$x[2], dc$y[2], space=space)
@@ -650,25 +651,39 @@ xyData <- function(playState, space="plot")
         foo <- eval(modCall, playState$env)
         return(foo)
     }
-    datarg <- callArg(playState, "data") ## may be NULL
-    if (is.null(datarg)) {
+    ## check for named "data" argument
+    tmp.data <- callArg(playState, "data") ## may be NULL
+    ## look at first argument (tmp.data may be NULL)
+    tmp.x <- callArg(playState, 1, data=tmp.data)
+    if (inherits(tmp.x, "formula")) {
+        ## if 1st arg is formula, 2nd is `data`
+        if (is.null(tmp.data) && (length(mainCall) > 2) &&
+            (is.null(names(mainCall)) ||
+             identical(names(mainCall)[[3]], "")))
+            tmp.data <- callArg(playState, 2)
+    }
+    if (is.null(tmp.data)) {
         ## objects may also come from a with() block
         if (identical(playState$call[[1]], as.symbol("with")))
-            datarg <- eval(playState$call[[2]], playState$env)
+            tmp.data <- eval(playState$call[[2]], playState$env)
     }
-    x <- callArg(playState, 1, data=datarg)
-    y <- callArg(playState, "y", data=datarg)
-    xy.coords_with_class(playState, x, y)
+    tmp.y <- callArg(playState, "y", data=tmp.data)
+    xy.coords_with_class(playState, tmp.x, tmp.y, data=tmp.data)
 }
 
 ## adapted from grDevices::xy.coords
-xy.coords_with_class <- function(playState, x, y=NULL, recycle=TRUE)
+xy.coords_with_class <- function(playState, x, y=NULL, recycle=TRUE, data=NULL)
 {
     if (is.null(y)) {
         if (is.language(x)) {
             if (inherits(x, "formula") && length(x) == 3) {
-                y <- eval(x[[2]], environment(x), playState$env)
-                x <- eval(x[[3]], environment(x), playState$env)
+                if (!is.null(data)) {
+                    y <- eval(x[[2]], data, playState$env)
+                    x <- eval(x[[3]], data, playState$env)
+                } else {
+                    y <- eval(x[[2]], environment(x), playState$env)
+                    x <- eval(x[[3]], environment(x), playState$env)
+                }
             }
             else stop("invalid first argument")
         }

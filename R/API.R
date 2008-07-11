@@ -113,6 +113,44 @@ mainCall <- function(playState) {
     playState
 }
 
+updateMainCall <- function(playState) {
+    ## find which component of the call takes arguments (xlim etc)
+    main.function <- playState$.args$main.function
+    tmpCall <- playState$call
+    okCallPath <- function(tmpCall, main.function) {
+        tmpFun <- eval(tmpCall[[1]])
+        if (!is.null(main.function)) {
+            ok <- identical(tmpFun, main.function)
+        } else {
+            ok <- any(c("xlim", "...") %in% names(formals(tmpFun)))
+            ok <- ok && !identical(tmpFun, with) ## skip `with` function
+        }
+        if (ok) return(TRUE)
+        if (length(tmpCall) > 1)
+            for (i in seq(2, length(tmpCall)))
+                if (is.call(tmpCall[[i]])) {
+                    tmpPath <- okCallPath(tmpCall[[i]], main.function)
+                    if (isTRUE(tmpPath)) return(i)
+                    if (!is.null(tmpPath)) return(c(i, tmpPath))
+                }
+        return(NULL)
+    }
+    main.call.index <- okCallPath(tmpCall, main.function)
+    if (is.null(main.function)) {
+        ## look for a call to "plot"
+        main.call.index.plot <- okCallPath(tmpCall, plot)
+        if (!is.null(main.call.index.plot)) {
+            ## found "plot" call
+            main.call.index <- main.call.index.plot
+        }
+    }
+    if (isTRUE(main.call.index)) main.call.index <- NA ## top-level
+    playState$main.call.index <- main.call.index
+    ## check whether the called function accepts arguments
+    playState$accepts.arguments <- !is.null(playState$main.call.index)
+        #((typeof(callFun) == "closure") && !is.null(formals(callFun)))
+}
+
 playFreezeGUI <- function(playState)
     playSetFreezeGUI(playState, TRUE)
 

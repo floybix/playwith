@@ -3,6 +3,7 @@
 \alias{callArg<-}
 \alias{mainCall}
 \alias{mainCall<-}
+\alias{updateMainCall}
 \title{Work with plot call arguments}
 \description{
   Part of the \code{\link{playwith}} Application Programming Interface.
@@ -13,6 +14,8 @@ callArg(playState, arg, expr) <- value
 
 mainCall(playState)
 mainCall(playState) <- value
+
+updateMainCall(playState)
 }
 \arguments{
   \item{playState}{ a \code{\link{playState}} object representing the plot, window and device. }

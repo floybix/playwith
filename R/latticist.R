@@ -3,8 +3,6 @@
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
-## audit <- read.csv(system.file("csv", "audit.csv", package = "rattle"))
-## latticist(audit)
 
 latticist <-
     function(dat, plot.call = quote(marginals(dat)), ...)
@@ -143,13 +141,17 @@ marginals <-
 
 makeLatticistTool <- function(dat)
 {
-    is.call.to <- function(x, name)
-        is.call(x) && identical(x[[1]], as.symbol(name))
     isInteraction <- function(x)
         is.call.to(x, "*") || is.call.to(x, "+")
+    isDiscretized <- function(x) {
+        is.call.to(x, "equal.count") ||
+        is.call.to(x, "cut") ||
+        is.call.to(x, "cutEq")
+    }
     isUnordered <- function(x, val) {
         ## need this because is.ordered(cut()) == FALSE!
         if (is.call.to(x, "cut")) return(FALSE)
+        if (is.call.to(x, "cut2")) return(FALSE)
         ## assumes is.categorical(val)
         !is.ordered(val) && !is.shingle(val)
     }
@@ -163,15 +165,10 @@ makeLatticistTool <- function(dat)
         callName <- toString(callArg(playState, 0, eval=FALSE))
         arg1 <- callArg(playState, 1, eval=FALSE)
         groups <- callArg(playState, "groups", eval=FALSE)
-        if (isTRUE(groups) || identical(groups, FALSE))
-            groups <- NULL
         subset <- callArg(playState, "subset", eval=FALSE)
 
         LOTS <- 800
         HEAPS <- 5000
-
-        discFun <- "cut"    # or "equal.count"
-        ## note: xtabs can't handle equal.count(?)
 
         ## parse variables from existing plot call
         xvar <- yvar <- c1 <- c2 <- NULL
@@ -238,11 +235,14 @@ makeLatticistTool <- function(dat)
 
         }
 
+        if (isTRUE(groups) || identical(groups, FALSE))
+            groups <- NULL
+
         ## strip discretization code for display
         nLevels <- 4 ## default
         nlevset <- FALSE
         stripDisc <- function(x, env=parent.frame()) {
-            if (is.call.to(x, discFun) &&
+            if (isDiscretized(x) &&
                 is.numeric(n <- x[[3]]) &&
                 (!nlevset || (n == nLevels)))
             {
@@ -300,6 +300,8 @@ makeLatticistTool <- function(dat)
         ## TODO: preload is.na() of vars with missing values
         ## TODO: split into numeric and categorical in lists
 
+        ## TODO: store user variables in playState
+
         ## subset
         subsetopts <- playState$latticist$subsets
         if (is.null(subsetopts)) {
@@ -325,11 +327,11 @@ makeLatticistTool <- function(dat)
         aspectVal <- callArg(playState, "aspect")
         aspectopts <- c('"fill"', '"iso"', '"xy"',
                         "0.5", "1", "2")
-        if (!is.null(aspectVal))
+        if (!is.null(aspectVal)) {
+            aspectVal <- deparseOneLine(aspectVal)
             aspectopts <-
-                unique(c(aspectopts, deparseOneLine(aspectVal)))
-                                        #playState$trellis$aspect.ratio
-                                        #playState$trellis$aspect.fill
+                unique(c(aspectopts, aspectVal))
+        }
         ## scales
         scalesopts <- c("x same, y same",
                         "x same, y free",
@@ -415,16 +417,36 @@ makeLatticistTool <- function(dat)
 
             ## discretize
             nlev <- nLevelsW[["value"]]
-            do.xdisc <- (is.numeric(xVal) && xdiscW[["active"]])
-            do.ydisc <- (is.numeric(yVal) && ydiscW[["active"]])
-            do.c1disc <- (is.numeric(c1Val))
-            do.c2disc <- (is.numeric(c2Val))
-            do.gdisc <- (is.numeric(groupsVal))
-            if (do.xdisc) xvar <- call(discFun, xvar, nlev)
-            if (do.ydisc) yvar <- call(discFun, yvar, nlev)
-            if (do.c1disc) c1 <- call(discFun, c1, nlev)
-            if (do.c2disc) c2 <- call(discFun, c2, nlev)
-            if (do.gdisc) groups <- call(discFun, groups, nlev)
+            do.xdisc <- (!is.null(xvar) && !is.categorical(xVal) && xdiscW[["active"]])
+            do.ydisc <- (!is.null(yvar) && !is.categorical(yVal) && ydiscW[["active"]])
+            do.c1disc <- (!is.null(c1) && !is.categorical(c1Val))
+            do.c2disc <- (!is.null(c2) && !is.categorical(c2Val))
+            do.gdisc <- (!is.null(groups) && !is.categorical(groupsVal))
+
+            ## if there are any numerical variables on plot
+            ## we can use shingles (otherwise plotting a "table" method)
+            anyNumerics <- ((!is.null(xvar) && !is.categorical(xVal) && !do.xdisc) ||
+                            (!is.null(yvar) && !is.categorical(yVal) && !do.ydisc))
+            if (anyNumerics) {
+                ## use shingles where appropriate
+                if (do.xdisc) xvar <- call("equal.count", xvar, nlev) ## or cut?
+                if (do.ydisc) yvar <- call("equal.count", yvar, nlev) ## or cut?
+                if (do.c1disc) c1 <- call("equal.count", c1, nlev)
+                if (do.c2disc) c2 <- call("equal.count", c2, nlev)
+            } else {
+                ## table method, need factors not shingles
+                if (do.xdisc) {
+                    if (is.null(yvar)) xvar <- call("cut", xvar, nlev)
+                    else xvar <- call("cutEq", xvar, nlev)
+                }
+                if (do.ydisc) {
+                    if (is.null(xvar)) yvar <- call("cut", yvar, nlev)
+                    else yvar <- call("cutEq", yvar, nlev)
+                }
+                if (do.c1disc) c1 <- call("cutEq", c1, nlev)
+                if (do.c2disc) c2 <- call("cutEq", c2, nlev)
+            }
+            if (do.gdisc) groups <- call("cutEq", groups, nlev)
 
             ## re-evaluate data if changed
             if (do.xdisc) xVal <- eval(xvar, dat)
@@ -463,21 +485,38 @@ makeLatticistTool <- function(dat)
             ## combined conditioning term (may be NULL)
             cond <- c1
             if (!is.null(c2)) cond <- call("*", c1, c2)
+            ncond <- 1
+            tooManyPanels <- FALSE
+            if (!is.null(cond)) {
+                ncond <- nlevels(c1Val)
+                if (!is.null(c2Val)) ncond <- ncond * nlevels(c2Val)
+                if (ncond > 16) tooManyPanels <- TRUE
+            }
 
             ## create plot call
             oldCall <- mainCall(playState)
-            mainCall(playState) <- quote(xyplot(0 ~ 0, data=dat))
-            callArg(playState, "subset") <- subset #if (!isTRUE(subset)) subset ## interferes with "sub"!
+            playState$call <- quote(xyplot(0 ~ 0, data=dat))
+            ## useOuterStrips unless we are going to use layout=...
+            if (!is.null(c1) && !is.null(c2) && !tooManyPanels) {
+                playState$call <-
+                    quote(useOuterStrips(xyplot(0 ~ 0, data=dat)))
+            }
+            updateMainCall(playState)
+            callArg(playState, "subset") <- subset
+                                        #if (!isTRUE(subset)) subset ## interferes with "sub"!
             callArg(playState, "groups") <- groups
             callArg(playState, "subscripts") <- TRUE
+            if (tooManyPanels)
+                callArg(playState, "layout") <-
+                    c(0, min(16, ceiling(ncond / 2)))
 
-            ## TODO: layout, if too many panels
             ## TODO: set up titles
 
             ## choose plot type and formula
             if (is.null(xVal) && is.null(yVal)) {
                 ## NO VARIABLES CHOSEN
-                mainCall(playState) <- quote(marginals(dat))
+                playState$call <- quote(marginals(dat))
+                updateMainCall(playState)
                 callArg(playState, "subset") <- subset
                                         #if (!isTRUE(subset)) subset else NULL
 
@@ -507,7 +546,7 @@ makeLatticistTool <- function(dat)
                         callArg(playState, 1) <-
                             call("xtabs", xform, quote(dat), subset=subset)
                         if (!is.null(groups))
-                            callArg(playState, "type") <- "o"
+                            callArg(playState, "type") <- c("p", "l")
                         else
                             callArg(playState, "type") <- c("p", "h")
                         callArg(playState, "origin") <- 0
@@ -516,7 +555,7 @@ makeLatticistTool <- function(dat)
                         ## (just for variety? & dotplot.table has no horizontal=FALSE)
                         ## BUT if x is a discretized numeric, use histogram
                         if (do.xdisc) {
-                            xvar <- xvar[[2]]
+                            xvar <- xvar[[2]] ## undo disc function
                             callArg(playState, 0) <- quote(histogram)
                             if (!is.null(cond))
                                 callArg(playState, 1) <- call("~", call("|", xvar, cond))
@@ -701,8 +740,11 @@ makeLatticistTool <- function(dat)
                                 (!is.null(yvar) && !is.categorical(yVal)))
                 ## style settings for points
                 if (anyNumerics) {
+                    if (ncond >= 4) {
+                        callArg(playState, "cex") <- 0.5
+                    }
                     if (nPoints > LOTS) {
-                        alpha <- if (nPoints > HEAPS) 0.05 else 0.25
+                        alpha <- if (nPoints > HEAPS) 0.05 else 0.3
                         if (!is.null(groups))
                             callArg(playState, quote(par.settings$superpose.symbol$alpha)) <- alpha
                         else {
@@ -710,9 +752,11 @@ makeLatticistTool <- function(dat)
                         }
                     }
                     if (nPoints > HEAPS) {
-                        ## TODO: if qqmath leave pch alone
-                        callArg(playState, "pch") <- "." ## 0 ## empty square
-                        callArg(playState, "cex") <- 2
+                        if (!is.call.to(mainCall(playState), "qqmath") &&
+                            !is.call.to(mainCall(playState), "densityplot")) {
+                            callArg(playState, "pch") <- "." ## or 0 ## empty square
+                            callArg(playState, "cex") <- 2
+                        }
                     }
                 }
                 ## add a grid if there are multiple panels
@@ -872,6 +916,9 @@ makeLatticistTool <- function(dat)
             if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
             selectScales <- c(if (!is.null(xvar)) "x",
                               if (!is.null(yvar)) "y")
+            if (is.call.to(mainCall(playState), "barchart") &&
+                !is.null(xvar) && !is.null(yvar))
+                return(FALSE)
             foo <- playRectInput(playState, scales=selectScales,
                                  prompt="Click and drag to define a data subset")
             if (is.null(foo)) return(FALSE)
@@ -905,7 +952,6 @@ makeLatticistTool <- function(dat)
                 newlevels <- y.limits[seq(limfrom, limto)]
                 ysub <- call("%in%", yvar, newlevels)
             }
-            ## TODO: if is.categorical(xVar) && is.categorical(yVar)
             subset <- call("&", xsub, ysub)
             if (is.null(yvar)) subset <- xsub
             if (is.null(xvar)) subset <- ysub
@@ -1196,6 +1242,9 @@ makeLatticistTool <- function(dat)
     }
 }
 
+is.call.to <- function(x, name)
+    is.call(x) && identical(x[[1]], as.symbol(name))
+
 is.categorical <- function(x)
     is.factor(x) || is.shingle(x) || is.character(x) || is.logical(x)
 
@@ -1207,3 +1256,14 @@ levelsOK <- function(x) {
 reorderByFreq <- function(x) {
     reorder(x, x, function(z) -length(z))
 }
+
+cutEq <- function(x, n, type=2, dig.lab=4, ...)
+{
+    stopifnot(length(n) == 1)
+    br <- quantile(x, seq(0, 1, length=n+1), type=type,
+                   na.rm=TRUE, names=FALSE)
+    br[length(br)] <- max(x, na.rm=TRUE)
+    cut(x, br, dig.lab=dig.lab, right=FALSE,
+        include.lowest=TRUE, ordered_result=TRUE)
+}
+

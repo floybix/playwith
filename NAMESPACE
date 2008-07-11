@@ -16,7 +16,8 @@ export(
 export(
        latticist,
        marginals,
-       reorderByFreq)
+       reorderByFreq,
+       cutEq)
 
 # settings
 export(
@@ -39,6 +40,7 @@ export(
        "callArg<-",
        mainCall,
        "mainCall<-",
+       updateMainCall,
        playDo,
        playPointInput,
        playLineInput,

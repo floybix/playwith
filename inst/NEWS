@@ -1,4 +1,10 @@
 
+Changes in Version 0.9-6
+
+  o use of equal.count and cutEq in latticist.
+
+  o use of useOuterStrips and layout in latticist.
+
 Changes in Version 0.9-5
 
   o marginals()

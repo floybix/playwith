@@ -1,4 +1,16 @@
 
+Changes in Version 0.9-7
+
+  o reorder factor levels only once in latticist(), which removes
+    lots of ugly reorderByFreq() from the plot calls.
+
+  o use shingle levels for lables in strips and on axes.
+
+  o latticist gives more error messages in dialog boxes.
+
+  o latticist passes labels argument to playwith(), which stops it
+    from trying to guess labels from the plot call each time.
+
 Changes in Version 0.9-6
 
   o use of equal.count and cutEq in latticist.

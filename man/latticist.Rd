@@ -5,11 +5,23 @@
   Interactively visualise a data set using \code{\link[lattice]{Lattice}} displays.
 }
 \usage{
-latticist(dat, plot.call = quote(marginals(dat)), ...)
+latticist(dat,
+          reorder.levels = TRUE,
+          plot.call = quote(marginals(dat)),
+          ...)
 }
 \arguments{
   \item{dat}{ a data frame containing numeric and/or categorical variables. }
-  \item{plot.call}{ call describing the initial plot display. }
+  \item{reorder.levels}{ if \code{TRUE}, change the ordering of levels of factor
+  variables so they are in order of frequency. Note that this does not
+  change the data, only its internal representation: see
+  \code{\link{reorder}}. This is recommended for effective graphic
+  displays. Factor variables of class \code{ordered} are not reordered.
+  Therefore you should ensure that any variables whose levels have an inherent
+  order are of class \code{ordered}: see \code{\link{as.ordered}}.
+  Warning: the result of \code{\link{cut}} is by default NOT \code{ordered}!
+  }
+  \item{plot.call}{ call defining the initial plot display. }
   \item{\dots}{ further arguments passed to \code{\link{playwith}}. }
 }
 \details{

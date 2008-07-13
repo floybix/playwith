@@ -5,15 +5,30 @@
 
 
 latticist <-
-    function(dat, plot.call = quote(marginals(dat)), ...)
+    function(dat,
+             reorder.levels = TRUE,
+             plot.call = quote(marginals(dat)),
+             ...)
 {
     title <- paste("Latticist:",
                    toString(deparse(substitute(dat)), width=24))
 
     dat <- as.data.frame(dat)
 
+    ## TODO: convert integers/numerics with few unique()s to factors?
+
+    if (reorder.levels) {
+        iscat <- sapply(dat, is.categorical)
+        for (nm in names(dat)[iscat]) {
+            val <- dat[[nm]]
+            if (!is.ordered(val) && !is.shingle(val))
+                dat[[nm]] <- reorderByFreq(val)
+        }
+    }
+
     playwith(plot.call = plot.call,
              title=title, ...,
+             labels=rownames(dat),
              bottom.tools=list(latticist=makeLatticistTool(dat)))
     invisible(playDevCur())
 }
@@ -22,16 +37,17 @@ marginals <-
     function(data,
              reorder = TRUE,
              subset = TRUE,
-             ref = TRUE,
-             levels.fos = NULL,
              plot.points = FALSE,
+             ref = TRUE,
+             origin = 0,
+             levels.fos = NULL,
              xlab = NULL, ylab = NULL,
              cex = 0.5,
              ...,
              as.table = TRUE,
-             subscripts = TRUE,
-             default.scales = list(relation="free", draw=FALSE))
+             subscripts = TRUE)
 {
+    default.scales <- list(relation="free", draw=FALSE)
     data <- as.data.frame(data)
     nvar <- ncol(data)
     factors <- sapply(data, is.categorical)
@@ -53,11 +69,12 @@ marginals <-
                     ...,
                     type=c("p","h"), cex=cex, ref=ref,
                     levels.fos = levels.fos,
-                    prepanel = function(...) {
-                        result <- prepanel.default.xyplot(...)
+                    origin = origin,
+                    #prepanel = function(...) {
+                    #    result <- prepanel.default.xyplot(...)
                         ## ensure zero is included on scale
-                        list(ylim = range(c(result$ylim, 0)))
-                    },
+                    #    list(ylim = range(c(result$ylim, 0)))
+                    #},
                     as.table = as.table,
                     default.scales = default.scales,
                     xlab=xlab, ylab=ylab)
@@ -92,7 +109,7 @@ marginals <-
     ## prepanel and panel functions.
     ## It would be nicer to actually merge the trellis objects
     ## (i.e. merge $panel.args, $x.limits, $y.limits, etc)
-    ## -- would still need custom panel and prepanel functions
+    ## -- would still need custom panel function
     nfactors <- sum(factors)
     pktnames <- c(dimnames(factobj)$which,
               dimnames(numobj)$which)
@@ -156,6 +173,11 @@ makeLatticistTool <- function(dat)
         !is.ordered(val) && !is.shingle(val)
     }
 
+    LOTS <- 800
+    HEAPS <- 5000
+    MAXPANELS <- 16
+    INIT.NLEVELS <- 5
+
     function(playState)
     {
         ## create list to store some settings
@@ -166,9 +188,6 @@ makeLatticistTool <- function(dat)
         arg1 <- callArg(playState, 1, eval=FALSE)
         groups <- callArg(playState, "groups", eval=FALSE)
         subset <- callArg(playState, "subset", eval=FALSE)
-
-        LOTS <- 800
-        HEAPS <- 5000
 
         ## parse variables from existing plot call
         xvar <- yvar <- c1 <- c2 <- NULL
@@ -239,7 +258,7 @@ makeLatticistTool <- function(dat)
             groups <- NULL
 
         ## strip discretization code for display
-        nLevels <- 4 ## default
+        nLevels <- INIT.NLEVELS
         nlevset <- FALSE
         stripDisc <- function(x, env=parent.frame()) {
             if (isDiscretized(x) &&
@@ -358,11 +377,26 @@ makeLatticistTool <- function(dat)
 
 
         tryParse <- function(x) {
+            itemName <- deparseOneLine(substitute(x))
             if (x %in% NULLNAMES) x <- "NULL"
             result <- tryCatch(parse(text=x)[[1]], error=function(e)e)
             ## check whether there was a syntax error
             if (inherits(result, "error")) {
-                gmessage.error(conditionMessage(result))
+                msg <- paste("Error parsing ", itemName, ": ",
+                             conditionMessage(result), sep="")
+                gmessage.error(msg)
+                stop(result)
+            }
+            result
+        }
+        tryEval <- function(x, ...) {
+            itemName <- deparseOneLine(substitute(x))
+            result <- tryCatch(eval(x, ...), error=function(e)e)
+            ## check whether there was a syntax error
+            if (inherits(result, "error")) {
+                msg <- paste("Error evaluating ", itemName, ": ",
+                             conditionMessage(result), sep="")
+                gmessage.error(msg)
                 stop(result)
             }
             result
@@ -399,12 +433,12 @@ makeLatticistTool <- function(dat)
             if (is.null(subset)) subset <- TRUE
 
             ## evaluate to check types
-            xVal <- eval(xvar, dat)
-            yVal <- eval(yvar, dat)
-            c1Val <- eval(c1, dat)
-            c2Val <- eval(c2, dat)
-            groupsVal <- eval(groups, dat)
-            subsetVal <- eval(subset, dat)
+            xVal <- tryEval(xvar, dat)
+            yVal <- tryEval(yvar, dat)
+            c1Val <- tryEval(c1, dat)
+            c2Val <- tryEval(c2, dat)
+            groupsVal <- tryEval(groups, dat)
+            subsetVal <- tryEval(subset, dat)
             ## calculate number of data points
             nPoints <- 0
             if (!is.null(xVal) && !is.null(yVal))
@@ -431,6 +465,7 @@ makeLatticistTool <- function(dat)
                 ## use shingles where appropriate
                 if (do.xdisc) xvar <- call("equal.count", xvar, nlev) ## or cut?
                 if (do.ydisc) yvar <- call("equal.count", yvar, nlev) ## or cut?
+                ## conditioning variables
                 if (do.c1disc) c1 <- call("equal.count", c1, nlev)
                 if (do.c2disc) c2 <- call("equal.count", c2, nlev)
             } else {
@@ -449,11 +484,11 @@ makeLatticistTool <- function(dat)
             if (do.gdisc) groups <- call("cutEq", groups, nlev)
 
             ## re-evaluate data if changed
-            if (do.xdisc) xVal <- eval(xvar, dat)
-            if (do.ydisc) yVal <- eval(yvar, dat)
-            if (do.c1disc) c1Val <- eval(c1, dat)
-            if (do.c2disc) c2Val <- eval(c2, dat)
-            if (do.gdisc) groupsVal <- eval(groups, dat)
+            if (do.xdisc) xVal <- tryEval(xvar, dat)
+            if (do.ydisc) yVal <- tryEval(yvar, dat)
+            if (do.c1disc) c1Val <- tryEval(c1, dat)
+            if (do.c2disc) c2Val <- tryEval(c2, dat)
+            if (do.gdisc) groupsVal <- tryEval(groups, dat)
 
             ## if only one conditioning term, call it c1
             if (is.null(c1) && !is.null(c2)) {
@@ -463,23 +498,20 @@ makeLatticistTool <- function(dat)
             }
 
             ## reorder factor levels of groups
-            if (!is.null(groupsVal)) {
-                if (isUnordered(groups, groupsVal)) {
-                    groups <- call("reorderByFreq", groups)
-                    groupsVal <- eval(groups, dat)
-                }
-            }
+#            if (!is.null(groupsVal)) {
+#                if (isUnordered(groups, groupsVal)) {
+#                    groups <- call("reorderByFreq", groups)
+#                    groupsVal <- tryEval(groups, dat)
+#                }
+#            }
 
             ## reorder conditioning (TODO: index.cond)
             if (!is.null(c1Val)) {
-                if (isUnordered(c1, c1Val)) {
-                    c1 <- call("reorderByFreq", c1)
 #                    if (!is.null(yVar) || !is.null(xVar)) {
 #                        c1 <- call("reorder", c1,
 #                                   if (!is.null(yVal)) yvar else xvar)
 #                    }
-                    c1Val <- eval(c1, dat)
-                }
+#                    c1Val <- tryEval(c1, dat)
             }
 
             ## combined conditioning term (may be NULL)
@@ -490,16 +522,17 @@ makeLatticistTool <- function(dat)
             if (!is.null(cond)) {
                 ncond <- nlevels(c1Val)
                 if (!is.null(c2Val)) ncond <- ncond * nlevels(c2Val)
-                if (ncond > 16) tooManyPanels <- TRUE
+                if (ncond > MAXPANELS) tooManyPanels <- TRUE
             }
 
             ## create plot call
             oldCall <- mainCall(playState)
             playState$call <- quote(xyplot(0 ~ 0, data=dat))
             ## useOuterStrips unless we are going to use layout=...
-            if (!is.null(c1) && !is.null(c2) && !tooManyPanels) {
-                playState$call <-
-                    quote(useOuterStrips(xyplot(0 ~ 0, data=dat)))
+            if (require(latticeExtra, quietly=TRUE)) {
+                if (!is.null(c1) && !is.null(c2) && !tooManyPanels)
+                    playState$call <-
+                        quote(useOuterStrips(xyplot(0 ~ 0, data=dat)))
             }
             updateMainCall(playState)
             callArg(playState, "subset") <- subset
@@ -508,7 +541,19 @@ makeLatticistTool <- function(dat)
             callArg(playState, "subscripts") <- TRUE
             if (tooManyPanels)
                 callArg(playState, "layout") <-
-                    c(0, min(16, ceiling(ncond / 2)))
+                    c(0, min(MAXPANELS, ceiling(ncond / 2)))
+
+            ## put shingle levels on axis
+            if (anyNumerics && do.xdisc)
+                callArg(playState, quote(scales$x$limits)) <-
+                    as.character(levels(xVal))
+            if (anyNumerics && do.ydisc)
+                callArg(playState, quote(scales$y$limits)) <-
+                    as.character(levels(yVal))
+            ## put shingle levels in strip
+            if (anyNumerics && do.c1disc && (is.null(c2) || do.c2disc))
+                callArg(playState, "strip") <-
+                    quote(strip.custom(strip.levels=TRUE, strip.names=FALSE))
 
             ## TODO: set up titles
 
@@ -530,11 +575,6 @@ makeLatticistTool <- function(dat)
                         callArg(playState, 0) <- quote(dotplot)
                         callArg(playState, "data") <- NULL
                         callArg(playState, "subset") <- NULL
-                        ## reorder factor levels
-                        if (isUnordered(yvar, yVal)) {
-                            yvar <- call("reorderByFreq", yvar)
-                            yVal <- eval(yvar, dat)
-                        }
                         xterms <- paste(c(deparseOneLine(yvar),
                                           if (!is.null(c1)) deparseOneLine(c1),
                                           if (!is.null(c2)) deparseOneLine(c2),
@@ -554,7 +594,7 @@ makeLatticistTool <- function(dat)
                         ## data on x axis, use barchart
                         ## (just for variety? & dotplot.table has no horizontal=FALSE)
                         ## BUT if x is a discretized numeric, use histogram
-                        if (do.xdisc) {
+                        if (do.xdisc && is.null(groups)) {
                             xvar <- xvar[[2]] ## undo disc function
                             callArg(playState, 0) <- quote(histogram)
                             if (!is.null(cond))
@@ -565,11 +605,6 @@ makeLatticistTool <- function(dat)
                             callArg(playState, 0) <- quote(barchart)
                             callArg(playState, "data") <- NULL
                             callArg(playState, "subset") <- NULL
-                            ## reorder factor levels
-                            if (isUnordered(xvar, xVal)) {
-                                xvar <- call("reorderByFreq", xvar)
-                                xVal <- eval(xvar, dat)
-                            }
                             xterms <- paste(c(deparseOneLine(xvar),
                                               if (!is.null(c1)) deparseOneLine(c1),
                                               if (!is.null(c2)) deparseOneLine(c2),
@@ -635,9 +670,11 @@ makeLatticistTool <- function(dat)
                         } else if (tst <= 1.2) {
                             ## uniform distribution
                             callArg(playState, "distribution") <- quote(qunif)
-                            callArg(playState, "xlab") <- "Probability"
+                            callArg(playState, "xlab") <- "Proportion <= y"
                         } else {
+                            callArg(playState, "distribution") <- quote(qnorm)
                             callArg(playState, "xlab") <- "Standard normal quantiles"
+                            ## TODO: use probabilites on axis?
                         }
                     }
                 }
@@ -651,14 +688,10 @@ makeLatticistTool <- function(dat)
                     callArg(playState, "data") <- NULL
                     callArg(playState, "subset") <- NULL
                     ## reorder factor levels
-                    if (isUnordered(xvar, xVal)) {
-                        xvar <- call("reorderByFreq", xvar)
-                        xVal <- eval(xvar, dat)
-                    }
                     if (isUnordered(yvar, yVal)) {
                         yvar <- call("reorder", yvar,
                                      call("unclass", xvar), na.rm=T)
-                        yVal <- eval(yvar, dat)
+                        yVal <- tryEval(yvar, dat)
                     }
                     ## use xvar as groups (for stacking)
                     xterms <- paste(c(deparseOneLine(yvar),
@@ -683,11 +716,11 @@ makeLatticistTool <- function(dat)
                     ## reorder factor levels
                     if (is.categorical(yVal) && isUnordered(yvar, yVal)) {
                         yvar <- call("reorder", yvar, xvar, na.rm=T)
-                        yVal <- eval(yvar, dat)
+                        yVal <- tryEval(yvar, dat)
                     }
                     if (is.categorical(xVal) && isUnordered(xvar, xVal)) {
                         xvar <- call("reorder", xvar, yvar, na.rm=T)
-                        xVal <- eval(xvar, dat)
+                        xVal <- tryEval(xvar, dat)
                     }
                     ## formula
                     if (!is.null(cond))
@@ -703,8 +736,7 @@ makeLatticistTool <- function(dat)
 
                     } else {
                         callArg(playState, 0) <- quote(bwplot)
-                        ## check that quantiles are sensible, i.e. different?
-                        ## but what if they are not -- panel.violin not great
+                        callArg(playState, "varwidth") <- FALSE
                     }
 
                 } else {
@@ -853,7 +885,8 @@ makeLatticistTool <- function(dat)
         }
         doLabels <- function(widget, playState) {
             labels <- tryParse(labelsW$getActiveText())
-            playState$labels <- eval(labels, dat)
+            playState$labels <- tryEval(labels, dat)
+            playState$.args$labels <- playState$labels
             ## TODO: replot if showing labels?
         }
         doLabelsOnSelect <- function(widget, playState) {
@@ -916,9 +949,6 @@ makeLatticistTool <- function(dat)
             if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
             selectScales <- c(if (!is.null(xvar)) "x",
                               if (!is.null(yvar)) "y")
-            if (is.call.to(mainCall(playState), "barchart") &&
-                !is.null(xvar) && !is.null(yvar))
-                return(FALSE)
             foo <- playRectInput(playState, scales=selectScales,
                                  prompt="Click and drag to define a data subset")
             if (is.null(foo)) return(FALSE)
@@ -1199,7 +1229,11 @@ makeLatticistTool <- function(dat)
         subsetBox <- gtkHBox()
         subsetBox$packStart(gtkLabel(" Subset:"), expand=FALSE)
         subsetSelW <- niceButton("interactive...")
-        subsetSelW[["visible"]] <- !is.null(xvar) || !is.null(yvar)
+        showSub <- !is.null(xvar) || !is.null(yvar)
+        if (is.call.to(mainCall(playState), "barchart") &&
+            !is.null(xvar) && !is.null(yvar))
+            showSub <- FALSE
+        subsetSelW[["visible"]] <- showSub
         gSignalConnect(subsetSelW, "button-press-event",
                        handler.subsetSelect, data=playState)
         subsetBox$packStart(subsetSelW)

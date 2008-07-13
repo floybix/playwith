@@ -9,9 +9,10 @@
 marginals(data,
           reorder = TRUE,
           subset = TRUE,
-          ref = TRUE,
-          levels.fos = NULL,
           plot.points = FALSE,
+          ref = TRUE,
+          origin = 0,
+          levels.fos = NULL,
           xlab = NULL, ylab = NULL,
           cex = 0.5,
           ...,
@@ -23,8 +24,8 @@ marginals(data,
   \item{data}{ a data frame. }
   \item{reorder}{ whether to reorder factor variables by frequency. }
   \item{subset}{ data subset expression, evaluated with \code{data}. }
-  \item{ref, plot.points}{ passed to \code{panel.densityplot}. }
-  \item{levels.fos}{ passed to \code{panel.dotplot}. }
+  \item{plot.points, ref}{ passed to \code{panel.densityplot}. }
+  \item{origin, levels.fos}{ passed to \code{panel.dotplot}. }
   \item{xlab, ylab, cex, as.table,
     subscripts, default.scales}{
     see \code{\link[lattice]{xyplot}}.

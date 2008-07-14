@@ -390,9 +390,9 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
     if (is.null(foo)) return(NULL)
     if (is.null(foo$coords)) return(NULL)
     coords <- foo$coords
-    ## convert from log scale if necessary
-    coords <- spaceCoordsToDataCoords(playState, coords)
     data <- xyCoords(playState, space=foo$space)
+    ## convert to log scale if necessary
+    data <- dataCoordsToSpaceCoords(playState, data)
 
     if (length(data$x) == 0) {
         gmessage.error(paste("Sorry, can not guess the data point coordinates.",
@@ -416,7 +416,8 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
             which <- integer(0)
         else {
             which <- which.min(pdists)
-            pos <- with(ppxy, lattice:::getTextPosition(x = lx - px[which], y = ly - py[which]))
+            pos <- with(ppxy, lattice:::getTextPosition(x = lx - px[which],
+                                                        y = ly - py[which]))
         }
     }
     else {

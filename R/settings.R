@@ -41,7 +41,8 @@
          "zoomfit",
          "zero",
          "---",
-         "coords"
+         "coords",
+         "clickhandler"
          ),
          bottom.tools = list(),
          right.tools = list(),

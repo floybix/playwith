@@ -16,12 +16,6 @@ toolConstructors$zoom <- function(playState)
     callName <- deparseOneLine(mainCall(playState)[[1]])
     if (callName %in% c("splom", "cloud", "wireframe"))
         return(NA)
-    ## add click event handler to plot -- always active
-    if (is.null(playState$widgets$plotZoomEventSig)) {
-        playState$widgets$plotZoomEventSig <-
-            gSignalConnect(playState$widgets$drawingArea,
-                           "button-press-event", zoom_click_handler, data=playState)
-    }
 
     quickTool(playState,
               label = "Zoom...",
@@ -30,63 +24,18 @@ toolConstructors$zoom <- function(playState)
               f = zoom_handler)
 }
 
-zoom_click_handler <- function(widget, event, playState)
+zoomCore <- function(playState, foo)
 {
-    if (!isTRUE(playState$plot.ready)) return(FALSE)
-    ## bail out if another tool is handling the click
-    ## TODO: is this a race condition? is there a better way?
-    if (isTRUE(playState$now.interacting)) return(FALSE)
-    x <- event$x
-    y <- event$y
-    if (event[["button"]] == 1) {
-        zoomCore(playState, x, y)
-    }
-    if (event[["button"]] == 3) {
-        zoomoutCore(playState, x, y)
-    }
-    return(FALSE)
-}
-
-zoomCore <- function(playState, x0, y0)
-{
+    if (!("zoom" %in% names(playState$tools))) return()
     xonly <- playState$time.mode && is.null(playState$time.vector)
     nav.x <- TRUE
     nav.y <- !xonly
     scales <- c( if (nav.x) "x", if (nav.y) "y" )
-    foo <- playClickOrDrag(playState, x0=x0, y0=y0, shape="rect", scales=scales)
-    if (is.null(foo)) return()
-    if (is.null(foo$coords)) return()
-    if (foo$is.click) return()
     xlim <- range(foo$coords$x)
     ylim <- range(foo$coords$y)
     ## reverse axis scales if needed
     if (is.unsorted(rawXLim(playState, space=foo$space))) xlim <- rev(xlim)
     if (is.unsorted(rawYLim(playState, space=foo$space))) ylim <- rev(ylim)
-    ## this converts from raw numeric to original format (including unlog)
-    if (nav.x) rawXLim(playState) <- xlim
-    if (nav.y) rawYLim(playState) <- ylim
-    playReplot(playState)
-}
-
-zoomoutCore <- function(playState, x0, y0)
-{
-    xonly <- playState$time.mode && is.null(playState$time.vector)
-    nav.x <- TRUE
-    nav.y <- !xonly
-    scales <- c( if (nav.x) "x", if (nav.y) "y" )
-    foo <- playClickOrDrag(playState, x0=x0, y0=y0)
-    if (is.null(foo)) return()
-    if (is.null(foo$coords)) return()
-    if (foo$is.click == FALSE) return()
-    ## find existing scales
-    xlim <- rawXLim(playState, space=foo$space)
-    ylim <- rawYLim(playState, space=foo$space)
-    ## centre on click location
-    xlim <- (xlim - mean(xlim)) + mean(foo$coords$x)
-    ylim <- (ylim - mean(ylim)) + mean(foo$coords$y)
-    ## zoom out: make range twice the size
-    if (nav.x) xlim <- xlim + diff(xlim) * c(-0.5, 0.5)
-    if (nav.y) ylim <- ylim + diff(ylim) * c(-0.5, 0.5)
     ## this converts from raw numeric to original format (including unlog)
     if (nav.x) rawXLim(playState) <- xlim
     if (nav.y) rawYLim(playState) <- ylim
@@ -135,6 +84,28 @@ toolConstructors$zoomout <- function(playState)
               tooltip = "Zoom out to show 4x plot area",
               icon = "gtk-zoom-out",
               f = zoomout_handler)
+}
+
+zoomoutCore <- function(playState, foo)
+{
+    if (!("zoom" %in% names(playState$tools))) return()
+    xonly <- playState$time.mode && is.null(playState$time.vector)
+    nav.x <- TRUE
+    nav.y <- !xonly
+    scales <- c( if (nav.x) "x", if (nav.y) "y" )
+    ## find existing scales
+    xlim <- rawXLim(playState, space=foo$space)
+    ylim <- rawYLim(playState, space=foo$space)
+    ## centre on click location
+    xlim <- (xlim - mean(xlim)) + mean(foo$coords$x)
+    ylim <- (ylim - mean(ylim)) + mean(foo$coords$y)
+    ## zoom out: make range twice the size
+    if (nav.x) xlim <- xlim + diff(xlim) * c(-0.5, 0.5)
+    if (nav.y) ylim <- ylim + diff(ylim) * c(-0.5, 0.5)
+    ## this converts from raw numeric to original format (including unlog)
+    if (nav.x) rawXLim(playState) <- xlim
+    if (nav.y) rawYLim(playState) <- ylim
+    playReplot(playState)
 }
 
 zoomout_handler <- function(widget, playState)

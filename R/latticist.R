@@ -3,19 +3,38 @@
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
+.prof.it <- function(n = 10000) {
+    audit <- read.csv(system.file("csv", "audit.csv", package = "rattle"))
+    audit <- lapply(audit, rep, length.out=n)
+#    audit.10 <- audit
+#    for (i in 1:9) audit.10 <- rbind(audit.10, audit)
+#    print(nrow(audit.10))
+#    audit.50 <- audit.10
+#    for (i in 1:4) audit.50 <- rbind(audit.50, audit.10)
+#    print(nrow(audit.50))
+    print(nrow(audit))
+    gc()
+    Rprof(tmp <- tempfile())
+    latticist(audit)
+    Rprof()
+    print(summaryRprof(tmp))
+    unlink(tmp)
+}
 
 latticist <-
     function(dat,
              reorder.levels = TRUE,
-             plot.call = quote(marginals(dat)),
+             plot.call = quote(marginals(dat, reorder=FALSE)),
              ...)
 {
     title <- paste("Latticist:",
                    toString(deparse(substitute(dat)), width=24))
 
-    dat <- as.data.frame(dat)
+    if (!is.data.frame(dat))
+        dat <- as.data.frame(dat)
 
     ## TODO: convert integers/numerics with few unique()s to factors?
+
 
     if (reorder.levels) {
         iscat <- sapply(dat, is.categorical)
@@ -48,7 +67,8 @@ marginals <-
              subscripts = TRUE)
 {
     default.scales <- list(relation="free", draw=FALSE)
-    data <- as.data.frame(data)
+    if (!is.data.frame(data))
+        data <- as.data.frame(data)
     nvar <- ncol(data)
     factors <- sapply(data, is.categorical)
     ## apply subset
@@ -70,11 +90,6 @@ marginals <-
                     type=c("p","h"), cex=cex, ref=ref,
                     levels.fos = levels.fos,
                     origin = origin,
-                    #prepanel = function(...) {
-                    #    result <- prepanel.default.xyplot(...)
-                        ## ensure zero is included on scale
-                    #    list(ylim = range(c(result$ylim, 0)))
-                    #},
                     as.table = as.table,
                     default.scales = default.scales,
                     xlab=xlab, ylab=ylab)
@@ -173,8 +188,8 @@ makeLatticistTool <- function(dat)
         !is.ordered(val) && !is.shingle(val)
     }
 
-    LOTS <- 800
-    HEAPS <- 5000
+    LOTS <- 1000
+    HEAPS <- 10000
     MAXPANELS <- 16
     INIT.NLEVELS <- 5
 
@@ -374,7 +389,10 @@ makeLatticistTool <- function(dat)
 
         ## labels
         labelsopts <- c("rownames(dat)", "1:nrow(dat)", names(dat))
-
+        labelsSetting <- playState$latticist$labels.setting
+        if (is.null(labelsSetting))
+            labelsSetting <- labelsopts[[1]]
+        labelsopts <- unique(c(labelsopts, labelsSetting))
 
         tryParse <- function(x) {
             itemName <- deparseOneLine(substitute(x))
@@ -529,8 +547,8 @@ makeLatticistTool <- function(dat)
             oldCall <- mainCall(playState)
             playState$call <- quote(xyplot(0 ~ 0, data=dat))
             ## useOuterStrips unless we are going to use layout=...
-            if (require(latticeExtra, quietly=TRUE)) {
-                if (!is.null(c1) && !is.null(c2) && !tooManyPanels)
+            if (!is.null(c1) && !is.null(c2) && !tooManyPanels) {
+                if (require(latticeExtra, quietly=TRUE))
                     playState$call <-
                         quote(useOuterStrips(xyplot(0 ~ 0, data=dat)))
             }
@@ -560,7 +578,7 @@ makeLatticistTool <- function(dat)
             ## choose plot type and formula
             if (is.null(xVal) && is.null(yVal)) {
                 ## NO VARIABLES CHOSEN
-                playState$call <- quote(marginals(dat))
+                playState$call <- quote(marginals(dat, reorder=FALSE))
                 updateMainCall(playState)
                 callArg(playState, "subset") <- subset
                                         #if (!isTRUE(subset)) subset else NULL
@@ -629,9 +647,9 @@ makeLatticistTool <- function(dat)
                         else
                             callArg(playState, 1) <- call("~", xvar)
                         ## settings depend on number of points, groups
-                        if (nPoints > HEAPS) {
+                        if (nPoints >= HEAPS) {
                             callArg(playState, "plot.points") <- FALSE
-                        } else if (nPoints > LOTS) {
+                        } else if (nPoints >= LOTS) {
                             callArg(playState, "plot.points") <- "jitter"
                             callArg(playState, "pch") <- "+" ## like jittered rug
                         }
@@ -643,10 +661,10 @@ makeLatticistTool <- function(dat)
                         else
                             callArg(playState, 1) <- call("~", yvar)
                         ## settings depend on number of points, groups
-                        if (nPoints > HEAPS) {
-                            callArg(playState, "f.value") <- 100
+                        if (nPoints >= HEAPS) {
+                            callArg(playState, "f.value") <- quote(ppoints(100))
                             callArg(playState, "type") <- "l"
-                        }
+                        } else
                         if (!is.null(groups)) {
                             callArg(playState, "type") <- "o"
                             callArg(playState, "cex") <- 0.5
@@ -772,24 +790,41 @@ makeLatticistTool <- function(dat)
                                 (!is.null(yvar) && !is.categorical(yVal)))
                 ## style settings for points
                 if (anyNumerics) {
+                    if (!is.null(groups)) {
+                        symbol <- callArg(playState, quote(par.settings$superpose.symbol))
+                    } else {
+                        symbol <- callArg(playState, quote(par.settings$plot.symbol))
+                    }
                     if (ncond >= 4) {
-                        callArg(playState, "cex") <- 0.5
+                        symbol$cex <- 0.5
+                        #if (!is.null(groups))
+                        #    callArg(playState, quote(par.settings$superpose.symbol$cex)) <- cex
+                        #else {
+                        #    callArg(playState, quote(par.settings$plot.symbol$cex)) <- cex
+                        #}
                     }
-                    if (nPoints > LOTS) {
-                        alpha <- if (nPoints > HEAPS) 0.05 else 0.3
-                        if (!is.null(groups))
-                            callArg(playState, quote(par.settings$superpose.symbol$alpha)) <- alpha
-                        else {
-                            callArg(playState, quote(par.settings$plot.symbol$alpha)) <- alpha
-                        }
+                    if (nPoints >= LOTS) {
+                        symbol$alpha <- if (nPoints >= HEAPS) 0.1 else 0.3
+                        #if (!is.null(groups))
+                        #    callArg(playState, quote(par.settings$superpose.symbol$alpha)) <- alpha
+                        #else {
+                        #    callArg(playState, quote(par.settings$plot.symbol$alpha)) <- alpha
+                        #}
                     }
-                    if (nPoints > HEAPS) {
+                    if (nPoints >= HEAPS) {
                         if (!is.call.to(mainCall(playState), "qqmath") &&
-                            !is.call.to(mainCall(playState), "densityplot")) {
-                            callArg(playState, "pch") <- "." ## or 0 ## empty square
-                            callArg(playState, "cex") <- 2
+                            !is.call.to(mainCall(playState), "densityplot") &&
+                            !is.call.to(mainCall(playState), "bwplot")) {
+                            symbol$pch <- "." ## or 0 ## empty square
+                            symbol$cex <- 2.5
                         }
                     }
+                    if (!is.null(groups)) {
+                        callArg(playState, quote(par.settings$superpose.symbol)) <- symbol
+                    } else {
+                        callArg(playState, quote(par.settings$plot.symbol)) <- symbol
+                    }
+
                 }
                 ## add a grid if there are multiple panels
                 if (anyNumerics && !is.null(cond)) {
@@ -841,7 +876,7 @@ makeLatticistTool <- function(dat)
                         } else
                         if ((nlevels(xVal) >= 8) ||
                             (mean(sapply(levelsOK(xVal), nchar)) >= 8)) {
-                            scales$x$rot <- 90
+                            scales$x$rot <- 60
                         }
                         callArg(playState, "scales") <- scales
                     }
@@ -887,6 +922,8 @@ makeLatticistTool <- function(dat)
             labels <- tryParse(labelsW$getActiveText())
             playState$labels <- tryEval(labels, dat)
             playState$.args$labels <- playState$labels
+            playState$latticist$labels.setting <-
+                labelsW$getActiveText()
             ## TODO: replot if showing labels?
         }
         doLabelsOnSelect <- function(widget, playState) {
@@ -1211,8 +1248,9 @@ makeLatticistTool <- function(dat)
         labelsW$show()
         labelsW[["width-request"]] <- 100
         for (item in labelsopts) labelsW$appendText(item)
-        ## TODO: detect current labels setting (from playState)
-        labelsW[["active"]] <- 0
+        index <- match(labelsSetting, labelsopts)
+        if (is.na(index)) index <- 0
+        labelsW[["active"]] <- (index - 1)
         ## "changed" emitted on typing and selection
         gSignalConnect(labelsW, "changed",
                        doLabelsOnSelect, data=playState)

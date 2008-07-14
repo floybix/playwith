@@ -30,7 +30,7 @@ edit.call_handler <- function(widget, playState)
 {
     theCall <- playState$call
     callTxt <-
-        paste(deparse(theCall, control=
+        paste(deparse(theCall, width=42, control=
                       playwith.getOption("deparse.options")),
               collapse="\n")
     repeat {

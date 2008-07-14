@@ -1,6 +1,11 @@
 
 Changes in Version 0.9-7
 
+  o click on plot makes a pop-up menu with labels for nearby points.
+    Select one to add that label to the plot.
+
+  o clicks on plot avoid looking up data points unless neccessary.
+
   o reorder factor levels only once in latticist(), which removes
     lots of ugly reorderByFreq() from the plot calls.
 

@@ -10,34 +10,24 @@ toolConstructors$coords <- function(playState)
     coordsLabel <- gtkLabel()
     coordsLabel$setMarkup("<tt>     </tt>")
     playState$widgets$coordsLabel <- coordsLabel
-    ## add click event handler to plot -- always active
-    if (is.null(playState$widgets$plotCoordsEventSig)) {
-        playState$widgets$plotCoordsEventSig <-
-            gSignalConnect(playState$widgets$drawingArea,
-                           "button-press-event", coords_click_handler, data=playState)
-    }
     widget <- gtkToolItem()
     widget$add(coordsLabel)
     widget
 }
 
-coords_click_handler <- function(widget, event, playState)
-{
-    if (!isTRUE(playState$plot.ready)) return(FALSE)
-    if (playState$.need.reconfig) generateSpaces(playState)
-    x <- event$x
-    y <- event$y
+## this is called by clickhandler tool
+coordsCore <- function(playState, foo) {
+    if (!("coords" %in% names(playState$tools))) return()
+    coords <- foo$coords
+    ## convert from log scale if necessary
+    coords <- spaceCoordsToDataCoords(playState, coords)
     coordsTxt <- "<tt>     </tt>"
-    space <- whichSpace(playState, x, y)
-    if (space != "page") {
-        xy <- deviceCoordsToSpace(playState, x, y, space=space)
-        xy <- spaceCoordsToDataCoords(playState, xy)
-        x <- format(xy$x, nsmall=4)
-        y <- format(xy$y, nsmall=4)
+    if (!is.null(coords)) {
+        x <- format(coords$x, nsmall=4)
+        y <- format(coords$y, nsmall=4)
         x <- substr(x, 1, 5)
         y <- substr(y, 1, 5)
         coordsTxt <- paste("<tt>", x, "\n", y, "</tt>", sep="")
     }
     playState$widgets$coordsLabel$setMarkup(coordsTxt)
-    return(FALSE)
 }

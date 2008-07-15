@@ -231,20 +231,20 @@ playwith(expr,
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{ \code{\link{autoplay}}, \link{playTools}, \link{playwith.API},
-  \code{\link{playwith.options}} }
+  \code{\link{playwith.options}}, \code{\link{latticist}} }
 \examples{
 if (interactive()) {
 
 ## scatterplot (base graphics)
-## identifying labels taken from rownames of data.
-## click and hold mouse button to see point labels.
+## labels are taken from rownames of data.
+## just click on the plot to identify points.
 rownames(USArrests) <- state.name
 playwith(plot(Assault ~ UrbanPop, data=USArrests,
   xlab="Percent urban population, 1973",
   ylab="Assault arrests (per 100,000), 1973"))
 
 ## time series plot (base graphics)
-## click and drag to zoom; right-click to zoomout
+## click and drag to zoom; right-click to zoomout.
 tt <- time(treering)
 treeyears <- paste(abs(tt) + (tt <= 0),
                   ifelse(tt > 0, "CE", "BCE"))
@@ -252,7 +252,7 @@ playwith(plot(treering, xlim = c(1000, 1300)),
 	labels = treeyears)
 
 ## time series plot (lattice)
-## date-time range can be entered directly in time mode
+## date-time range can be entered directly in time mode.
 library(zoo)
 playwith(xyplot(sunspots ~ yearmon(time(sunspots)),
                 xlim=c(1900, 1930), type="l"))
@@ -292,7 +292,7 @@ playwith(splom(environmental))
 playwith(wireframe(volcano, drape=TRUE))
 
 ## ggplot (NOTE: only qplot()-based calls will work)
-## labels come from data frame automatically
+## labels come from data frame automatically.
 library(ggplot2)
 playwith(qplot(qsec, wt, data=mtcars) + stat_smooth())
 

@@ -243,13 +243,12 @@ identifyCore <- function(playState, foo)
                         py=convertY(unit(data$y, "native"), "points", TRUE)),
                    space=foo$space)
     pdists <- with(ppxy, sqrt((px - lx)^2 + (py - ly)^2))
-    ## all data points within 18 points (1/4 inch)
-    which <- which(pdists < 18)
+    ## all data points within 11 points
+    which <- which(pdists < 11)
     if (length(which) == 0) return()
     ## order by distance from click
     which <- which[order(pdists[which])]
     idMenu <- gtkMenu()
-    idItems <- list()
     for (w in which) {
         datx <- data$x[[w]]
         daty <- data$y[[w]]
@@ -257,10 +256,12 @@ identifyCore <- function(playState, foo)
                                                     y = ly - py[w]))
         ss <- data$subscripts[[w]]
         if (is.null(ss)) ss <- w
-        label <- playState$labels[[ss]]
-        idInfo <- list(which=ss, pos=pos, label=label)
-        item <- gtkMenuItem(toString(label))
+        label <- toString(playState$labels[[ss]])
+        label <- paste(label, " (x: ", format(signif(datx, 4)),
+                       ", y: ", format(signif(daty, 4)), ")", sep="")
+        item <- gtkMenuItem(label)
         idMenu$append(item)
+        idInfo <- list(which=ss, pos=pos)
         gSignalConnect(item, "activate",
                        function(widget, user.data) {
                            which <- user.data$which

@@ -11,13 +11,13 @@ toolConstructors$clickhandler <- function(playState)
     if (is.null(playState$widgets$clickEventSignal)) {
         playState$widgets$clickEventSignal <-
             gSignalConnect(playState$widgets$drawingArea,
-                           "button-press-event", click_handler,
+                           "button-press-event", device_click_handler,
                            data=playState)
     }
     return(NA)
 }
 
-click_handler <- function(widget, event, playState)
+device_click_handler <- function(widget, event, playState)
 {
     if (!isTRUE(playState$plot.ready)) return(FALSE)
     ## bail out if another tool is handling the click

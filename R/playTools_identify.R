@@ -15,7 +15,7 @@ toolConstructors$identify <- function(playState)
         if (playState$accepts.arguments == FALSE) return(NA)
         callName <- deparseOneLine(mainCall(playState)[[1]])
         ## detect plots that this will not work with
-        ## TODO: check that xyData() has x and y coords!
+        ## TODO: check that xyData() has x and y coords
         ## lattice package:
         if (callName %in%
             c("splom", "cloud", "wireframe",
@@ -222,6 +222,7 @@ identify_postplot_action <- function(widget, playState)
     }
 }
 
+## this is called by clickhandler tool
 identifyCore <- function(playState, foo)
 {
     if (!("identify" %in% names(playState$tools))) return()
@@ -242,9 +243,11 @@ identifyCore <- function(playState, foo)
                         py=convertY(unit(data$y, "native"), "points", TRUE)),
                    space=foo$space)
     pdists <- with(ppxy, sqrt((px - lx)^2 + (py - ly)^2))
+    ## all data points within 18 points (1/4 inch)
     which <- which(pdists < 18)
     if (length(which) == 0) return()
-
+    ## order by distance from click
+    which <- which[order(pdists[which])]
     idMenu <- gtkMenu()
     idItems <- list()
     for (w in which) {
@@ -277,7 +280,7 @@ identifyCore <- function(playState, foo)
                            })
                        }, data=idInfo)
     }
-
+    ## show the menu
     idMenu$popup(button=0, activate.time=gtkGetCurrentEventTime())
     while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
 }

@@ -24,6 +24,7 @@ toolConstructors$zoom <- function(playState)
               f = zoom_handler)
 }
 
+## this is called by clickhandler tool
 zoomCore <- function(playState, foo)
 {
     if (!("zoom" %in% names(playState$tools))) return()
@@ -86,6 +87,7 @@ toolConstructors$zoomout <- function(playState)
               f = zoomout_handler)
 }
 
+## this is called by clickhandler tool
 zoomoutCore <- function(playState, foo)
 {
     if (!("zoom" %in% names(playState$tools))) return()

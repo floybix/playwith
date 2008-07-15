@@ -33,8 +33,15 @@ latticist <-
     if (!is.data.frame(dat))
         dat <- as.data.frame(dat)
 
-    ## TODO: convert integers/numerics with few unique()s to factors?
-
+    ## convert integers with only 1 or 2 uniques to factors
+    isint <- sapply(dat, is.integer)
+    for (nm in names(dat)[isint]) {
+        if (is.integer(dd <- dat[[nm]]) &&
+            (diff(range(dd, na.rm=TRUE)) <= 1))
+        {
+            dat[[nm]] <- factor(dd)
+        }
+    }
 
     if (reorder.levels) {
         iscat <- sapply(dat, is.categorical)
@@ -322,19 +329,36 @@ makeLatticistTool <- function(dat)
 
         iscat <- sapply(dat, is.categorical)
 
-        ## variables and expressions
-        varnames <- c("NULL", names(dat),
-                      xvarStr, yvarStr,
-                      c1Str, c2Str, groupsStr)
-        varnames <- unique(varnames)
         NULLNAMES <- c("(none)", "")
-        varnames[[1]] <- NULLNAMES[[1]]
 
-        ## TODO: preload log() of positive numerics
-        ## TODO: preload is.na() of vars with missing values
-        ## TODO: split into numeric and categorical in lists
-
-        ## TODO: store user variables in playState
+        ## variables and expressions
+        varexprs <- playState$latticist$varexprs
+        if (is.null(varexprs)) {
+            varexprs <- c("NULL",
+                          names(dat)[iscat],
+                          "------------------",
+                          names(dat)[!iscat],
+                          "------------------.")
+            ## log() of positive numerics
+            logs <- lapply(names(dat)[!iscat], function(nm) {
+                if (all(dat[[nm]] > 0, na.rm=TRUE))
+                    paste("log(", nm, ")", sep="")
+                else NULL
+            })
+            varexprs <- c(varexprs, unlist(logs))
+            ## is.na() of variables with missing values
+            missings <- lapply(names(dat), function(nm) {
+                if (any(is.na(dat[[nm]])))
+                    paste("is.na(", nm, ")", sep="")
+                else NULL
+            })
+            varexprs <- c(varexprs, unlist(missings))
+        }
+        varexprs <- unique(c(varexprs,
+                      xvarStr, yvarStr,
+                      c1Str, c2Str, groupsStr))
+        playState$latticist$varexprs <- varexprs
+        varexprs[[1]] <- NULLNAMES[[1]]
 
         ## subset
         subsetopts <- playState$latticist$subsets
@@ -349,8 +373,14 @@ makeLatticistTool <- function(dat)
                 paste(nm, "==", sapply(tmp, deparse))
             })
             subsetopts <- c(subsetopts, unlist(toplev))
-            ## TODO: preload is.finite() of numerics with missing values
-            ## TODO: preload > 0 of relevant numerics
+            subsetopts <- c(subsetopts, "------------------")
+            ## is.finite() of variables with missing values
+            missings <- lapply(names(dat), function(nm) {
+                if (any(is.na(dat[[nm]])))
+                    paste("is.finite(", nm, ")", sep="")
+                else NULL
+            })
+            subsetopts <- c(subsetopts, unlist(missings))
         }
         subsetopts <-
             unique(c(subsetopts, if (!is.null(subset) && !isTRUE(subset))
@@ -1066,8 +1096,8 @@ makeLatticistTool <- function(dat)
         yvarW <- gtkComboBoxEntryNewText()
         yvarW$show()
         yvarW[["width-request"]] <- 100
-        for (item in varnames) yvarW$appendText(item)
-        index <- match(deparseOneLine(yvar), varnames)
+        for (item in varexprs) yvarW$appendText(item)
+        index <- match(deparseOneLine(yvar), varexprs)
         if (is.na(index)) index <- 1
         yvarW[["active"]] <- (index - 1)
         ## "changed" emitted on typing and selection
@@ -1094,8 +1124,8 @@ makeLatticistTool <- function(dat)
         xvarW <- gtkComboBoxEntryNewText()
         xvarW$show()
         xvarW[["width-request"]] <- 100
-        for (item in varnames) xvarW$appendText(item)
-        index <- match(deparseOneLine(xvar), varnames)
+        for (item in varexprs) xvarW$appendText(item)
+        index <- match(deparseOneLine(xvar), varexprs)
         if (is.na(index)) index <- 1
         xvarW[["active"]] <- (index - 1)
         ## "changed" emitted on typing and selection
@@ -1161,8 +1191,8 @@ makeLatticistTool <- function(dat)
         c1W <- gtkComboBoxEntryNewText()
         c1W$show()
         c1W[["width-request"]] <- 100
-        for (item in varnames) c1W$appendText(item)
-        index <- match(deparseOneLine(c1), varnames)
+        for (item in varexprs) c1W$appendText(item)
+        index <- match(deparseOneLine(c1), varexprs)
         if (is.na(index)) index <- 1
         c1W[["active"]] <- (index - 1)
         ## "changed" emitted on typing and selection
@@ -1178,8 +1208,8 @@ makeLatticistTool <- function(dat)
         c2W$show()
         c2W[["sensitive"]] <- !is.null(c1)
         c2W[["width-request"]] <- 100
-        for (item in varnames) c2W$appendText(item)
-        index <- match(deparseOneLine(c2), varnames)
+        for (item in varexprs) c2W$appendText(item)
+        index <- match(deparseOneLine(c2), varexprs)
         if (is.na(index)) index <- 1
         c2W[["active"]] <- (index - 1)
         ## "changed" emitted on typing and selection
@@ -1228,8 +1258,8 @@ makeLatticistTool <- function(dat)
         groupsW <- gtkComboBoxEntryNewText()
         groupsW$show()
         groupsW[["width-request"]] <- 100
-        for (item in varnames) groupsW$appendText(item)
-        index <- match(deparseOneLine(groups), varnames)
+        for (item in varexprs) groupsW$appendText(item)
+        index <- match(deparseOneLine(groups), varexprs)
         if (is.na(index)) index <- 1
         groupsW[["active"]] <- (index - 1)
         ## "changed" emitted on typing and selection

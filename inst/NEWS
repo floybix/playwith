@@ -9,7 +9,11 @@ Changes in Version 0.9-7
   o reorder factor levels only once in latticist(), which removes
     lots of ugly reorderByFreq() from the plot calls.
 
-  o use shingle levels for lables in strips and on axes.
+  o latticist preloads some useful variable expressions and subsets.
+
+  o latticist converts integers with only 1 or 2 levels to factor.
+
+  o use shingle levels for labels in strips and on axes.
 
   o latticist gives more error messages in dialog boxes.
 

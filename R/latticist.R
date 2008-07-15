@@ -6,13 +6,6 @@
 .prof.it <- function(n = 10000) {
     audit <- read.csv(system.file("csv", "audit.csv", package = "rattle"))
     audit <- lapply(audit, rep, length.out=n)
-#    audit.10 <- audit
-#    for (i in 1:9) audit.10 <- rbind(audit.10, audit)
-#    print(nrow(audit.10))
-#    audit.50 <- audit.10
-#    for (i in 1:4) audit.50 <- rbind(audit.50, audit.10)
-#    print(nrow(audit.50))
-    print(nrow(audit))
     gc()
     Rprof(tmp <- tempfile())
     latticist(audit)
@@ -47,8 +40,14 @@ latticist <-
         iscat <- sapply(dat, is.categorical)
         for (nm in names(dat)[iscat]) {
             val <- dat[[nm]]
-            if (!is.ordered(val) && !is.shingle(val))
+            if (is.character(val))
+              dat[[nm]] <- factor(val)
+            if (!is.ordered(val) &&
+                !is.shingle(val) &&
+                nlevels(val) > 1)
+              {
                 dat[[nm]] <- reorderByFreq(val)
+              }
         }
     }
 
@@ -86,9 +85,10 @@ marginals <-
                          as.data.frame(table(Value)) )
         facdat <- do.call(make.groups, facdat)
         ## order packets by number of levels, same effect as index.cond
-        facdat$which <- with(facdat, reorder(which, which, quote(length)))
+        facdat$which <- with(facdat, reorder(which, which, length))
         ## reorder factor levels within each group
-        if (reorder) facdat$Value <-
+        if (reorder)
+          facdat$Value <-
             with(facdat, reorder(reorder(Value, -Freq), as.numeric(which)))
         ## make trellis object for factors
         factobj <-
@@ -320,6 +320,18 @@ makeLatticistTool <- function(dat)
         c2 <- stripReorder(c2)
         groups <- stripReorder(groups)
 
+        ## strip factor code for display
+        stripFactor <- function(x) {
+            if (is.call.to(x, "factor"))
+                x <- x[[2]]
+            x
+        }
+        #xvar <- stripFactor(xvar)
+        #yvar <- stripFactor(yvar)
+        #c1 <- stripFactor(c1)
+        #c2 <- stripFactor(c2)
+        #groups <- stripFactor(groups)
+        
         ## set up variables and options
         xvarStr <- deparseOneLine(xvar)
         yvarStr <- deparseOneLine(yvar)
@@ -336,9 +348,10 @@ makeLatticistTool <- function(dat)
         if (is.null(varexprs)) {
             varexprs <- c("NULL",
                           names(dat)[iscat],
+                          if (any(iscat) && any(!iscat))
                           "------------------",
                           names(dat)[!iscat],
-                          "------------------.")
+                          "-------------------")
             ## log() of positive numerics
             logs <- lapply(names(dat)[!iscat], function(nm) {
                 if (all(dat[[nm]] > 0, na.rm=TRUE))
@@ -463,6 +476,9 @@ makeLatticistTool <- function(dat)
             groups <- tryParse(groupsW$getActiveText())
             ## keep for titles etc
             xvarOrigStr <- deparseOneLine(xvar)
+            yvarOrigStr <- deparseOneLine(yvar)
+            c1OrigStr <- deparseOneLine(c1)
+            c2OrigStr <- deparseOneLine(c2)
             groupsOrigStr <- deparseOneLine(groups)
             ## parse aspect and scales except if new xy structure
             aspect <- NULL
@@ -496,7 +512,7 @@ makeLatticistTool <- function(dat)
                 nPoints <- sum(is.finite(xVal[subsetVal]))
             else if (!is.null(yVal))
                 nPoints <- sum(is.finite(yVal[subsetVal]))
-
+            
             ## discretize
             nlev <- nLevelsW[["value"]]
             do.xdisc <- (!is.null(xvar) && !is.categorical(xVal) && xdiscW[["active"]])
@@ -603,7 +619,28 @@ makeLatticistTool <- function(dat)
                 callArg(playState, "strip") <-
                     quote(strip.custom(strip.levels=TRUE, strip.names=FALSE))
 
-            ## TODO: set up titles
+            ## construct plot title
+            if (!is.null(xvar) || !is.null(yvar)) {
+              title <- paste(c(if (!is.null(yvar)) yvarOrigStr,
+                               if (!is.null(xvar)) xvarOrigStr),
+                             collapse=" vs ")
+              if (is.null(xvar) || is.null(yvar))
+                title <- paste("Distribution of", title)
+              byStr <- paste(c(if (!is.null(c1)) c1OrigStr,
+                               if (!is.null(c2)) c2OrigStr,
+                               if (!is.null(groups)) groupsOrigStr),
+                             collapse=" and ")
+              if (nchar(byStr) > 0)
+                title <- paste(title, byStr, sep=" by ")
+              ## TODO: if title too long, wrap?
+              callArg(playState, "main") <- title
+            }
+
+            ## axis labels (not for categoricals)
+            if (!is.null(xvar) && !is.categorical(xVal))
+                callArg(playState, "xlab") <- xvarOrigStr
+            if (!is.null(yvar) && !is.categorical(yVal))
+                callArg(playState, "ylab") <- yvarOrigStr
 
             ## choose plot type and formula
             if (is.null(xVal) && is.null(yVal)) {
@@ -724,6 +761,7 @@ makeLatticistTool <- function(dat)
                             callArg(playState, "xlab") <- "Standard normal quantiles"
                             ## TODO: use probabilites on axis?
                         }
+                        callArg(playState, "prepanel") <- quote(prepanel.qqmathline)
                     }
                 }
 
@@ -737,9 +775,11 @@ makeLatticistTool <- function(dat)
                     callArg(playState, "subset") <- NULL
                     ## reorder factor levels
                     if (isUnordered(yvar, yVal)) {
+                      if (nlevels(yVal) > 2) {
                         yvar <- call("reorder", yvar,
                                      call("unclass", xvar), na.rm=T)
                         yVal <- tryEval(yvar, dat)
+                      }
                     }
                     ## use xvar as groups (for stacking)
                     xterms <- paste(c(deparseOneLine(yvar),
@@ -761,14 +801,25 @@ makeLatticistTool <- function(dat)
 
                     ## TODO: if only one value for each level use dotplot
 
-                    ## reorder factor levels
+                    #if (is.logical(yVal))
+                    #    yvar <- call("factor", yvar)
+                    #if (is.logical(xVal))
+                    #    xvar <- call("factor", xvar)
+                    if (is.logical(xVar))
+                      callArg(playState, "horizontal") <- FALSE
+                  
+                    ## reorder factor levels if more than 2
                     if (is.categorical(yVal) && isUnordered(yvar, yVal)) {
-                        yvar <- call("reorder", yvar, xvar, na.rm=T)
-                        yVal <- tryEval(yvar, dat)
+                        if (nlevels(yVal) > 2) {
+                          yvar <- call("reorder", yvar, xvar, na.rm=T)
+                          yVal <- tryEval(yvar, dat)
+                        }
                     }
                     if (is.categorical(xVal) && isUnordered(xvar, xVal)) {
-                        xvar <- call("reorder", xvar, yvar, na.rm=T)
-                        xVal <- tryEval(xvar, dat)
+                        if (nlevels(xVal) > 2) {
+                          xvar <- call("reorder", xvar, yvar, na.rm=T)
+                          xVal <- tryEval(xvar, dat)
+                        }
                     }
                     ## formula
                     if (!is.null(cond))
@@ -794,14 +845,14 @@ makeLatticistTool <- function(dat)
                         callArg(playState, 1) <- call("~", yvar, call("|", xvar, cond))
                     else
                         callArg(playState, 1) <- call("~", yvar, xvar)
-                    type <- "p"
+                    ## type
                     if (!is.unsorted(xVal, na.rm=TRUE))
-                        type <- c("p", "l")
+                        callArg(playState, "type") <- c("p", "l")
                     else {              #if (!is.null(groups))
-                        type <- c("p", "smooth")
+                        callArg(playState, "type") <- c("p", "smooth")
                         callArg(playState, "span") <- 1
+                        callArg(playState, "prepanel") <- quote(prepanel.loess)
                     }
-                    callArg(playState, "type") <- type
                 }
             }
 
@@ -827,19 +878,12 @@ makeLatticistTool <- function(dat)
                     }
                     if (ncond >= 4) {
                         symbol$cex <- 0.5
-                        #if (!is.null(groups))
-                        #    callArg(playState, quote(par.settings$superpose.symbol$cex)) <- cex
-                        #else {
-                        #    callArg(playState, quote(par.settings$plot.symbol$cex)) <- cex
-                        #}
                     }
                     if (nPoints >= LOTS) {
+                      ## there's a bug in lattice: grouped lines take alpha from points setting
+                      if (!is.null(groups) ||
+                          (packageDescription("lattice")$Version > "0.17-10")) 
                         symbol$alpha <- if (nPoints >= HEAPS) 0.1 else 0.3
-                        #if (!is.null(groups))
-                        #    callArg(playState, quote(par.settings$superpose.symbol$alpha)) <- alpha
-                        #else {
-                        #    callArg(playState, quote(par.settings$plot.symbol$alpha)) <- alpha
-                        #}
                     }
                     if (nPoints >= HEAPS) {
                         if (!is.call.to(mainCall(playState), "qqmath") &&
@@ -869,26 +913,27 @@ makeLatticistTool <- function(dat)
                     (is.categorical(xVal) && is.categorical(yVal)))
                 {
                     auto.key <- list()
-                    auto.key$title <- groupsOrigStr
                     levs <- levelsOK(groupsVal)
                     if (is.categorical(xVal) && is.categorical(yVal)) {
-                        auto.key$title <- xvarOrigStr
                         levs <- levelsOK(xVal)
-                    }
-                    n.items <- length(levs)
-                    auto.key$columns <-
-                        if (n.items <= 1) NULL else
-                    if (n.items <= 3) n.items else
-                    if (n.items <= 4) 2 else
-                    if (n.items <= 6) 3 else 1
-                    if (n.items > 3) {
-                        auto.key$cex <- 0.7
+                        auto.key$title <- xvarOrigStr
                         auto.key$cex.title <- 1
                     }
-                    ## TODO: check lengths of text, abbreviate?
-                    if (n.items > 6) {
-                        auto.key$space <- "right"
+                    ## if groups are discretised, need a title
+                    if (do.gdisc) {
+                        auto.key$title <- groupsOrigStr
+                        auto.key$cex.title <- 1
                     }
+                    n.items <- length(levs)
+                    if (n.items > 1 && n.items <= 4)
+                        auto.key$columns <- n.items
+                    if (n.items > 4)
+                        auto.key$space <- "right"
+                    if (n.items == 4)
+                        auto.key$between.columns <- 1
+                    if (n.items >= 3)
+                        auto.key$cex <- 0.7
+                    ## TODO: check lengths of text, abbreviate?
                     callArg(playState, "auto.key") <- auto.key
                 }
 

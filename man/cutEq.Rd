@@ -19,14 +19,27 @@ reorderByFreq(x)
   \item{\dots}{ ignored. }
 }
 \details{
+\code{cutEq} is similar to \code{\link{cut}} but divides into roughly
+equally-sized groups, rather than dividing into bins of equal width.
 
+\code{reorderByFreq} orders levels of a factor by their frequency.
+It is basically \code{reorder(x, x, length)}, but reversed.
 }
 \value{
-
+  \code{cutEq} returns an ordered factor.
+  \code{reorderByFreq} returns a factor with the same values as its
+  input, but with levels reordered.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{ \code{\link{cut}}, \code{cut2} in \code{Hmisc} package, \code{\link{reorder}} }
 \examples{
+summary(cut(rnorm(100), 4, dig=2))
+summary(cutEq(rnorm(100), 4, dig=2))
 
+foo <- factor(c("c","b","b","a"))
+levels(foo)
+# "a" "b" "c"
+levels(reorderByFreq(foo))
+# "b" "a" "c"
 }
 \keyword{ utilities }

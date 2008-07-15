@@ -115,9 +115,12 @@ toolConstructors$identify <- function(playState)
 makeLabels <- function(x, orSeq=FALSE)
 {
     labels <- row.names(x)
-    if (inherits(x, "POSIXt"))
-        labels <- format(x)
-    if (inherits(x, "Date"))
+    if (is.factor(x) || is.character(x))
+        labels <- as.character(x)
+    if (inherits(x, "POSIXt") ||
+        inherits(x, "Date") ||
+        inherits(x, "yearmon") ||
+        inherits(x, "yearqtr"))
         labels <- format(x)
     if (inherits(x, "ts") || inherits(x, "zoo"))
         labels <- rep(format(stats::time(x)), NCOL(x))

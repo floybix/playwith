@@ -71,15 +71,16 @@ zero_postplot_action <- function(widget, playState)
         if (is.character(y.limits)) trans.y <- FALSE
     }
     nonzero <- FALSE
+    eps <- .Machine$double.eps * 2
     if (trans.x) {
         xlim <- rawXLim(playState)
-        if (min(xlim) > 0) nonzero <- TRUE
-        if (max(xlim) < 0) nonzero <- TRUE
+        if (min(xlim) > eps) nonzero <- TRUE
+        if (max(xlim) < -eps) nonzero <- TRUE
     }
     if (trans.y) {
         ylim <- rawYLim(playState)
-        if (min(ylim) > 0) nonzero <- TRUE
-        if (max(ylim) < 0) nonzero <- TRUE
+        if (min(ylim) > eps) nonzero <- TRUE
+        if (max(ylim) < -eps) nonzero <- TRUE
     }
     widget["visible"] <- nonzero
 }

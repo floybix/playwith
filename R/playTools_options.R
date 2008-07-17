@@ -106,7 +106,7 @@ toolConstructors$options <- function(playState)
     ## attach the menu
     gSignalConnect(myButton, "button_press_event",
                    function(widget, event, menu) {
-                       menu$popup(button=event[["button"]], activate.time=event[["time"]])
+                       menu$popup(button=event$button, activate.time=event$time)
                    }, data=myMenu)
     foo <- gtkToolItem()
     foo$add(myButton)

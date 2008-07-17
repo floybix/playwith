@@ -18,14 +18,14 @@ guiTextInput <-
                          show = F)
     editBox$setDefaultResponse(GtkResponseType["ok"])
     if (nchar(prompt) > 0) {
-        editBox[["vbox"]]$packStart(gtkLabel(prompt), expand=F, pad=2)
+        editBox$vbox$packStart(gtkLabel(prompt), expand=F, pad=2)
     }
     if (oneLiner) {
         editEntry <- gtkEntry()
-        editEntry['activates-default'] <- T
-        editEntry['text'] <- text
-        editEntry['width-chars'] <- width.chars
-        editBox[["vbox"]]$packStart(editEntry, pad=10)
+        editEntry["activates-default"] <- T
+        editEntry["text"] <- text
+        editEntry["width-chars"] <- width.chars
+        editBox$vbox$packStart(editEntry, pad=10)
     } else {
         editBox$setDefaultSize(size[1], size[2])
         editTV <- gtkTextView()
@@ -36,12 +36,12 @@ guiTextInput <-
         scroller <- gtkScrolledWindow()
         scroller$add(editTV)
         scroller$setPolicy(GtkPolicyType["automatic"], GtkPolicyType["automatic"])
-        editBox[["vbox"]]$packStart(scroller)
+        editBox$vbox$packStart(scroller)
     }
     ## put focus on the OK button
-    if (focus.on.ok) editBox[["actionArea"]]$getChildren()[[2]]$grabFocus()
+    if (focus.on.ok) editBox$actionArea$getChildren()[[2]]$grabFocus()
     result <- editBox$run() ## make it modal
-    newTxt <- if (oneLiner) editEntry['text'] else getTextviewText(editTV)
+    newTxt <- if (oneLiner) editEntry["text"] else getTextviewText(editTV)
     editBox$destroy()
     if (result != GtkResponseType["ok"]) return(invisible(NULL))
     newTxt

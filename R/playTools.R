@@ -37,10 +37,10 @@ quickTool <-
 {
     x <- if (isToggle) gtkToggleToolButton(show=show)
     else gtkToolButton(show=show)
-    x[["label"]] <- label
-    x[["icon-name"]] <- icon.name
+    x["label"] <- label
+    x["icon-name"] <- icon.name
     if (!is.null(tooltip)) {
-        result <- try(x[["tooltip-text"]] <- tooltip, silent=TRUE)
+        result <- try(x["tooltip-text"] <- tooltip, silent=TRUE)
         #result <- try(x$setTooltipText(tooltip), silent=TRUE)
         #if (inherits(result, "try-error"))
         #    x$setTooltip(gtkTooltips(), tooltip) ## deprecated
@@ -65,21 +65,21 @@ parameterControlTool <-
         label <- paste(label, ": ", sep="")
     ## signal handlers
     updateParamValue <- function(widget, playState) {
-        newval <- widget[["value"]]
+        newval <- widget["value"]
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
         playReplot(playState)
     }
     updateParamText <- function(widget, playState) {
-        newval <- widget[["text"]]
+        newval <- widget["text"]
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
         playReplot(playState)
     }
     updateParamTextNumeric <- function(widget, playState) {
-        newval <- try(as.numeric(widget[["text"]]))
+        newval <- try(as.numeric(widget["text"]))
         if (inherits(newval, "try-error")) return()
         if (is.na(newval)) return()
         oldval <- get(name, envir=playState$env)
@@ -97,7 +97,7 @@ parameterControlTool <-
         playReplot(playState)
     }
     updateParamActive <- function(widget, playState) {
-        newval <- widget[["active"]]
+        newval <- widget["active"]
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
@@ -116,7 +116,7 @@ parameterControlTool <-
         }
         step <- min(diff(unique(sort(value))))
         widget <- gtkSpinButton(min=min(range), max=max(range), step=step)
-        widget[["digits"]] <- max(0, - floor(log10(step)))
+        widget["digits"] <- max(0, - floor(log10(step)))
         widget$setValue(get(name, envir=playState$env))
         gSignalConnect(widget, "value-changed",
                        updateParamValue, data=playState)
@@ -131,7 +131,7 @@ parameterControlTool <-
             box <- gtkVBox()
             box$packStart(gtkLabel(label))
             widget <- gtkEntry()
-            widget[["text"]] <- toString(get(name, envir=playState$env))
+            widget["text"] <- toString(get(name, envir=playState$env))
             widget["width-chars"] <- 6
             gSignalConnect(widget, "activate",
                            updateParamTextNumeric, data=playState)
@@ -161,8 +161,8 @@ parameterControlTool <-
             gtkHScale(min=min(range), max=max(range), step=step)
         else gtkVScale(min=min(range), max=max(range), step=step)
         widget$setValue(get(name, envir=playState$env))
-        widget[["digits"]] <- digits
-        widget[["update-policy"]] <- GtkUpdateType["discontinuous"]
+        widget["digits"] <- digits
+        widget["update-policy"] <- GtkUpdateType["discontinuous"]
         gSignalConnect(widget, "value-changed",
                        updateParamValue, data=playState)
         box$packStart(widget)
@@ -177,7 +177,7 @@ parameterControlTool <-
         if (length(value) == 1) {
             ## text entry
             widget <- gtkEntry()
-            widget[["text"]] <- get(name, envir=playState$env)
+            widget["text"] <- get(name, envir=playState$env)
             #widget["width-chars"] <- 30
             gSignalConnect(widget, "activate",
                            updateParamText, data=playState)
@@ -190,7 +190,7 @@ parameterControlTool <-
             #widget$setActiveText(get(name, envir=playState$env))
             index <- match(get(name, envir=playState$env), value)
             if (is.na(index)) index <- 1
-            widget[["active"]] <- (index - 1)
+            widget["active"] <- (index - 1)
             #gSignalConnect(widget, "editing-done",
             gSignalConnect(widget$getChild(), "activate",
                            updateParamText, data=playState)
@@ -205,7 +205,7 @@ parameterControlTool <-
     if (is.logical(value)) {
         ## toggle button / checkbox
         widget <- gtkCheckButton(label)
-        widget[["active"]] <- isTRUE(get(name, envir=playState$env))
+        widget["active"] <- isTRUE(get(name, envir=playState$env))
         gSignalConnect(widget, "clicked",
                        updateParamActive, data=playState)
         foo <- gtkToolItem()

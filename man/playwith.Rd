@@ -234,6 +234,8 @@ playwith(expr,
   \code{\link{playwith.options}}, \code{\link{latticist}} }
 \examples{
 if (interactive()) {
+op <- options(device.ask.default = FALSE)
+#on.exit(options(op))
 
 ## scatterplot (base graphics)
 ## labels are taken from rownames of data.
@@ -341,6 +343,7 @@ rm(globalOne)
 
 ## see help(playwith.API) for examples of new tools.
 
+options(op)
 }
 }
 \keyword{ iplot }

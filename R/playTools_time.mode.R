@@ -118,7 +118,7 @@ time.mode_scrollbar_handler <- function(widget, playState)
         return()
     }
     newLim[2] <- newLim + widget["adjustment"]["page-size"]
-    if (widget["adjustment"]["page-size"] == 0) stop()
+    if (widget["adjustment"]["page-size"] == 0) return() ## sanitycheck
                                         #oldLim <- rawXLim(playState)
                                         #if (min(oldLim) == min(newLim)) return()
     newLim <- signif(newLim, 8)

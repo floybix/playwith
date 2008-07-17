@@ -27,7 +27,7 @@ device_click_handler <- function(widget, event, playState)
     x <- event$x
     y <- event$y
     coordsCore(playState, NULL)
-    if (event[["button"]] == 1) {
+    if (event$button == 1) {
         ## standard (left) mouse button
         xonly <- playState$time.mode && is.null(playState$time.vector)
         nav.x <- TRUE
@@ -54,7 +54,7 @@ device_click_handler <- function(widget, event, playState)
             zoomCore(playState, foo)
         }
     }
-    if (event[["button"]] == 3) {
+    if (event$button == 3) {
         ## right mouse button
         space <- whichSpace(playState, x, y)
         if (space != "page") {

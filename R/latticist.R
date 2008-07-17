@@ -21,7 +21,7 @@ latticist <-
              ...)
 {
     title <- paste("Latticist:",
-                   toString(deparse(substitute(dat)), width=24))
+                   toString(deparse(substitute(dat)), width=30))
 
     if (!is.data.frame(dat))
         dat <- as.data.frame(dat)
@@ -51,132 +51,21 @@ latticist <-
         }
     }
 
+    pageExpr <- call("panel.text", 0.5, 0, paste("Latticist ",
+                  packageDescription("playwith")$Version, ". ",
+                  "Select variables below to begin.", sep=""),
+                   pos=3, font=2)
+    pageFn <- function(n) NA
+    body(pageFn) <- as.expression(call("{", pageExpr))
+    plot.call$page <- pageFn
+
     playwith(plot.call = plot.call,
              title=title, ...,
+             latticist=list(),
              labels=rownames(dat),
              bottom.tools=list(latticist=makeLatticistTool(dat)))
     invisible(playDevCur())
 }
-
-marginals <-
-    function(data,
-             reorder = TRUE,
-             subset = TRUE,
-             plot.points = FALSE,
-             ref = TRUE,
-             origin = 0,
-             levels.fos = NULL,
-             xlab = NULL, ylab = NULL,
-             cex = 0.5,
-             ...,
-             as.table = TRUE,
-             subscripts = TRUE)
-{
-    default.scales <- list(relation="free", draw=FALSE)
-    if (!is.data.frame(data))
-        data <- as.data.frame(data)
-    nvar <- ncol(data)
-    factors <- sapply(data, is.categorical)
-    ## apply subset
-    subset <- eval(substitute(subset), data)
-    if (!isTRUE(subset)) data <- data[subset,]
-    if (any(factors)) {
-        facdat <- lapply(data[factors], function(Value)
-                         as.data.frame(table(Value)) )
-        facdat <- do.call(make.groups, facdat)
-        ## order packets by number of levels, same effect as index.cond
-        facdat$which <- with(facdat, reorder(which, which, length))
-        ## reorder factor levels within each group
-        if (reorder)
-          facdat$Value <-
-            with(facdat, reorder(reorder(Value, -Freq), as.numeric(which)))
-        ## make trellis object for factors
-        factobj <-
-            dotplot(Freq ~ Value | which, data=facdat, subscripts=TRUE,
-                    ...,
-                    type=c("p","h"), cex=cex, ref=ref,
-                    levels.fos = levels.fos,
-                    origin = origin,
-                    as.table = as.table,
-                    default.scales = default.scales,
-                    xlab=xlab, ylab=ylab)
-        if (all(factors)) return(factobj)
-    }
-    if (any(!factors)) {
-        numdat <- do.call(make.groups, data[!factors])
-        ## order packets by mean, same effect as index.cond
-        numdat$which <- with(numdat, reorder(which, data, mean, na.rm=TRUE))
-        ## make trellis object for numerics
-        numobj <-
-            densityplot(~ data | which, data=numdat, subscripts=TRUE,
-                        ...,
-                        plot.points=plot.points, ref=ref,
-                        as.table = as.table,
-                        default.scales = default.scales,
-                        xlab=xlab, ylab=ylab)
-        if (FALSE)
-            qqmath(~ data | which, data=numdat, subscripts=TRUE,
-                   ...,
-                   distribution=qunif,
-                   f.value=ppoints(100),
-                   type=c("p", "l"), pch=".", cex=2,
-                   as.table = as.table,
-                   default.scales = default.scales,
-                   xlab=xlab, ylab=ylab)
-
-        if (all(!factors)) return(numobj)
-    }
-    ## construct trellis object with combined layout but no data
-    ## This stores the two trellis objects and uses their
-    ## prepanel and panel functions.
-    ## It would be nicer to actually merge the trellis objects
-    ## (i.e. merge $panel.args, $x.limits, $y.limits, etc)
-    ## -- would still need custom panel function
-    nfactors <- sum(factors)
-    pktnames <- c(dimnames(factobj)$which,
-              dimnames(numobj)$which)
-    pktnames <- factor(pktnames, levels=pktnames)
-    dummyobj <-
-        xyplot(1:ncol(data) ~ 1:ncol(data) | pktnames, subscripts=TRUE,
-               ...,
-               OBJ1 = factobj, OBJ2 = numobj, OFFSET = nfactors,
-               prepanel = function(x, ..., OBJ1, OBJ2, OFFSET) {
-                   n <- x ## which is packet.number()
-                   obj <- OBJ1
-                   if (n > OFFSET) {
-                       obj <- OBJ2
-                       n <- n - OFFSET
-                   }
-                   ## can not use default prepanel with mixed fac/num
-                   xlim <- obj$x.num.limit[[n]]
-                   ylim <- obj$y.num.limit[[n]]
-                   if (any(is.na(xlim))) xlim <- obj$x.limits[[n]]
-                   if (any(is.na(ylim))) ylim <- obj$y.limits[[n]]
-                   ## need to apply axis padding to factors manually
-                   pad <- lattice.getOption("axis.padding")$factor
-                   if (is.categorical(obj$x.limits[[n]]))
-                       xlim <- xlim + ifelse(is.unsorted(xlim), -1, 1) *
-                           c(-pad, pad)
-                   list(xlim=xlim, ylim=ylim)
-               },
-               panel = function(..., OBJ1, OBJ2, OFFSET) {
-                   n <- packet.number()
-                   obj <- OBJ1
-                   if (n > OFFSET) {
-                       obj <- OBJ2
-                       n <- n - OFFSET
-                   }
-                   panel <- obj$panel
-                   if (is.character(panel)) panel <- get(panel)
-                   do.call(panel, trellis.panelArgs(obj, n))
-               },
-               as.table = as.table,
-               default.scales = default.scales,
-               xlab=xlab, ylab=ylab)
-
-    dummyobj
-}
-
 
 makeLatticistTool <- function(dat)
 {
@@ -198,12 +87,12 @@ makeLatticistTool <- function(dat)
     LOTS <- 1000
     HEAPS <- 10000
     MAXPANELS <- 16
-    INIT.NLEVELS <- 5
+    INIT.NLEVELS <- 4
 
     function(playState)
     {
         ## create list to store some settings
-        if (is.null(playState$latticist))
+        if (length(playState$latticist) == 0)
             playState$latticist <- list()
         ## get arguments to current call
         callName <- toString(callArg(playState, 0, eval=FALSE))
@@ -571,7 +460,7 @@ makeLatticistTool <- function(dat)
 
             ## reorder conditioning (TODO: index.cond)
             if (!is.null(c1Val)) {
-#                    if (!is.null(yVar) || !is.null(xVar)) {
+#                    if (!is.null(yVal) || !is.null(xVal)) {
 #                        c1 <- call("reorder", c1,
 #                                   if (!is.null(yVal)) yvar else xvar)
 #                    }
@@ -600,7 +489,7 @@ makeLatticistTool <- function(dat)
             }
             updateMainCall(playState)
             callArg(playState, "subset") <- subset
-                                        #if (!isTRUE(subset)) subset ## interferes with "sub"!
+            ## otherwise "sub" gets renamed to "subset" by match.call!
             callArg(playState, "groups") <- groups
             callArg(playState, "subscripts") <- TRUE
             if (tooManyPanels)
@@ -805,7 +694,7 @@ makeLatticistTool <- function(dat)
                     #    yvar <- call("factor", yvar)
                     #if (is.logical(xVal))
                     #    xvar <- call("factor", xvar)
-                    if (is.logical(xVar))
+                    if (is.logical(xVal))
                       callArg(playState, "horizontal") <- FALSE
 
                     ## reorder factor levels if more than 2

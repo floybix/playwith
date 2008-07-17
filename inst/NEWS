@@ -3,6 +3,8 @@ Changes in Version 0.9-8
 
   o compatability with older versions of RGtk2.
 
+  o draw x scales in marginals().
+
 Changes in Version 0.9-7
 
   o click on plot makes a pop-up menu with labels for nearby points.

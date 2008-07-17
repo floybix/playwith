@@ -272,9 +272,13 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
         x.panel <- xyData(playState, space="page")[[x.or.y]]
         ## set factor labels explicitly, othewise is coerced to numeric
         if (is.factor(x.panel)) {
-            if (is.null(callArg(playState, expr=scales[[x.or.y]]$labels))) {
-                callArg(playState, expr=scales[[x.or.y]]$labels) <- levels(x.panel)
-                callArg(playState, expr=scales[[x.or.y]]$at) <- 1:nlevels(x.panel)
+            scales.labels <- substitute(scales[[x.or.y]]$labels,
+                                        list(x.or.y=x.or.y))
+            scales.at <- substitute(scales[[x.or.y]]$at,
+                                        list(x.or.y=x.or.y))
+            if (is.null(callArg(playState, scales.labels))) {
+                callArg(playState, scales.labels) <- levels(x.panel)
+                callArg(playState, scales.at) <- 1:nlevels(x.panel)
             }
         }
         else if (is.somesortoftime(x.panel)) {
@@ -657,9 +661,12 @@ xyData <- function(playState, space="plot")
     if (playState$is.lattice) {
         if (space == "page") {
             ## data from all packets
-            return(do.call(rbind,
-                           lapply(playState$trellis$panel.args, as.data.frame)
-                           ))
+            tmp <- try(do.call(rbind,
+                               lapply(playState$trellis$panel.args, as.data.frame)
+                               ), silent=TRUE)
+            if (inherits(tmp, "try-error"))
+                return(NULL)
+            return(tmp)
         }
         if (space == "plot") {
             space <- packet.number()

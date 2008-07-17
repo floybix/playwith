@@ -8,7 +8,6 @@
 \usage{
 marginals(data,
           reorder = TRUE,
-          subset = TRUE,
           plot.points = FALSE,
           ref = TRUE,
           origin = 0,
@@ -16,8 +15,13 @@ marginals(data,
           xlab = NULL, ylab = NULL,
           cex = 0.5,
           ...,
+          subset = TRUE,
           as.table = TRUE,
-          subscripts = TRUE)
+          subscripts = TRUE,
+          default.scales = list(
+            x = list(relation="free", abbreviate=TRUE,
+                     rot=60, cex=0.5, tick.number=3),
+            y = list(relation="free", draw=FALSE)))
 }
 \arguments{
   \item{data}{ a data frame. }
@@ -26,15 +30,16 @@ marginals(data,
   \item{plot.points, ref}{ passed to \code{panel.densityplot}. }
   \item{origin, levels.fos}{ passed to \code{panel.dotplot}. }
   \item{xlab, ylab, cex, as.table,
-    subscripts}{
+    subscripts, default.scales}{
     see \code{\link[lattice]{xyplot}}.
   }
   \item{\dots}{ passed to \code{\link[lattice]{panel.densityplot}} and
     \code{\link[lattice]{panel.dotplot}}. }
 }
 \details{
-  This implementation is currently a bit of a hack, in the case of
-  mixed numeric and categorical variables.
+  In the case of mixed numeric and categorical variables,
+  the trellis objects from \code{dotplot()} and \code{densityplot}
+  are merged.
 }
 \value{
   a trellis object.
@@ -43,7 +48,10 @@ marginals(data,
 \seealso{ \code{\link[lattice]{panel.dotplot}},
   \code{\link[lattice]{panel.densityplot}} }
 \examples{
-enviro <- transform(environmental, bad = ozone > 50)
+enviro <- environmental
+## make an ordered factor (so it will not be reordered)
+enviro$smell <- cut(enviro$ozone, breaks=c(0,30,50,Inf),
+    labels=c("ok","hmmm","yuck"), ordered=TRUE)
 marginals(enviro)
 }
 \keyword{ hplot }

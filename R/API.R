@@ -163,10 +163,14 @@ playSetFreezeGUI <- function(playState, frozen)
     with(playState$widgets, {
         topToolbar["sensitive"] <- !frozen
         leftToolbar["sensitive"] <- !frozen
-        bottomToolbar["sensitive"] <- !frozen
         rightToolbar["sensitive"] <- !frozen
-        pageScrollBox["sensitive"] <- !frozen
-        timeScrollBox["sensitive"] <- !frozen
+        ## leave bottom toolbar alone as this is where parameter
+        ## control tools go (otherwise long slider drags interrupted).
+        ## these tools check plot.ready before redrawing (threads...).
+        #bottomToolbar["sensitive"] <- !frozen
+        ## similarly, leave page and time scrollbars as sensitive.
+        #pageScrollBox["sensitive"] <- !frozen
+        #timeScrollBox["sensitive"] <- !frozen
                                         #callToolbar["sensitive"] <- !frozen
     })
     playState$win$getWindow()$setCursor(

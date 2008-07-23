@@ -51,13 +51,17 @@ latticist <-
         }
     }
 
-    pageExpr <- call("panel.text", 0.5, 0, paste("Latticist ",
-                  packageDescription("playwith")$Version, ". ",
-                  "Select variables below to begin.", sep=""),
-                   pos=3, font=2)
-    pageFn <- function(n) NA
-    body(pageFn) <- as.expression(call("{", pageExpr))
-    plot.call$page <- pageFn
+    if (missing(plot.call)) {
+        pageFn <- function(n) NA
+        body(pageFn) <- as.expression(call("{",
+            call("panel.text", 0.5, 0, paste("Latticist ",
+                                             packageDescription("playwith")$Version, ". ",
+                                             "Select variables below to begin.", sep=""),
+                 pos=3, font=2)
+            ))
+        ## assuming that the top-level call is the main call!
+        plot.call$page <- pageFn
+    }
 
     playwith(plot.call = plot.call,
              title=title, ...,
@@ -644,7 +648,7 @@ makeLatticistTool <- function(dat)
                         } else if (tst <= 1.2) {
                             ## uniform distribution
                             callArg(playState, "distribution") <- quote(qunif)
-                            callArg(playState, "xlab") <- "Proportion <= y"
+                            callArg(playState, "xlab") <- expression(Proportion <= y)
                         } else {
                             callArg(playState, "distribution") <- quote(qnorm)
                             callArg(playState, "xlab") <- "Standard normal quantiles"
@@ -861,6 +865,12 @@ makeLatticistTool <- function(dat)
                     subt <- call("paste", subsetStr, subt, sep="\n")
                 else subt <- call("paste", subsetStr, subt, sep=", ")
             }
+            #pageFn <- function(n) NA
+            #body(pageFn) <- as.expression(call("{",
+            #    call("panel.text", 1, 0, subt,
+            #         adj=c(1, -0.5), cex=0.7)
+            #    ))
+            #callArg(playState, "page") <- pageFn
             callArg(playState, "sub") <- list(subt, x=0.99, just="right")
             callArg(playState, quote(par.settings$par.sub.text)) <-
                 list(cex=0.7, font=1)

@@ -1,4 +1,15 @@
 
+Changes in Version 0.9-9
+
+  o fix bug when tooltips are turned on: this runs the GTK Main Loop,
+    and sometimes when the window was closed it was not stopped,
+    freezing the R terminal.
+
+  o fix bug in parameter slider ("Invalid property value").
+
+  o make sliders and scrollbars update continuously (but constrained
+    by plot redrawing), rather than only on mouse button release.
+
 Changes in Version 0.9-8
 
   o compatability with older versions of RGtk2.

@@ -114,16 +114,25 @@ playwith <-
         ## create a new window
         myWin <- gtkWindow(show=FALSE)
         if (!inherits(myWin, "GtkWindow"))
-          stop(paste("Could not create the GTK window.",
-                     "Make sure you have recent versions of",
-                     "RGtk2 and the GTK+ libraries.",
-                     "See http://www.ggobi.org/rgtk2/"))
+            stop(paste("Could not create the GTK window.",
+                       "Make sure you have recent versions of",
+                       "RGtk2 and the GTK+ libraries.",
+                       "See http://www.ggobi.org/rgtk2/"))
         ## set approx window size; NOTE: device size is adjusted below
         doResize <- TRUE
         myWin["default-width"] <- width * 96
         myWin["default-height"] <- height * 96
         myWin["modal"] <- modal
         myWin$show()
+        ## switch to GTK event loop while the window is in focus (for tooltips)
+        myWin$addEvents(GdkEventMask["focus-change-mask"])
+        gSignalConnect(myWin, "focus-in-event", gtkmain_handler,
+                       data=playState)
+        gSignalConnect(myWin, "focus-out-event", gtkmainquit_handler,
+                       data=playState)
+        gSignalConnect(myWin, "delete-event", gtkmainquit_handler,
+                       data=playState)
+        ## run user-defined close action
         gSignalConnect(myWin, "delete-event",  window.close_handler,
                        data=playState)
     }
@@ -236,14 +245,7 @@ playwith <-
                    data=playState)
     gSignalConnect(myHBox, "remove", devoff_handler,
                    data=playState, after=TRUE)
-    ## switch to GTK event loop while the window is in focus (for tooltips)
-    myWin$addEvents(GdkEventMask["focus-change-mask"])
-    gSignalConnect(myWin, "focus-in-event", gtkmain_handler,
-                   data=playState)
-    gSignalConnect(myWin, "focus-out-event", gtkmainquit_handler,
-                   data=playState)
-    gSignalConnect(myWin, "delete-event", gtkmainquit_handler,
-                   data=playState)
+    ## initialise trellis settings for the device
     trellis.device(new=FALSE)
     ## create the page scrollbar
     pageScrollBox <- gtkVBox(show=FALSE)
@@ -253,6 +255,7 @@ playwith <-
     pageEntry["width-chars"] <- 2
     gSignalConnect(pageEntry, "activate",
                    function(widget, playState) {
+                       if (!playState$plot.ready) return()
                        newPage <- round(as.numeric(widget["text"]))
                        if (newPage == playState$page) return()
                        playState$page <- newPage
@@ -263,9 +266,10 @@ playwith <-
     pageScrollbar <- gtkVScrollbar()
     pageScrollbar["adjustment"] <- gtkAdjustment(value=1, lower=1, upper=1+1,
                                                  step.incr=1, page.incr=1, page.size=1)
-    pageScrollbar["update-policy"] <- GtkUpdateType["discontinuous"]
+    pageScrollbar["update-policy"] <- GtkUpdateType["delayed"]
     gSignalConnect(pageScrollbar, "value-changed",
                    function(widget, playState) {
+                       if (!playState$plot.ready) return()
                        newPage <- round(widget$getValue())
                        if (newPage == playState$page) return()
                        playState$page <- newPage
@@ -290,7 +294,7 @@ playwith <-
     timeScrollBox$packStart(timeEntry, expand=FALSE)
     timeScrollbar <- gtkHScrollbar()
     timeScrollbar["adjustment"] <- gtkAdjustment()
-    timeScrollbar["update-policy"] <- GtkUpdateType["discontinuous"]
+    timeScrollbar["update-policy"] <- GtkUpdateType["delayed"]
     gSignalConnect(timeScrollbar, "value-changed",
                    time.mode_scrollbar_handler, data=playState)
     timeScrollBox$packStart(timeScrollbar)

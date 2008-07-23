@@ -65,10 +65,12 @@ parameterControlTool <-
         label <- paste(label, ": ", sep="")
     ## signal handlers
     updateParamValue <- function(widget, playState) {
-        newval <- widget["value"]
+        ## (can't use widget["value"] with a slider)
+        newval <- widget$getValue()
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
+        if (!playState$plot.ready) return()
         playReplot(playState)
     }
     updateParamText <- function(widget, playState) {
@@ -76,6 +78,7 @@ parameterControlTool <-
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
+        if (!playState$plot.ready) return()
         playReplot(playState)
     }
     updateParamTextNumeric <- function(widget, playState) {
@@ -85,6 +88,7 @@ parameterControlTool <-
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
+        if (!playState$plot.ready) return()
         playReplot(playState)
     }
     updateParamCombobox <- function(widget, playState) {
@@ -94,6 +98,7 @@ parameterControlTool <-
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
+        if (!playState$plot.ready) return()
         playReplot(playState)
     }
     updateParamActive <- function(widget, playState) {
@@ -101,6 +106,7 @@ parameterControlTool <-
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
+        if (!playState$plot.ready) return()
         playReplot(playState)
     }
     if (is.integer(value) || inherits(value, "AsIs")) {
@@ -162,7 +168,7 @@ parameterControlTool <-
         else gtkVScale(min=min(range), max=max(range), step=step)
         widget$setValue(get(name, envir=playState$env))
         widget["digits"] <- digits
-        widget["update-policy"] <- GtkUpdateType["discontinuous"]
+        widget["update-policy"] <- GtkUpdateType["delayed"]
         gSignalConnect(widget, "value-changed",
                        updateParamValue, data=playState)
         box$packStart(widget)

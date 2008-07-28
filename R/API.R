@@ -876,14 +876,12 @@ playLogBase <- function(playState, x.or.y=c("x", "y"))
 {
     x.or.y <- match.arg(x.or.y)
     if (playState$is.lattice) {
-        scalesArg <- callArg(playState, "scales")
-        if (!is.null(scalesArg[[x.or.y]]$log)) {
-            logBase <- latticeLogBase(scalesArg[[x.or.y]]$log)
-            if (!is.na(logBase)) return(logBase)
-        } else {
-            logBase <- latticeLogBase(scalesArg$log)
-            if (!is.na(logBase)) return(logBase)
-        }
+        scalesObj <- playState$trellis[[paste(x.or.y, "scales", sep=".")]]
+        x <- scalesObj$log
+        if (identical(x, FALSE)) return(NA)
+        if (isTRUE(x)) return(10)
+        if (identical(x, "e")) return(exp(1))
+        return(x)
     } else if (playState$is.ggplot) {
         logArg <- callArg(playState, "log")
         if (!is.null(logArg) &&
@@ -894,15 +892,6 @@ playLogBase <- function(playState, x.or.y=c("x", "y"))
         if (par(paste(x.or.y, "log", sep=""))) return(10)
     }
     return(NA)
-}
-
-latticeLogBase <- function(x)
-{
-    x <- eval(x)
-    if (is.null(x) || identical(x, FALSE)) return(NA)
-    if (isTRUE(x)) return(10)
-    if (identical(x, "e")) return(exp(1))
-    x
 }
 
 whichSpace <- function(playState, x.device, y.device)
@@ -931,6 +920,7 @@ deviceCoordsToSpace <- function(playState, x.device, y.device, space = "plot")
     spaceFun <- playState$deviceToSpace[[space]]
     spaceFun(x.device, y.device)
 }
+
 
 ## this is called by playReplot
 ## makes a function to transform device native x, y (i.e. pixels)

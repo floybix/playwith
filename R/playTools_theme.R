@@ -14,14 +14,28 @@ toolConstructors$theme <- function(playState)
     myMenu$append(myLabel)
     themeItems <-
         list(
-             whitebg=gtkMenuItem(label="White BG (general)"),
-             standard.screen=gtkMenuItem(label="Dark BG (for screen)"),
-             standard.print=gtkMenuItem(label="Greyscale (for print)")
+             standard.pdf = gtkMenuItem(label="General default"),
+             whitebg = gtkMenuItem(label="White BG"),
+             standard.screen = gtkMenuItem(label="Dark BG (for screen)"),
+             standard.print = gtkMenuItem(label="Greyscale (for print)"),
+             custom.theme.1 = gtkMenuItem(label="ColorBrewer 1")
              )
+    theme_handler <- function(widget, theme)
+    {
+        switch(theme,
+               standard.pdf = trellis.par.set(standard.theme("pdf")),
+               whitebg = trellis.par.set(col.whitebg()),
+               standard.screen = trellis.par.set(standard.theme("X11")),
+               standard.print = trellis.par.set(standard.theme("postscript")),
+               custom.theme.1 = trellis.par.set(latticeExtra::custom.theme())
+               )
+        playReplot(playState)
+    }
+
     for (x in names(themeItems)) {
         myMenu$append(themeItems[[x]])
         gSignalConnect(themeItems[[x]], "activate", theme_handler,
-                       data=list(playState=playState, theme=x))
+                       data=x)
     }
     widget <- quickTool(playState,
                         label = "Theme",
@@ -34,15 +48,4 @@ toolConstructors$theme <- function(playState)
                        menu$popup(button=0, activate.time=gtkGetCurrentEventTime())
                    }, data=myMenu)
     widget
-}
-
-theme_handler <- function(widget, user.data)
-{
-    playState <- user.data$playState
-    switch(user.data$theme,
-           whitebg=trellis.par.set(theme=col.whitebg()),
-           standard.screen=trellis.par.set(theme=standard.theme("X11")),
-           standard.print=trellis.par.set(theme=standard.theme("postscript"))
-           )
-    playReplot(playState)
 }

@@ -1,4 +1,16 @@
 
+Changes in Version 0.9-10
+
+  o grob inspector tool (currently only shows str() of grobs).
+
+  o moved marginals() and c.trellis() into latticeExtra package.
+
+  o plot settings dialog now does not fail for lattice plots
+    where scales="free".
+
+  o lattice theme selector now includes the defaults of custom.theme()
+    from latticeExtra.
+
 Changes in Version 0.9-9
 
   o fix bug when tooltips are turned on: this runs the GTK Main Loop,

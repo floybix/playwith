@@ -13,6 +13,9 @@ settings_handler <- function(widget, playState)
     wid <- list()
 
     ## convenience extractor
+    isLatt <- playState$is.lattice
+    x.scales <- if (isLatt) playState$trellis$x.scales
+    y.scales <- if (isLatt) playState$trellis$y.scales
     arg <- function(x) callArg(playState, x)
 
     ## TODO: LEGEND / KEY
@@ -40,31 +43,31 @@ settings_handler <- function(widget, playState)
     }
     visible(lay) <- TRUE
 
+
     ## AXES
     axisgroup <- gframe("Axes", horizontal=FALSE, container=annTab)
     lay <- glayout(container=axisgroup)
     wid$xaxis.show <-
-        gcheckbox("visible", checked=!(any(arg("scales")$x$draw == FALSE) ||
-                                       any(arg("scales")$draw == FALSE) ||
-                                       any(arg("axes") == FALSE) ||
-                                       any(arg("xaxt") == "n")
-                                       ))
+        gcheckbox("visible",
+                  checked=if (isLatt) x.scales$draw else
+                  !(any(arg("axes") == FALSE) ||
+                    any(arg("xaxt") == "n")))
     wid$yaxis.show <-
-        gcheckbox("visible", checked=!(any(arg("scales")$y$draw == FALSE) ||
-                                       any(arg("scales")$draw == FALSE) ||
-                                       any(arg("axes") == FALSE) ||
-                                       any(arg("yaxt") == "n")
-                                       ))
+        gcheckbox("visible",
+                  checked=if (isLatt) y.scales$draw else
+                  !(any(arg("axes") == FALSE) ||
+                    any(arg("yaxt") == "n")))
     wid$xaxis.log <-
-        gcheckbox("logarithmic", checked=(any(as.character(arg("scales")$x$log) != "FALSE") ||
-                                          any(as.character(arg("scales")$log) != "FALSE") ||
-                                          any(grep("x", arg("log")))
-                                          ))
+        gcheckbox("logarithmic",
+                  checked=if (isLatt) !identical(x.scales$log, FALSE) else
+                  par("xlog")) #any(grep("x", arg("log"))))
     wid$yaxis.log <-
-        gcheckbox("logarithmic", checked=(any(as.character(arg("scales")$y$log) != "FALSE") ||
-                                          any(as.character(arg("scales")$log) != "FALSE") ||
-                                          any(grep("y", arg("log")))
-                                          ))
+        gcheckbox("logarithmic",
+                  checked=if (isLatt) !identical(y.scales$log, FALSE) else
+                  par("ylog")) #any(grep("y", arg("log"))))
+
+    ## TODO: lattice scale options (same / sliced / free)
+    ## TODO: lattice aspect options
     wid$aspect.iso <-
         gcheckbox("isometric scale", checked=(any(arg("aspect") == "iso") ||
                                               any(arg("asp") == 1)

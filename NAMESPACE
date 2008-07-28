@@ -15,7 +15,6 @@ export(
 # latticist
 export(
        latticist,
-       marginals,
        reorderByFreq,
        cutEq)
 

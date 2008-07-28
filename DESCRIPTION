@@ -1,13 +1,13 @@
 Package: playwith
 Type: Package
 Title: A GUI for interactive plots using GTK+
-Version: 0.9-9
-Date: 2008-07-22
+Version: 0.9-10
+Date: 2008-07-28
 Author: Felix Andrews <felix@nfrac.org>
 Maintainer: Felix Andrews <felix@nfrac.org>
-Depends: R (>= 2.5.0), lattice (>= 0.16), grid, gWidgets, gWidgetsRGtk2, cairoDevice
-Imports: RGtk2 (>= 2.10.11), gridBase, graphics, grDevices, utils
-Suggests: latticeExtra, zoo
+Depends: R (>= 2.5.0), lattice (>= 0.16), latticeExtra (>= 0.5-1), grid, gWidgets, gWidgetsRGtk2, cairoDevice
+Imports: RGtk2 (>= 2.10.11), gridBase, grDevices, utils, graphics
+Suggests: zoo
 Description: A GTK+ graphical user interface for viewing and interacting with R plots.
   It tries to work out the structure of a plot, in order to interact with it.
   The built-in features include: zooming the data space, identifying data points,

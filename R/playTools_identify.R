@@ -69,8 +69,10 @@ toolConstructors$identify <- function(playState)
                     if (inherits(tmp.x, "formula")) {
                         ## if 1st arg is formula, 2nd is `data`
                         if (is.null(tmp.data) &&
-                              (is.null(names(mainCall)) ||
-                               identical(names(mainCall)[[3]], "")))
+                            (length(mainCall) >= 3) &&
+                            (is.null(names(mainCall)) ||
+                             identical(names(mainCall)[[3]], ""))
+                            )
                             tmp.data <- callArg(playState, 2)
                         xObj <- if (length(tmp.x) == 2)
                             tmp.x[[2]] else tmp.x[[3]]

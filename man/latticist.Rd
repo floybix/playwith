@@ -19,9 +19,8 @@ latticist(dat,
   displays. Factor variables of class \code{ordered} are not reordered.
   Therefore you should ensure that any variables whose levels have an inherent
   order are of class \code{ordered}: see \code{\link{as.ordered}}.
-  Warning: the result of \code{\link{cut}} is by default NOT
+  Note: the result of \code{\link{cut}} is by default NOT
   \code{ordered}!
-
   Integer variables with only one or two levels are converted to factors.
   }
   \item{plot.call}{ call defining the initial plot display. }
@@ -29,13 +28,21 @@ latticist(dat,
 }
 \details{
   To change the style of lattice graphics, use \code{lattice.options(default.theme=...)}.
-See \code{\link[lattice]{show.settings}} and \code{\link[lattice]{simpleTheme}}.
+See \code{\link[lattice]{show.settings}},
+\code{\link[lattice]{simpleTheme}}
+and \code{\link[latticeExtra]{custom.theme}}.
 }
 \value{
   invisibly returns the \code{playState} object representing the plot
   window: see \code{\link{playDevCur}}.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
+\references{
+  For an excellent introduction to and coverage of Lattice:
+
+Sarkar, Deepayan (2008) "Lattice: Multivariate Data Visualization with
+R", Springer. \url{http://lmdvr.r-forge.r-project.org/}
+}
 \seealso{ \code{\link{playwith}}, \code{\link[lattice]{Lattice}} }
 \examples{
 if (interactive()) {

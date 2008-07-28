@@ -40,6 +40,8 @@
          "zoomout",
          "zoomfit",
          "zero",
+         "--",
+         "inspector",
          "---",
          "coords",
          "clickhandler"

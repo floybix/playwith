@@ -1,4 +1,8 @@
 
+Changes in Version 0.9-11
+
+  o revised and expanded all examples in help("playwith").
+
 Changes in Version 0.9-10
 
   o grob inspector tool (currently only shows str() of grobs).

@@ -147,7 +147,7 @@ playwith(expr,
     this is used instead of \code{expr}. }
   \item{main.function}{ the function (or its name) appearing in the call
     which accepts typical plot arguments like \code{xlim} and
-    \code{main}. This will only be needed in unusual cases when the
+    \code{ylab}. This will only be needed in unusual cases when the
     default guess fails. }
 }
 \details{
@@ -183,7 +183,8 @@ playwith(expr,
   Some interaction is based on evaluating and changing arguments to the plot call.
   This is designed to work in common cases, but could never work for all
   plots. For basic interaction, ensure that the call accepts \code{xlim}
-  and \code{ylim} arguments.
+  and \code{ylim} arguments, and supply \code{data.points} and \code{labels}
+  to \code{playwith} if necessary.
   Generally, it can be expected to work best with Lattice plots.
 
   The locations and type of data points will be guessed from the plot call.
@@ -234,37 +235,49 @@ playwith(expr,
   \code{\link{playwith.options}}, \code{\link{latticist}} }
 \examples{
 if (interactive()) {
-op <- options(device.ask.default = FALSE)
-#on.exit(options(op))
+options(device.ask.default = FALSE)
 
-## scatterplot (base graphics)
+## scatterplot (lattice graphics)
 ## labels are taken from rownames of data.
 ## just click on the plot to identify points.
-rownames(USArrests) <- state.name
-playwith(plot(Assault ~ UrbanPop, data=USArrests,
-  xlab="Percent urban population, 1973",
-  ylab="Assault arrests (per 100,000), 1973"))
+playwith(xyplot(Income ~ log(Population / Area),
+   data = data.frame(state.x77), groups = state.region,
+   type = c("p", "smooth"), span = 1, auto.key = TRUE,
+   ylab = "Income per capita, 1974"))
 
-## time series plot (base graphics)
-## click and drag to zoom; right-click to zoomout.
-tt <- time(treering)
-treeyears <- paste(abs(tt) + (tt <= 0),
-                  ifelse(tt > 0, "CE", "BCE"))
-playwith(plot(treering, xlim = c(1000, 1300)),
-	labels = treeyears)
+## scatterplot (base graphics); similar.
+urbAss <- USArrests[c("UrbanPop", "Assault")]
+playwith(plot(urbAss, panel.first = lines(lowess(urbAss)),
+   col = "blue", main = "Assault vs urbanisation",
+   xlab = "Percent urban population, 1973",
+   ylab = "Assault arrests (per 100,000), 1973"))
 
 ## time series plot (lattice)
 ## date-time range can be entered directly in time mode.
+## (supports numeric, Date, POSIXct, yearmon and yearqtr).
 library(zoo)
 playwith(xyplot(sunspots ~ yearmon(time(sunspots)),
                 xlim=c(1900, 1930), type="l"))
 
+## time series plot (base graphics)
+## click and drag to zoom in; right-click to zoom out;
+## and use the scrollbar to move along the x-axis.
+## custom labels are passed directly to playwith.
+## label style can also be set with playwith.options().
+tt <- time(treering)
+treeyears <- paste(abs(tt) + (tt <= 0),
+                  ifelse(tt > 0, "CE", "BCE"))
+playwith(plot(treering, xlim = c(1000, 1300)),
+   labels = treeyears, label.style = gpar(col="red",
+      fontfamily="HersheySans", cex=0.7)))
+
 ## multi-panel lattice plot
-## note label style can also be set with playwith.options()
-playwith(xyplot(Income ~ log(Population / Area) | state.region,
-	data = data.frame(state.x77), subscripts=TRUE),
-	label.style = gpar(col="red", fontfamily="HersheySans",
-	cex=0.7))
+## need subscripts=TRUE to correctly identify points.
+## scales are "same" so zooming affects all panels.
+Depth <- equal.count(quakes$depth, number = 3, overlap = 0.1)
+playwith(xyplot(lat ~ long | Depth, data = quakes,
+      subscripts = TRUE, aspect = "iso", pch = ".", cex = 2),
+   labels = paste("mag", quakes$mag))
 
 ## interactive control of a parameter with a slider
 xx <- rnorm(50)
@@ -273,9 +286,13 @@ playwith(plot(density(xx, bw = bandwidth), panel.last = rug(xx)),
 
 ## the same with a spinbutton (use I() to force spinbutton).
 ## initial value is set as the first in the vector of values.
+## also shows a combobox for selecting text options.
 xx <- rnorm(50)
-playwith(plot(density(xx, bw = bandwidth), panel.last = rug(xx)),
-	parameters = list(bandwidth = I(c(0.1, 5:100/100))) )
+kernels <- c("gaussian", "epanechnikov", "rectangular",
+   "triangular", "biweight", "cosine", "optcosine")
+playwith(plot(density(xx, bw = bandwidth, kern=kernel), lty=lty),
+	parameters = list(bandwidth = I(c(0.1, 5:100/100)),
+            kernel=kernels, lty = 1:6))
 
 ## more parameters
 playwith(stripplot(yield ~ site, data = barley,
@@ -287,34 +304,57 @@ playwith(stripplot(yield ~ site, data = barley,
                     groups=c("none", "year", "variety"),
                     linecol="red"))
 
-## brushing a multivariate scatterplot
-playwith(splom(environmental))
+## composite plot (base graphics)
+## adapted from an example in help("legend").
+## in this case, the initial plot() call is detected correctly.
+## in more complex cases may need to pass main.function=...
+## also construct data points and labels manually.
+x <- seq(-4*pi, 4*pi, by=pi/24)
+pts <- data.frame(x=x, y=c(sin(x), cos(x), tan(x)))
+labs <- rep(c("sin","cos","tan"), each=length(x))
+labs <- paste(labs, round(180 * x / pi) %% 360)
+playwith( {
+   plot(x, sin(x), type = "l", xlim=c(-pi, pi),
+       ylim = c(-1.2, 1.8), col = 3, lty = 2)
+   points(x, cos(x), pch = 3, col = 4)
+   lines(x, tan(x), type = "b", lty = 1, pch = 4, col = 6)
+   legend("topright", c("sin", "cos", "tan"), col = c(3,4,6),
+       lty = c(2, -1, 1), pch = c(-1, 3, 4),
+       merge = TRUE, bg = 'gray90')
+}, data.points=pts, labels=labs)
 
 ## simple spin and zoom for a 3D plot
 playwith(wireframe(volcano, drape=TRUE))
 
+## brushing a multivariate scatterplot
+playwith(splom(environmental))
+
 ## ggplot (NOTE: only qplot()-based calls will work)
-## labels come from data frame automatically.
+## labels are rownames of the data.
 library(ggplot2)
 playwith(qplot(qsec, wt, data=mtcars) + stat_smooth())
 
 ## a minimalist grid plot
-gridPlot <- function(x, y, xlim = NULL, ylim = NULL) {
-	if (is.null(xlim)) xlim <- extendrange(x)
-	if (is.null(ylim)) ylim <- extendrange(y)
-	grid.newpage()
-	pushViewport(plotViewport())
-	grid.rect()
-	pushViewport(viewport(xscale=xlim, yscale=ylim,
-		name="theData"))
-	grid.points(x, y)
-	grid.xaxis()
-	grid.yaxis()
-	upViewport(0)
+## accept xlim/ylim and pass "viewport" to enable zooming.
+gridPlot <- function(x, y, xlim = NULL, ylim = NULL, ...)
+{
+   if (is.null(xlim)) xlim <- extendrange(x)
+   if (is.null(ylim)) ylim <- extendrange(y)
+   grid.newpage()
+   pushViewport(plotViewport())
+   grid.rect()
+   pushViewport(viewport(xscale=xlim, yscale=ylim,
+      name="theData"))
+   grid.points(x, y, gp=gpar(...))
+   grid.xaxis()
+   grid.yaxis()
+   upViewport(0)
 }
 playwith(gridPlot(1:10, 11:20), viewport="theData")
 
-## acting like a dialog box (confirm close)
+## acting like a modal dialog box
+## when window is closed, ask user to confirm.
+## use only a subset of the default tools, and hide plot call.
 subTools <- list("identify", "clear", "zoom", "zoomout", "zoomfit")
 confirmClose <- function(playState) {
 	if (gWidgets::gconfirm("Close window and report IDs?")) {
@@ -328,17 +368,24 @@ playwith(plot(xy), on.close=confirmClose, modal=TRUE,
 	width=4, height=3.5, show.call=FALSE,
 	top=NULL, left=subTools)
 
-## only local variables appearing in the plot call are stored
-## (use eval.args=TRUE to store all data)
+## by default, only local variables in the plot are stored
 globalOne <- rnorm(1000)
-localStuff <- function() {
+doLocalStuff <- function(...) {
 	localOne <- rnorm(1000)
-	playwith(plot(localOne, globalOne))
+	playwith(plot(localOne, globalOne), ...)
 }
-localStuff()
+doLocalStuff(title="locals only") ## eval.args=NA is the default
 ## list objects that have been copied and stored
 sapply(playDevCur()$env, object.size)
-## if you rm(globalOne) now, redraws will fail
+## i.e. if you rm(globalOne) now, redraws will fail
+## Next: store all data objects (in a new window)
+doLocalStuff(title="all stored", eval.args=TRUE, new=TRUE)
+sapply(playDevCur()$env, object.size)
+## now there are two devices open:
+playDevList()
+playDevCur()
+playDevOff()
+playDevCur()
 
 ## see help(playwith.API) for examples of new tools.
 

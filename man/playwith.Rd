@@ -338,8 +338,7 @@ localStuff <- function() {
 localStuff()
 ## list objects that have been copied and stored
 sapply(playDevCur()$env, object.size)
-## if global object is removed, redraws will fail
-rm(globalOne)
+## if you rm(globalOne) now, redraws will fail
 
 ## see help(playwith.API) for examples of new tools.
 

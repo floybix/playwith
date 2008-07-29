@@ -8,7 +8,7 @@ Changes in Version 0.9-10
   o plot settings dialog now does not fail for lattice plots
     where scales="free".
 
-  o lattice theme selector now includes the defaults of custom.theme()
+  o lattice theme selector now includes an option for custom.theme()
     from latticeExtra.
 
 Changes in Version 0.9-9

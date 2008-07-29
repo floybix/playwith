@@ -83,15 +83,16 @@ playwith <-
         if (is.null(title)) title <- playState$title
     }
     if (is.null(playState) || isTRUE(playState$keep)) {
-        playState <- new.env()
+        playState <- new.env(parent = emptyenv())
         class(playState) <- c("playState", "environment")
         ID <- basename(tempfile())
         StateEnv[[ID]] <- playState
     }
     playState$plot.ready <- FALSE
     StateEnv$.current <- playState
+    ## env is the <environment> containing local cached objects
+    env <- new.env(parent = globalenv())
     ## work out evaluation rules
-    env <- new.env()
     evalGlobals <- !is.na(eval.args)
     if (is.na(eval.args)) eval.args <- (environmentName(envir) != "R_GlobalEnv")
     if (!identical(eval.args, FALSE)) {

@@ -3,6 +3,7 @@ import(RGtk2)
 # note cairoDevice::asCairoDevice calls require(RGtk2)
 import(gridBase)
 import(graphics)
+#importFrom(graphics, par, plot)
 import(grDevices)
 importFrom(utils, head, modifyList)
 

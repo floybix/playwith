@@ -27,7 +27,7 @@ toolConstructors$theme <- function(playState)
                whitebg = trellis.par.set(col.whitebg()),
                standard.screen = trellis.par.set(standard.theme("X11")),
                standard.print = trellis.par.set(standard.theme("postscript")),
-               custom.theme.1 = trellis.par.set(latticeExtra::custom.theme())
+               custom.theme.1 = trellis.par.set(custom.theme())
                )
         playReplot(playState)
     }

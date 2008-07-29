@@ -8,7 +8,8 @@
 toolConstructors$inspector <- function(playState)
 {
     ## this tool does not work with base graphics plots
-    ## TODO: how to detect grid vs base?
+    if (length(grid.ls(print=FALSE)$name) == 0)
+        return(NA)
 
     quickTool(playState,
               label = "Grobs",

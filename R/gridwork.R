@@ -168,6 +168,7 @@ showGrobsBB <-
                                           print=FALSE)),
                           stringsAsFactors=FALSE)
     objs <- objs[objs$type == "grobListing",]
+    if (nrow(objs) == 0) return()
     objs$vpPath <- sub("^ROOT::", "", objs$vpPath)
     objs$vpPath[objs$vpPath == "ROOT"] <- ""
     ## draw boxes around grobs

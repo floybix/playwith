@@ -76,7 +76,7 @@ playwith(expr,
     extra arguments:
     \describe{
       \item{\code{show.tooltips}}{
-	show tooltips for toolbar items. This uses the GTK event loop,
+	show tooltips for toolbar items. This uses the GTK event loop internally,
 	which might, occasionally, cause the R terminal to freeze.
       }
       \item{\code{page}}{
@@ -132,14 +132,22 @@ playwith(expr,
   \item{width, height}{ initial size of the plot device in inches. }
   \item{pointsize}{ default point size for text, used in the
     \code{\link[cairoDevice]{Cairo}} device. }
-  \item{modal}{ whether the window is modal: if \code{TRUE}, the session will freeze until the window is closed. }
-  \item{on.close}{ a function to be called when the user closes the plot window. The \code{\link{playState}} object
-    will passed to the function. If the function returns \code{TRUE}, the window will not be closed. }
-  \item{show.call}{ set to \code{FALSE} to hide the plot call text-box ("address bar") and associated buttons.}
-  \item{eval.args}{ whether to evaluate the plot call arguments: can be \code{TRUE}, \code{FALSE}, \code{NA} (don't eval global vars)
-    or a \link[=regex]{regular expression} matching symbols to evaluate. See below. }
-  \item{invert.match}{ whether to evaluate arguments that do NOT match the regular expression given in \code{eval.args}. }
-  \item{envir}{ \code{\link{environment}} to use in evaluating the call arguments (see \code{eval.args}) }
+  \item{modal}{ whether the window is modal: if \code{TRUE},
+    the session will freeze until the window is closed. }
+  \item{on.close}{ a function to be called when the user closes the plot
+    window. The \code{\link{playState}} object
+    will passed to the function. If the function returns \code{TRUE},
+    the window will not be closed. }
+  \item{show.call}{ set to \code{FALSE} to hide the plot call text-box
+    ("address bar") and associated buttons.}
+  \item{eval.args}{ whether to evaluate the plot call arguments: can be
+    \code{TRUE}, \code{FALSE}, \code{NA} (don't eval global vars)
+    or a \link[=regex]{regular expression} matching symbols to evaluate.
+    See below. }
+  \item{invert.match}{ whether to evaluate arguments that do NOT match
+    the  regular expression given in \code{eval.args}. }
+  \item{envir}{ \code{\link{environment}} to use in evaluating the call
+    arguments (see \code{eval.args}) }
   \item{playState}{ the \code{\link{playState}} object for an existing plot window.
     If given, the new plot will appear in that window, replacing the old plot.
     This over-rides the \code{new} argument.}
@@ -160,7 +168,7 @@ playwith(expr,
   if necessary.
 
   With the \code{\link{autoplay}} facility, \code{playwith} can function
-  as a default graphics device (although it is not technically a
+  like a default graphics device (although it is not technically a
   graphics device itself, it is a wrapper around one).
 
   See \link{playTools} for a description of the pre-defined tools,
@@ -168,67 +176,78 @@ playwith(expr,
   For the special case of tools to control parameter values, it is possible
   to create the tools automatically using the \code{parameters} argument.
 
-  Four types of plots are handled slightly differently:
+  Four types of plots are handled somewhat differently:
   \itemize{
-    \item Lattice graphics: recognised by returning an object of class \code{trellis}.
-    \item ggplot graphics: recognised by returning an object of class \code{ggplot}.
-    This case is poorly supported.
+    \item Lattice graphics: recognised by returning an object of class
+    \code{trellis}. This is the best-supported case.
+    \item ggplot2 graphics: recognised by returning an object of class \code{ggplot}.
+    This case is rather poorly supported.
     \item other grid graphics: you must give the \code{viewport}
     argument to enable interaction.
-    \item base graphics: this is the default case.
+    \item base graphics: this is the default case. If a multiple-plot
+    layout is used, interaction can only work in the last sub-plot, i.e.
+    the settings defined by \code{par()}.
   }
 
-  It is important to be aware that \code{playwith} makes a lot of guesses
-  about the plot, the data, and how to interact with them.
-  Some interaction is based on evaluating and changing arguments to the plot call.
+  Some forms of interaction are based on evaluating and changing arguments to the plot call.
   This is designed to work in common cases, but could never work for all
-  plots. For basic interaction, ensure that the call accepts \code{xlim}
-  and \code{ylim} arguments, and supply \code{data.points} and \code{labels}
-  to \code{playwith} if necessary.
-  Generally, it can be expected to work best with Lattice plots.
+  types of plots. To enable zooming, ensure that the main call accepts \code{xlim}
+  and \code{ylim} arguments. Furthermore, you may need to specify \code{main.function} if the
+  relevant high-level call is nested in a complex block of expressions.
 
-  The locations and type of data points will be guessed from the plot call.
-  An attempt will also be made to construct labels to identify the data points.
-  These guesses may be wrong in complex cases, in which case
-  you can pass the correct values in as \code{data.points} and/or \code{labels}.
+  To enable identification of data points, the locations of data points
+  are required, along with appropriate labels.
+  By default, these locations and labels will be guessed from the plot call,
+  but this may fail.
+  You can pass the correct values in as \code{data.points} and/or \code{labels}.
   Please also contact the maintainer to help improve the guesses.
-  The automatic subscripts used to identify points in Lattice plots
-  will be usually be the within-panel indices unless \code{subscripts=TRUE} is
-  specified in the plot call: see \code{\link[lattice]{xyplot}}.
-  If so a warning dialog box will be shown.
+  If identification of data points is not required, passing
+  \code{data.points = NA, labels = NA} may speed things up.
+
+  Some lattice functions require \code{subscripts = TRUE} in order to correctly
+  identify points in a multiple-panel layout. Otherwise the subscripts used will then
+  refer to the data in each panel separately, rather than the original dataset.
+  In this case a warning dialog box will be shown.
 
   In order to interact with a plot, its supporting data needs to be stored:
   i.e. all variables appearing in the plot call must remain accessible.
-  By default, all non-global data is copied into an attached environment and stored.
+  By default (\code{eval.args = NA}), objects that are not globally
+  accessible will be copied into an attached environment and stored with
+  the plot window.
+  I.e. objects are stored unless they exist in the global environment
+  (user workspace) or in an attached namespace.
+  This method should work in most cases.
+  However, it may end up copying more data than is really necessary,
+  potentially using up memory. Note that if e.g. \code{foo$bar} appears
+  in the call, the whole of \code{foo} will be copied.
 
-  The default setting \code{eval.args=NA} causes variables appearing in the
-  plot call to be evaluated and stored, except if they are defined in the
-  global environment (i.e. user workspace). This method should work in most
-  cases, but: Functions appearing in the plot call will be evaluated each
-  time the plot is updated -- so random data as in \code{plot(rnorm(100))}
-  will keep changing, with confusing consequences! You should therefore
-  generate random data prior to the plot call. Changes to variables in the
-  global environment will also cause inconsistencies in previously generated
-  plots (e.g. labels on data points may be wrong).
-
-  If \code{eval.args=TRUE} then variables appearing in the plot call will be
+  If \code{eval.args = TRUE} then variables appearing in the plot call will be
   evaluated and stored even if they are defined in the global environment.
   Use this if the global variables might change (or be removed) before the
   plot is destroyed.
 
+  If \code{eval.args = FALSE} then the plot call will be left alone
+  and no objects will be copied. This is OK if all the data are
+  globally accessible, and will speed things up.
+
   If a regular expression is given for \code{eval.args} then only variables
   whose names match it will be evaluated, and this includes global variables,
   as with \code{eval.args=TRUE}. In this case you can set \code{invert.match=TRUE}
-  to evaluate variables that are not matched.
-  For example \code{eval.args="^tmp"} will evaluate variables whose names
-  begin with "tmp"; \code{eval.args="^foo$", invert.match=TRUE} will evaluate
+  to store variables that are not matched.
+  For example \code{eval.args="^tmp"} will store variables whose names
+  begin with "tmp"; \code{eval.args="^foo$", invert.match=TRUE} will store
   everything except \code{foo}.
 
-  If \code{eval.args=FALSE} then the plot call will be left alone
-  (not evaluated until plot time).
+  \emph{Warning:} function calls appearing in the plot call will be evaluated each
+  time the plot is updated -- so random data as in \code{plot(rnorm(100))}
+  will keep changing, with confusing consequences! You should therefore
+  generate random data prior to the plot call. Changes to variables
+  in the workspace (if they are not stored locally) may also cause inconsistencies in previously generated
+  plots.
 }
 \value{
-  \code{playwith} invisibly returns the value from the plot call.
+  \code{playwith} invisibly returns the \code{\link{playState}} object representing
+  the plot, window and device.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{ \code{\link{autoplay}}, \link{playTools}, \link{playwith.API},
@@ -237,159 +256,192 @@ playwith(expr,
 if (interactive()) {
 options(device.ask.default = FALSE)
 
-## scatterplot (lattice graphics)
-## labels are taken from rownames of data.
-## just click on the plot to identify points.
+## Scatterplot (Lattice graphics).
+## Labels are taken from rownames of data.
+## Just click on the plot to identify points.
 playwith(xyplot(Income ~ log(Population / Area),
    data = data.frame(state.x77), groups = state.region,
    type = c("p", "smooth"), span = 1, auto.key = TRUE,
    ylab = "Income per capita, 1974"))
 
-## scatterplot (base graphics); similar.
-urbAss <- USArrests[c("UrbanPop", "Assault")]
+## Scatterplot (base graphics); similar.
+urbAss <- USArrests[,c("UrbanPop", "Assault")]
 playwith(plot(urbAss, panel.first = lines(lowess(urbAss)),
    col = "blue", main = "Assault vs urbanisation",
    xlab = "Percent urban population, 1973",
    ylab = "Assault arrests (per 100,000), 1973"))
 
-## time series plot (lattice)
-## date-time range can be entered directly in time mode.
+## Time series plot (Lattice).
+## Date-time range can be entered directly in "time mode"
 ## (supports numeric, Date, POSIXct, yearmon and yearqtr).
+## Click and drag to zoom in; right-click to zoom out;
+## and use the scrollbar to move along the x-axis.
 library(zoo)
 playwith(xyplot(sunspots ~ yearmon(time(sunspots)),
-                xlim=c(1900, 1930), type="l"))
+                xlim = c(1900, 1930), type = "l"))
 
-## time series plot (base graphics)
-## click and drag to zoom in; right-click to zoom out;
-## and use the scrollbar to move along the x-axis.
-## custom labels are passed directly to playwith.
-## label style can also be set with playwith.options().
+## Time series plot (base graphics); similar.
+## Custom labels are passed directly to playwith.
+## Label style can also be set with playwith.options(),
+## or from a menu item inside the window.
 tt <- time(treering)
 treeyears <- paste(abs(tt) + (tt <= 0),
                   ifelse(tt > 0, "CE", "BCE"))
 playwith(plot(treering, xlim = c(1000, 1300)),
    labels = treeyears, label.style = gpar(col="red",
-      fontfamily="HersheySans", cex=0.7)))
+      fontfamily = "HersheySans", cex = 0.7))
 
-## multi-panel lattice plot
-## need subscripts=TRUE to correctly identify points.
-## scales are "same" so zooming affects all panels.
+## Multi-panel Lattice plot.
+## Need subscripts=TRUE to correctly identify points.
+## Scales are "same" so zooming affects all panels.
 Depth <- equal.count(quakes$depth, number = 3, overlap = 0.1)
 playwith(xyplot(lat ~ long | Depth, data = quakes,
       subscripts = TRUE, aspect = "iso", pch = ".", cex = 2),
    labels = paste("mag", quakes$mag))
 
-## interactive control of a parameter with a slider
+## Interactive control of a parameter with a slider.
 xx <- rnorm(50)
 playwith(plot(density(xx, bw = bandwidth), panel.last = rug(xx)),
-	parameters = list(bandwidth = seq(0.05, 1, by=0.01)))
+	parameters = list(bandwidth = seq(0.05, 1, by = 0.01)))
 
-## the same with a spinbutton (use I() to force spinbutton).
-## initial value is set as the first in the vector of values.
-## also shows a combobox for selecting text options.
+## The same with a spinbutton (use I() to force spinbutton).
+## Initial value is set as the first in the vector of values.
+## This also shows a combobox for selecting text options.
 xx <- rnorm(50)
 kernels <- c("gaussian", "epanechnikov", "rectangular",
    "triangular", "biweight", "cosine", "optcosine")
-playwith(plot(density(xx, bw = bandwidth, kern=kernel), lty=lty),
+playwith(plot(density(xx, bw = bandwidth, kern = kernel), lty = lty),
 	parameters = list(bandwidth = I(c(0.1, 5:100/100)),
-            kernel=kernels, lty = 1:6))
+            kernel = kernels, lty = 1:6))
 
-## more parameters
+## More parameters (logical, numeric, text).
 playwith(stripplot(yield ~ site, data = barley,
-    jitter=TRUE, type=c("p","a"),
-    aspect=aspect, groups=barley[[groups]],
-    scales=list(abbreviate=abbrev),
-    par.settings=list(plot.line=list(col=linecol))),
-  parameters = list(abbrev=FALSE, aspect=0.5,
-                    groups=c("none", "year", "variety"),
-                    linecol="red"))
+    jitter = TRUE, type = c("p", "a"),
+    aspect = aspect, groups = barley[[groups]],
+    scales = list(abbreviate = abbrev),
+    par.settings = list(plot.line = list(col = linecol))),
+  parameters = list(abbrev = FALSE, aspect = 0.5,
+                    groups = c("none", "year", "variety"),
+                    linecol = "red"))
 
-## composite plot (base graphics)
-## adapted from an example in help("legend").
-## in this case, the initial plot() call is detected correctly.
-## in more complex cases may need to pass main.function=...
-## also construct data points and labels manually.
-x <- seq(-4*pi, 4*pi, by=pi/24)
-pts <- data.frame(x=x, y=c(sin(x), cos(x), tan(x)))
-labs <- rep(c("sin","cos","tan"), each=length(x))
+## Composite plot (base graphics).
+## Adapted from an example in help("legend").
+## In this case, the initial plot() call is detected correctly;
+## in more complex cases may need e.g. main.function="plot".
+## Here we also construct data points and labels manually.
+x <- seq(-4*pi, 4*pi, by = pi/24)
+pts <- data.frame(x = x, y = c(sin(x), cos(x), tan(x)))
+labs <- rep(c("sin", "cos", "tan"), each = length(x))
 labs <- paste(labs, round(180 * x / pi) %% 360)
 playwith( {
-   plot(x, sin(x), type = "l", xlim=c(-pi, pi),
+   plot(x, sin(x), type = "l", xlim = c(-pi, pi),
        ylim = c(-1.2, 1.8), col = 3, lty = 2)
    points(x, cos(x), pch = 3, col = 4)
    lines(x, tan(x), type = "b", lty = 1, pch = 4, col = 6)
    legend("topright", c("sin", "cos", "tan"), col = c(3,4,6),
        lty = c(2, -1, 1), pch = c(-1, 3, 4),
        merge = TRUE, bg = 'gray90')
-}, data.points=pts, labels=labs)
+}, data.points = pts, labels = labs)
 
-## simple spin and zoom for a 3D plot
-playwith(wireframe(volcano, drape=TRUE))
+## Simple spin and zoom for a 3D Lattice plot (slow).
+playwith(wireframe(volcano, drape = TRUE))
 
-## brushing a multivariate scatterplot
+## Brushing a multivariate scatterplot.
 playwith(splom(environmental))
 
-## ggplot (NOTE: only qplot()-based calls will work)
-## labels are rownames of the data.
+## A ggplot example.
+## NOTE: only qplot()-based calls will work.
+## Labels are taken from rownames of the data.
 library(ggplot2)
-playwith(qplot(qsec, wt, data=mtcars) + stat_smooth())
+playwith(qplot(qsec, wt, data = mtcars) + stat_smooth())
 
-## a minimalist grid plot
+## A minimalist grid plot.
+## This shows how to get playwith to work with custom plots:
 ## accept xlim/ylim and pass "viewport" to enable zooming.
-gridPlot <- function(x, y, xlim = NULL, ylim = NULL, ...)
+myGridPlot <- function(x, y, xlim = NULL, ylim = NULL, ...)
 {
    if (is.null(xlim)) xlim <- extendrange(x)
    if (is.null(ylim)) ylim <- extendrange(y)
    grid.newpage()
    pushViewport(plotViewport())
    grid.rect()
-   pushViewport(viewport(xscale=xlim, yscale=ylim,
-      name="theData"))
-   grid.points(x, y, gp=gpar(...))
+   pushViewport(viewport(xscale = xlim, yscale = ylim,
+      name = "theData"))
+   grid.points(x, y, ...)
    grid.xaxis()
    grid.yaxis()
    upViewport(0)
 }
-playwith(gridPlot(1:10, 11:20), viewport="theData")
+playwith(myGridPlot(1:10, 11:20, pch = 17), viewport = "theData")
 
-## acting like a modal dialog box
-## when window is closed, ask user to confirm.
-## use only a subset of the default tools, and hide plot call.
+## Presenting the window as a modal dialog box.
+## When the window is closed, ask user to confirm.
+## Use only a subset of the default tools, and hide plot call.
 subTools <- list("identify", "clear", "zoom", "zoomout", "zoomfit")
 confirmClose <- function(playState) {
 	if (gWidgets::gconfirm("Close window and report IDs?")) {
 		cat("Indices of identified data points:\n")
 		print(playGetIDs(playState))
-		return(FALSE)
+		return(FALSE) ## close
 	} else TRUE ## don't close
 }
-xy <- list(x=rnorm(20), y=rnorm(20))
-playwith(plot(xy), on.close=confirmClose, modal=TRUE,
-	width=4, height=3.5, show.call=FALSE,
-	top=NULL, left=subTools)
+xy <- data.frame(x = 1:20, y = rnorm(20), row.names = letters[1:20])
+playwith(plot(xy), on.close = confirmClose, modal = TRUE,
+	width = 4, height = 3.5, show.call = FALSE,
+	top = NULL, left = subTools)
 
-## by default, only local variables in the plot are stored
-globalOne <- rnorm(1000)
+## Demonstrate cacheing of objects in local environment.
+## By default, only local variables in the plot call are stored.
+x_global <- rnorm(100)
 doLocalStuff <- function(...) {
-	localOne <- rnorm(1000)
-	playwith(plot(localOne, globalOne), ...)
+   y_local <- rnorm(100)
+   angle <- (atan2(y_local, x_global) / (2*pi)) + 0.5
+   color <- hsv(h = angle, v = 0.75)
+   mkpolys <- function(z) {
+      p <- rep(z, each = 4); i <- seq(z)
+      p[-i*4+3] <- c(0, 0.05, NA); p
+   }
+   playwith(plot(x_global, y_local,
+      panel.first = polygon(mkpolys(x_global), mkpolys(y_local),
+                            col = color, border = NA)),
+   ...)
 }
-doLocalStuff(title="locals only") ## eval.args=NA is the default
-## list objects that have been copied and stored
+doLocalStuff(title = "locals only") ## eval.args = NA is default
+## List objects that have been copied and stored:
 sapply(playDevCur()$env, object.size)
-## i.e. if you rm(globalOne) now, redraws will fail
-## Next: store all data objects (in a new window)
-doLocalStuff(title="all stored", eval.args=TRUE, new=TRUE)
+## i.e. if you rm(x_global) now, redraws will fail.
+## Next: store all data objects (in a new window):
+doLocalStuff(title = "all stored", eval.args = TRUE, new = TRUE)
 sapply(playDevCur()$env, object.size)
-## now there are two devices open:
+## Now there are two devices open:
 playDevList()
 playDevCur()
 playDevOff()
 playDevCur()
 
-## see help(playwith.API) for examples of new tools.
+\dontrun{
+## Memory usage test.
+## Big data object, do not try to guess labels or time.mode.
+gc()
+bigobj <- rpois(5000000, 1)
+object.size(bigobj) / 1048576 ## in MB
+gc()
+playwith(qqmath(~ bigobj, f.value=ppoints(500)),
+   data.points=NA, labels=NA, time.mode=FALSE)
+playDevOff()
+gc()
+## or generate the trellis object first:
+trel <- qqmath(~ bigobj, f.value=ppoints(500))
+playwith(update(trel))
+rm(trel)
+## in this case, better to compute the sample first:
+subobj <- quantile(foo, ppoints(500), na.rm=TRUE)
+playwith(qqmath(~ subobj))
+rm(subobj)
+rm(bigobj)
+}
 
-options(op)
+## See help(playwith.API) for examples of new tools.
 }
 }
 \keyword{ iplot }

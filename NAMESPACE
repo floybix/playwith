@@ -17,7 +17,9 @@ export(
 export(
        latticist,
        reorderByFreq,
-       cutEq)
+       cutEq,
+       try.prepanel.loess)
+S3method(levelplot, table)
 
 # settings
 export(

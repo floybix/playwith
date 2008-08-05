@@ -1,7 +1,18 @@
 
 Changes in Version 0.9-11
 
+  o latticist uses hexbinplot, and many other changes.
+
+  o playwith() now returns the playState object, not the plot result.
+
   o revised and expanded all examples in help("playwith").
+
+  o improved local cacheing of objects appearing in the plot call.
+    now stores local functions as well as objects, and works better.
+
+  o re-used playwith windows are resized to account for toolbars etc.
+
+  o grob inspector tool allows removing grobs (but note bug in 'grid').
 
 Changes in Version 0.9-10
 

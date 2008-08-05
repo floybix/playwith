@@ -94,23 +94,25 @@ playwith <-
     env <- new.env(parent = globalenv())
     ## work out evaluation rules
     evalGlobals <- !is.na(eval.args)
-    if (is.na(eval.args)) eval.args <- (environmentName(envir) != "R_GlobalEnv")
+    if (is.na(eval.args))
+        eval.args <- (environmentName(envir) != "R_GlobalEnv")
     if (!identical(eval.args, FALSE)) {
-        try(copyArgsIntoEnv(plot.call, envir=envir, newEnv=env,
-                            evalGlobals=evalGlobals, pattern=eval.args,
-                            invert.match=invert.match))
+        try(copyLocalArgs(plot.call, envir=envir, newEnv=env,
+                          evalGlobals=evalGlobals, pattern=eval.args,
+                          invert.match=invert.match))
     }
     ## check whether the window already exists
-    doResize <- !missing(width) || !missing(height)
-    width <- max(width, 1)
-    height <- max(height, 1)
-    if (!is.null(myWin <- playState$win) &&
-        inherits(myWin, "GtkWindow")) {
+    myWin <- playState$win
+    if (!is.null(myWin) && inherits(myWin, "GtkWindow")) {
+        daSize <- playState$widgets$drawingArea$getAllocation()
+        if (missing(width)) width <- daSize$width / 96
+        if (missing(height)) height <- daSize$height / 96
+        #myWin$destroy()
         ## remove everything
         playState$devoff <- TRUE ## to avoid trigger close
         myWin$getChild()$destroy()
         myWin$present()
-        if (doResize) myWin$resize(width * 96, height * 96)
+        myWin$resize(width * 96, height * 96)
     } else {
         ## create a new window
         myWin <- gtkWindow(show=FALSE)
@@ -120,7 +122,6 @@ playwith <-
                        "RGtk2 and the GTK+ libraries.",
                        "See http://www.ggobi.org/rgtk2/"))
         ## set approx window size; NOTE: device size is adjusted below
-        doResize <- TRUE
         myWin["default-width"] <- width * 96
         myWin["default-height"] <- height * 96
         myWin["modal"] <- modal
@@ -236,8 +237,8 @@ playwith <-
                    + GdkEventMask["button-release-mask"]
                    + GdkEventMask["exposure-mask"])
     myHBox$packStart(myDA)
-    if (doResize) ## note, constraint is removed below
-      myDA$setSizeRequest(width * 96, height * 96)
+    ## note, constraint is removed below
+    myDA$setSizeRequest(width * 96, height * 96)
     asCairoDevice(myDA, pointsize=pointsize)
     ## need to regenerate coord spaces after resize
     gSignalConnect(myDA, "configure-event", configure_handler,
@@ -410,7 +411,8 @@ playwith <-
              title = title,
              main.function = main.function)
     ## do the plot
-    invisible(playNewPlot(playState))
+    playNewPlot(playState)
+    invisible(playState)
 }
 
 playNewPlot <- function(playState)
@@ -418,6 +420,7 @@ playNewPlot <- function(playState)
     playDevSet(playState)
     ## clear the current plot if any, to avoid lengthy redraws
     playState$plot.ready <- FALSE
+    on.exit(playState$plot.ready <- TRUE)
     grid.newpage()
     playPrompt(playState, NULL)
     ## disable toolbars until this is over
@@ -433,17 +436,8 @@ playNewPlot <- function(playState)
                            horiz=FALSE)
     }
     ## find which component of the call takes arguments (xlim etc)
+    ## (also put main call into canonical form, with match.call)
     updateMainCall(playState)
-    ## put call into canonical form, but with first argument un-named
-    if (playState$accepts.arguments) {
-        mainCall <- mainCall(playState)
-        callFun <- eval(mainCall[[1]])
-        firstArgName <- names(mainCall)[2]
-        mainCall <- match.call(callFun, mainCall)
-        if (is.null(firstArgName) || (firstArgName == ""))
-            if (!is.null(names(mainCall))) names(mainCall)[2] <- ""
-        mainCall(playState) <- mainCall
-    }
     ## update address bar with current call
     updateAddressBar(playState)
     ## eval plot call
@@ -545,6 +539,7 @@ playReplot <- function(playState)
 {
     if (isTRUE(playState$skip.redraws)) return()
     playState$plot.ready <- FALSE
+    on.exit(playState$plot.ready <- TRUE)
     playDevSet(playState)
     grid.newpage()
     playPrompt(playState, NULL)
@@ -649,6 +644,7 @@ updateAddressBar <- function(playState)
     }
 }
 
+## TODO: use new stuff in gridwork.R
 generateSpaces <- function(playState)
 {
     playState$deviceToSpace <- list()
@@ -770,9 +766,9 @@ devoff_handler <- function(widget, event, playState)
 {
     ## this handles dev.off()
     ## destroy the window, but store a flag to avoid destroying twice
-    if (any(playState$devoff)) return(FALSE)
+    if (isTRUE(playState$devoff)) return(FALSE)
     playState$devoff <- TRUE
-    widget$destroy()
+    #widget$destroy() ## TODO: need this?
     playDevOff(playState)
     return(FALSE)
 }
@@ -798,133 +794,6 @@ gtkmainquit_handler <- function(widget, event, playState)
   return(FALSE)
 }
 
-
-### Automatic playwith support
-
-autoplay <-
-    function(on=NA, lattice.on=on, base.on=on, grid.on=on, ask=FALSE)
-{
-    if (all(is.na(c(lattice.on, base.on, grid.on))))
-        message("No action taken.")
-    if (!is.na(lattice.on)) {
-        library("lattice")
-        if (packageDescription("lattice")$Version < package_version("0.17-1"))
-            stop("this requires lattice package version >= 0.17")
-        newFoo <- if (lattice.on) playwith.trellis else NULL
-        lattice.options(print.function = newFoo)
-        message("Automatic `playwith` for Lattice graphics is now ",
-                if (lattice.on) "ON." else "OFF.")
-    }
-    if (!is.na(base.on)) {
-        newFoo <- if (base.on) list(playwith.plot.new) else NULL
-        setHook("plot.new", newFoo, "replace")
-        message("Automatic `playwith` for base graphics is now ",
-                if (base.on) "ON." else "OFF.")
-        if (base.on) {
-            StateEnv$.autoplay.ask <- ask
-            if (ask) message("The high-level plot call will be chosen from a list.")
-        }
-    }
-    if (!is.na(grid.on)) {
-        newFoo <- if (grid.on) list(playwith.grid.newpage) else NULL
-        setHook("grid.newpage", newFoo, "replace")
-        message("Automatic `playwith` for grid graphics is now ",
-                if (grid.on) "ON." else "OFF.")
-        if (grid.on) {
-            StateEnv$.autoplay.ask <- ask
-            if (ask) message("The high-level plot call will be chosen from a list.")
-        }
-    }
-    invisible()
-}
-
-## not to be called directly
-playwith.trellis <-
-    function(x, position = NULL, split = NULL, more = FALSE, newpage = TRUE,
-             packet.panel = packet.panel.default, draw.in = NULL, ...)
-{
-    dev.interactive2 <- function(orNone)
-    {
-        dev.interactive(orNone) ||
-        (interactive() && .Device == "null device" &&
-         getOption("device") == "Cairo")
-    }
-    new <- (newpage && is.null(draw.in) &&
-            !lattice:::lattice.getStatus("print.more"))
-    if (dev.interactive2(TRUE) && new) {
-        ## starting a new plot on an interactive device
-        eval(call("playwith", x$call, envir=parent.frame(2)))
-        return(invisible())
-    }
-    ## call `plot.trellis` from lattice package, as usual
-    ocall <- sys.call()
-    ocall[[1]] <- quote(plot)
-    eval.parent(ocall)
-}
-
-## not to be called directly
-playwith.plot.new <- function(...)
-{
-    sysCallNames <- sapply(sys.calls(), function(x)
-                           ifelse(is.symbol(x[[1]]), toString(x[[1]]), ""))
-    playing <- any(c("playReplot", "playNewPlot")
-                   %in% sysCallNames)
-                                        #multifig <- !isTRUE(all.equal(par("mfrow"), c(1,1)))
-    first <- isTRUE(all.equal(par("mfg")[1:2], c(1,1)))
-    opar <- par(no.readonly=TRUE)
-    if (dev.interactive() && !playing && first && !par("new")) {
-        ## starting a new plot on an interactive device
-        frameNum <- which(sysCallNames != "")[1]
-        if (any(StateEnv$.autoplay.ask)) {
-            items <- make.unique(sapply(sys.calls(), function(x)
-                                        toString(deparseOneLine(x), width=34)))
-            myItem <- select.list(items, preselect=items[frameNum],
-                                  title="Choose plot call for playwith:")
-            frameNum <- match(myItem, items)
-            if (is.na(frameNum)) return()
-        }
-        dev.off() ## close screen device (from `plot.new`)
-        parentFrame <- sys.frame(sys.parents()[frameNum])
-        newCall <- call("playwith", sys.call(frameNum),
-			envir=parentFrame)
-                                        # eval.args=FALSE ?
-        eval(newCall)
-        par(opar) ## on the new device (redrawing now)
-        .Internal(plot.new())
-    }
-    return()
-}
-
-## not to be called directly
-playwith.grid.newpage <- function(...)
-{
-    sysCallNames <- sapply(sys.calls(), function(x)
-                           ifelse(is.symbol(x[[1]]), toString(x[[1]]), ""))
-    playing <- any(c("playReplot", "playNewPlot", "plot.trellis", "print.trellis")
-                   %in% sysCallNames)
-    if (dev.interactive() && !playing) {
-        ## starting a new plot on an interactive device
-        frameNum <- which(sysCallNames != "")[1]
-        if (any(StateEnv$.autoplay.ask)) {
-            items <- make.unique(sapply(sys.calls(), function(x)
-                                        toString(deparseOneLine(x), width=34)))
-            myItem <- select.list(items, preselect=items[frameNum],
-                                  title="Choose plot call for playwith:")
-            frameNum <- match(myItem, items)
-            if (is.na(frameNum)) return()
-        }
-        dev.off() ## close screen device (from `grid.newpage`)
-        parentFrame <- sys.frame(sys.parents()[frameNum])
-        newCall <- call("playwith", sys.call(frameNum),
-			envir=parentFrame)
-                                        # eval.args=FALSE ?
-        eval(newCall)
-        ## on the new device (redrawing now)
-        ##grid.newpage() ## recursive nightmares
-    }
-    return()
-}
-
 ## General utility functions
 
 ## NOT USED. +.layer approach better i think.
@@ -939,6 +808,7 @@ plotadd <- function(FUN, ..., add.stuff=expression()) {
     retval
 }
 
+## TODO: this fails with one-line inline functions
 deparseOneLine <-
     function(expr, width.cutoff=500, ...)
 {
@@ -968,7 +838,8 @@ xy.coords.call <-
     xy.coords(tmp.x, tmp.y, log=log, recycle=recycle)
 }
 
-copyArgsIntoEnv <-
+## export this?
+copyLocalArgs <-
     function(the.call,
              envir = parent.frame(),
              newEnv,
@@ -979,38 +850,70 @@ copyArgsIntoEnv <-
     stopifnot(is.call(the.call) || is.list(the.call) || is.expression(the.call))
     isMatch <- !invert.match
     for (i in seq_along(the.call)) {
-        if (is.call(the.call) && (i == 1)) next
         this.arg <- the.call[[i]]
-        ## skip literal symbol in "$" extractor
-        if (is.call(this.arg) && this.arg[[1]] == as.symbol("$"))
-            this.arg <- this.arg[[2]]
+        if (is.call(the.call) && (i == 1)) {
+            if (mode(this.arg) == "name") {
+                callname <- as.character(this.arg)
+                ## skip base operators, unlikely to be locally redefined
+                if (exists(callname, baseenv(), mode="function"))
+                    next
+            } else {
+                ## anonymous function call
+                next
+            }
+        }
+
+        if (is.call(this.arg)) {
+            if (mode(this.arg[[1]]) == "name") {
+                argcallname <- as.character(this.arg[[1]])
+                ## skip function definitions
+                ## (could skip function entirely, but it may refer
+                ##  to variables in outer context)
+                if (argcallname == "function")
+                    this.arg <- this.arg[[3]]
+                ## skip assigned variables
+                if (argcallname == "<-")
+                    this.arg <- this.arg[[3]]
+                ## skip literal symbol in "$" extractor
+                if (argcallname == "$")
+                    this.arg <- this.arg[[2]]
+            }
+        }
 
         if (mode(this.arg) %in% c("call", "(", "list", "expression")) {
             ## call recursively...
-            copyArgsIntoEnv(this.arg, envir=envir, newEnv=newEnv,
-                            evalGlobals=evalGlobals, pattern=pattern,
-                            invert.match=invert.match)
-        } else if (mode(this.arg) %in% "name") {
+            copyLocalArgs(this.arg, envir=envir, newEnv=newEnv,
+                          evalGlobals=evalGlobals, pattern=pattern,
+                          invert.match=invert.match)
+        } else if (mode(this.arg) == "name") {
             this.name <- as.character(this.arg)
             ## check if this name already exists in local env
-            if (exists(this.name, envir=newEnv, inherits=F))
+            if (exists(this.name, newEnv, inherits=F))
                 next
             ## check that the name matches the pattern
             if (!isTRUE(pattern) &&
                 (any(grep(pattern, this.name))) != isMatch)
                 next
-            ## find whether name exists in sys.frames or in GlobalEnv
-            ## (`inherits=TRUE` matches packages too)
-            ## TODO ... this is all a bit of a hack
-            ## ignore global symbols if evalGlobals == FALSE
-            if ((evalGlobals == FALSE) &&
-                (exists(this.name, envir=.GlobalEnv, inherits=F)))
-                next
-            ## ignore symbols in loaded packages
-            if (exists(this.name, where=2)) next
-            ## OK, copy it if possible (still may fail)
-            try(assign(this.name, eval(this.arg, envir=envir),
-                       envir=newEnv), silent=TRUE)
+            ## check if name exists in 'envir' or its parents
+            ## (up to global env only, i.e. local objects)
+            testenv <- envir
+            hit <- FALSE
+            while (TRUE) {
+                if (exists(this.name, testenv, inherits=FALSE)) {
+                    assign(this.name, get(this.name, testenv), newEnv)
+                    hit <- TRUE
+                    break
+                }
+                testenv <- parent.env(testenv)
+                if (environmentName(testenv) %in%
+                    c("R_GlobalEnv", "R_EmptyEnv", "base"))
+                    break
+            }
+            if (hit) next
+            ## eval globals
+            if (evalGlobals &&
+                exists(this.name, globalenv(), inherits=FALSE))
+                assign(this.name, get(this.name, testenv), newEnv)
         }
         ## leave constants alone
     }

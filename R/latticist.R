@@ -3,7 +3,7 @@
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
-.prof.it <- function(n = 10000) {
+.prof.it <- function(n = 20000) {
     audit <- read.csv(system.file("csv", "audit.csv", package = "rattle"))
     audit <- lapply(audit, rep, length.out=n)
     gc()
@@ -18,7 +18,9 @@ latticist <-
     function(dat,
              reorder.levels = TRUE,
              plot.call = quote(marginals(dat, reorder=FALSE)),
-             ...)
+             ...,
+             labels = rownames(dat),
+             time.mode = FALSE)
 {
     title <- paste("Latticist:",
                    toString(deparse(substitute(dat)), width=30))
@@ -26,13 +28,18 @@ latticist <-
     if (!is.data.frame(dat))
         dat <- as.data.frame(dat)
 
-    ## convert integers with only 1 or 2 uniques to factors
-    isint <- sapply(dat, is.integer)
-    for (nm in names(dat)[isint]) {
-        if (is.integer(dd <- dat[[nm]]) &&
-            (diff(range(dd, na.rm=TRUE)) <= 1))
-        {
-            dat[[nm]] <- factor(dd)
+    ## convert numerics with discrete values in {-1, 0, 1} to factors
+    isnum <- sapply(dat, is.numeric)
+    for (nm in names(dat)[isnum]) {
+        dd <- dat[[nm]]
+        ## test first 50 values first (fail fast)
+        vals <- unique(head(dd, n=50))
+        if (all(vals %in% -1:1)) {
+            if (all(range(dd, na.rm=TRUE) %in% -1:1) &&
+                all(range(abs(diff(dd)), na.rm=TRUE) %in% 0:2))
+            {
+                dat[[nm]] <- factor(dd)
+            }
         }
     }
 
@@ -64,11 +71,11 @@ latticist <-
     }
 
     playwith(plot.call = plot.call,
-             title=title, ...,
-             latticist=list(),
-             labels=rownames(dat),
-             bottom.tools=list(latticist=makeLatticistTool(dat)))
-    invisible(playDevCur())
+             title = title, ...,
+             labels = labels,
+             time.mode = time.mode,
+             latticist = list(), ## to replace (reset) any existing one
+             bottom.tools = list(latticist = makeLatticistTool(dat)))
 }
 
 makeLatticistTool <- function(dat)
@@ -89,7 +96,7 @@ makeLatticistTool <- function(dat)
     }
 
     LOTS <- 1000
-    HEAPS <- 10000
+    HEAPS <- 8000
     MAXPANELS <- 16
     INIT.NLEVELS <- 4
 
@@ -146,6 +153,7 @@ makeLatticistTool <- function(dat)
                     xvar <- vars[[length(vars)]]
                     vars <- vars[-length(vars)]
                 }
+                vars <- vars[-1]
             } else {
                 if (identical(callArg(playState, "horizontal"), FALSE)) {
                     ## variable is on x axis
@@ -160,9 +168,10 @@ makeLatticistTool <- function(dat)
                         vars <- vars[-length(vars)]
                     }
                 }
+                vars <- vars[-1]
             }
-            if (length(vars) >= 2) c1 <- vars[[2]]
-            if (length(vars) >= 3) c2 <- vars[[3]]
+            if (length(vars) >= 1) c1 <- vars[[1]]
+            if (length(vars) >= 2) c2 <- vars[[2]]
             subset <- arg1$subset
         } else {
             ## unrecognised object
@@ -199,6 +208,11 @@ makeLatticistTool <- function(dat)
         if (callName == "histogram") {
             xdisc <- TRUE
         }
+        ## hexbinplot by convention has x and y discretized
+        if (callName == "hexbinplot") {
+            xdisc <- TRUE
+            ydisc <- TRUE
+        }
 
         ## strip reordering code for display
         stripReorder <- function(x) {
@@ -212,18 +226,6 @@ makeLatticistTool <- function(dat)
         c1 <- stripReorder(c1)
         c2 <- stripReorder(c2)
         groups <- stripReorder(groups)
-
-        ## strip factor code for display
-        stripFactor <- function(x) {
-            if (is.call.to(x, "factor"))
-                x <- x[[2]]
-            x
-        }
-        #xvar <- stripFactor(xvar)
-        #yvar <- stripFactor(yvar)
-        #c1 <- stripFactor(c1)
-        #c2 <- stripFactor(c2)
-        #groups <- stripFactor(groups)
 
         ## set up variables and options
         xvarStr <- deparseOneLine(xvar)
@@ -246,18 +248,19 @@ makeLatticistTool <- function(dat)
                           names(dat)[!iscat],
                           "-------------------")
             ## log() of positive numerics
-            logs <- lapply(names(dat)[!iscat], function(nm) {
-                if (all(dat[[nm]] > 0, na.rm=TRUE))
-                    paste("log(", nm, ")", sep="")
-                else NULL
-            })
-            varexprs <- c(varexprs, unlist(logs))
+            #logs <- lapply(names(dat)[!iscat], function(nm) {
+            #    if (all(dat[[nm]] > 0, na.rm=TRUE))
+            #        paste("log(", nm, ")", sep="")
+            #    else NULL
+            #})
+            #varexprs <- c(varexprs, unlist(logs))
+
             ## is.na() of variables with missing values
-            missings <- lapply(names(dat), function(nm) {
-                if (any(is.na(dat[[nm]])))
-                    paste("is.na(", nm, ")", sep="")
-                else NULL
-            })
+            #missings <- lapply(names(dat), function(nm) {
+            #    if (any(is.na(dat[[nm]])))
+            #        paste("is.na(", nm, ")", sep="")
+            #    else NULL
+            #})
             varexprs <- c(varexprs, unlist(missings))
         }
         varexprs <- unique(c(varexprs,
@@ -270,8 +273,7 @@ makeLatticistTool <- function(dat)
         subsetopts <- playState$latticist$subsets
         if (is.null(subsetopts)) {
             ## preload some useful subsets
-            subsetopts <- c(NULLNAMES[[1]],
-                            "complete.cases(dat)")
+            subsetopts <- NULLNAMES[[1]]
             ## preload factor levels (only most frequent two of each)
             toplev <- lapply(names(dat)[iscat], function(nm) {
                 tmp <- names(sort(table(dat[[nm]]), decreasing=TRUE))
@@ -283,9 +285,12 @@ makeLatticistTool <- function(dat)
             ## is.finite() of variables with missing values
             missings <- lapply(names(dat), function(nm) {
                 if (any(is.na(dat[[nm]])))
-                    paste("is.finite(", nm, ")", sep="")
+                    paste("!is.na(", nm, ")", sep="")
                 else NULL
             })
+            if (length(missings) > 0) {
+                subsetopts <- c(subsetopts, "complete.cases(dat)")
+            }
             subsetopts <- c(subsetopts, unlist(missings))
         }
         subsetopts <-
@@ -323,6 +328,13 @@ makeLatticistTool <- function(dat)
                                "y ", playState$trellis$y.scales$relation, sep="")
         }
 
+        ## lines setting
+        linesVal <- playState$latticist$linesSetting
+        if (is.null(linesVal)) {
+            linesVal <- TRUE
+            playState$latticist$linesSetting <- linesVal
+        }
+
         ## labels
         labelsopts <- c("rownames(dat)", "1:nrow(dat)", names(dat))
         labelsSetting <- playState$latticist$labels.setting
@@ -330,12 +342,13 @@ makeLatticistTool <- function(dat)
             labelsSetting <- labelsopts[[1]]
         labelsopts <- unique(c(labelsopts, labelsSetting))
 
-        tryParse <- function(x) {
-            itemName <- deparseOneLine(substitute(x))
+        tryParse <- function(x0) {
+            x <- x0
             if (x %in% NULLNAMES) x <- "NULL"
             result <- tryCatch(parse(text=x)[[1]], error=function(e)e)
             ## check whether there was a syntax error
             if (inherits(result, "error")) {
+                itemName <- deparseOneLine(substitute(x0))
                 msg <- paste("Error parsing ", itemName, ": ",
                              conditionMessage(result), sep="")
                 gmessage.error(msg)
@@ -343,11 +356,12 @@ makeLatticistTool <- function(dat)
             }
             result
         }
-        tryEval <- function(x, ...) {
-            itemName <- deparseOneLine(substitute(x))
+        tryEval <- function(x0, ...) {
+            x <- x0
             result <- tryCatch(eval(x, ...), error=function(e)e)
             ## check whether there was a syntax error
             if (inherits(result, "error")) {
+                itemName <- deparseOneLine(substitute(x0))
                 msg <- paste("Error evaluating ", itemName, ": ",
                              conditionMessage(result), sep="")
                 gmessage.error(msg)
@@ -357,7 +371,8 @@ makeLatticistTool <- function(dat)
         }
 
         ## generate formula and other args from widget settings
-        composePlot <- function(playState, newXY=FALSE) {
+        composePlot <- function(playState, newXY = FALSE) {
+            ## this is needed by handler functions to fiddle with GUI:
             if (!isTRUE(playState$plot.ready)) return()
             ## parse variables / expressions
             xvar <- tryParse(xvarW$getActiveText())
@@ -428,11 +443,13 @@ makeLatticistTool <- function(dat)
             } else {
                 ## table method, need factors not shingles
                 if (do.xdisc) {
-                    if (is.null(yvar)) xvar <- call("cut", xvar, nlev)
+                    if (is.null(yvar) || do.ydisc)
+                        xvar <- call("cut", xvar, nlev)
                     else xvar <- call("cutEq", xvar, nlev)
                 }
                 if (do.ydisc) {
-                    if (is.null(xvar)) yvar <- call("cut", yvar, nlev)
+                    if (is.null(xvar) || do.xdisc)
+                        yvar <- call("cut", yvar, nlev)
                     else yvar <- call("cutEq", yvar, nlev)
                 }
                 if (do.c1disc) c1 <- call("cutEq", c1, nlev)
@@ -482,8 +499,11 @@ makeLatticistTool <- function(dat)
                 if (ncond > MAXPANELS) tooManyPanels <- TRUE
             }
 
+            ## lines setting
+            doLines <- playState$latticist$linesSetting
+
             ## create plot call
-            oldCall <- mainCall(playState)
+            oldCall <- playState$call
             playState$call <- quote(xyplot(0 ~ 0, data=dat))
             ## useOuterStrips unless we are going to use layout=...
             if (!is.null(c1) && !is.null(c2) && !tooManyPanels) {
@@ -563,11 +583,14 @@ makeLatticistTool <- function(dat)
                         xform <- as.formula(paste("~", xterms))
                         callArg(playState, 1) <-
                             call("xtabs", xform, quote(dat), subset=subset)
-                        if (!is.null(groups))
-                            callArg(playState, "type") <- c("p", "l")
-                        else
-                            callArg(playState, "type") <- c("p", "h")
-                        callArg(playState, "origin") <- 0
+                        if (doLines) {
+                            if (!is.null(groups))
+                                callArg(playState, "type") <- c("p", "l")
+                            else
+                                callArg(playState, "type") <- c("p", "h")
+                            callArg(playState, "origin") <- 0
+                        }
+
                     } else {
                         ## data on x axis, use barchart
                         ## (just for variety? & dotplot.table has no horizontal=FALSE)
@@ -588,6 +611,7 @@ makeLatticistTool <- function(dat)
                                               if (!is.null(c2)) deparseOneLine(c2),
                                               if (!is.null(groups)) deparseOneLine(groups)),
                                             collapse=" + ")
+                            callArg(playState, "stack") <- FALSE
                             ## and set logical `groups` argument
                             callArg(playState, "groups") <- !is.null(groups)
                             xform <- as.formula(paste("~", xterms))
@@ -613,6 +637,7 @@ makeLatticistTool <- function(dat)
                             callArg(playState, "plot.points") <- "jitter"
                             callArg(playState, "pch") <- "+" ## like jittered rug
                         }
+                        callArg(playState, "ref") <- TRUE
                     } else {
                         ## data on y axis, use qqmath
                         callArg(playState, 0) <- quote(qqmath)
@@ -621,17 +646,16 @@ makeLatticistTool <- function(dat)
                         else
                             callArg(playState, 1) <- call("~", yvar)
                         ## settings depend on number of points, groups
+                        type <- "p"
                         if (nPoints >= HEAPS) {
                             callArg(playState, "f.value") <- quote(ppoints(100))
-                            callArg(playState, "type") <- "l"
-                        } else
-                        if (!is.null(groups)) {
-                            callArg(playState, "type") <- "o"
-                            callArg(playState, "cex") <- 0.5
+                            if (doLines) type <- "l"
+                        } else {
+                            if (doLines) type <- "o"
                         }
+                        ## a grid is always useful with qqmath
+                        callArg(playState, "type") <- c("g", type)
                         ## decide when to use normal vs uniform etc
-                                        #madsad <- function(x, na.rm=TRUE)
-                                        #    mad(x, na.rm=na.rm) / sd(x, na.rm=na.rm)
                         tailtest <- function(x) {
                             qs <- quantile(x, c(0.01, 0.05, 0.95, 0.99), na.rm=TRUE)
                             diff(qs[c(1,4)]) / diff(qs[2:3])
@@ -651,8 +675,12 @@ makeLatticistTool <- function(dat)
                             callArg(playState, "xlab") <- expression(Proportion <= y)
                         } else {
                             callArg(playState, "distribution") <- quote(qnorm)
-                            callArg(playState, "xlab") <- "Standard normal quantiles"
-                            ## TODO: use probabilites on axis?
+                            callArg(playState, "xlab") <- "Probability (normal distribution)"
+                            ## label probabilites on axis
+                            ## TODO: axis.components function to do this
+                            probs <- c(0.001, 0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99, 0.999)
+                            callArg(playState, quote(scales$x$at)) <- bquote(qnorm(.(probs)))
+                            callArg(playState, quote(scales$x$labels)) <- probs
                         }
                         callArg(playState, "prepanel") <- quote(prepanel.qqmathline)
                     }
@@ -663,30 +691,51 @@ makeLatticistTool <- function(dat)
 
                 if (is.categorical(xVal) && is.categorical(yVal)) {
                     ## BIVARIATE CATEGORICAL
-                    callArg(playState, 0) <- quote(barchart)
-                    callArg(playState, "data") <- NULL
-                    callArg(playState, "subset") <- NULL
-                    ## reorder factor levels
-                    if (isUnordered(yvar, yVal)) {
-                      if (nlevels(yVal) > 2) {
-                        yvar <- call("reorder", yvar,
-                                     call("unclass", xvar), na.rm=T)
-                        yVal <- tryEval(yvar, dat)
-                      }
+                    if (do.xdisc && do.ydisc && require("hexbin")) {
+                        ## if both are discretized numerics, use 2D binning
+                        ## use hexbin package if available
+                        callArg(playState, 0) <- quote(hexbinplot)
+                        xvar <- xvar[[2]] ## undo disc function
+                        yvar <- yvar[[2]] ## undo disc function
+                        if (!is.null(cond))
+                            callArg(playState, 1) <- call("~", yvar, call("|", xvar, cond))
+                        else
+                            callArg(playState, 1) <- call("~", yvar, xvar)
+                        type <- if (doLines) "r"
+                        if (!is.null(cond)) type <- c("g", type)
+                        callArg(playState, "type") <- type
+                        if (is.null(aspect))
+                            aspect <- 1
+                        ## ignore groups setting
+                        callArg(playState, "groups") <- NULL
+
+                    } else {
+                        ## otherwise, proportional barchart
+                        callArg(playState, 0) <- quote(barchart)
+                        callArg(playState, "data") <- NULL
+                        callArg(playState, "subset") <- NULL
+                        ## reorder factor levels
+                        if (isUnordered(yvar, yVal)) {
+                            if (nlevels(yVal) > 2) {
+                                yvar <- call("reorder", yvar,
+                                             call("unclass", xvar), na.rm=T)
+                                yVal <- tryEval(yvar, dat)
+                            }
+                        }
+                        ## use xvar as groups (for stacking)
+                        xterms <- paste(c(deparseOneLine(yvar),
+                                          if (!is.null(c1)) deparseOneLine(c1),
+                                          if (!is.null(c2)) deparseOneLine(c2),
+                                          deparseOneLine(xvar)),
+                                        collapse=" + ")
+                        xform <- as.formula(paste("~", xterms))
+                        callArg(playState, 1) <-
+                            call("prop.table",
+                                 call("xtabs", xform, quote(dat), subset=subset),
+                                 margin=1)
+                        ## ignore groups setting
+                        callArg(playState, "groups") <- TRUE
                     }
-                    ## use xvar as groups (for stacking)
-                    xterms <- paste(c(deparseOneLine(yvar),
-                                      if (!is.null(c1)) deparseOneLine(c1),
-                                      if (!is.null(c2)) deparseOneLine(c2),
-                                      deparseOneLine(xvar)),
-                                    collapse=" + ")
-                    xform <- as.formula(paste("~", xterms))
-                    callArg(playState, 1) <-
-                        call("prop.table",
-                             call("xtabs", xform, quote(dat), subset=subset),
-                             margin=1)
-                    ## ignore groups setting
-                    callArg(playState, "groups") <- TRUE
                 } else
 
                 if (is.categorical(yVal) || is.categorical(xVal)) {
@@ -694,10 +743,6 @@ makeLatticistTool <- function(dat)
 
                     ## TODO: if only one value for each level use dotplot
 
-                    #if (is.logical(yVal))
-                    #    yvar <- call("factor", yvar)
-                    #if (is.logical(xVal))
-                    #    xvar <- call("factor", xvar)
                     if (is.logical(xVal))
                       callArg(playState, "horizontal") <- FALSE
 
@@ -723,11 +768,15 @@ makeLatticistTool <- function(dat)
                     if (!is.null(groups)) {
                         callArg(playState, 0) <- quote(stripplot)
                         callArg(playState, "jitter.data") <- TRUE
-                        callArg(playState, "type") <- c("p", "a")
-                        callArg(playState, "fun") <- quote(median)
+                        if (doLines) {
+                            callArg(playState, "type") <- c("p", "a")
+                            #callArg(playState, "fun") <- quote(median)
+                            callArg(playState, "fun") <- quote(function(x) median(x, na.rm=TRUE))
+                        }
 
                     } else {
                         callArg(playState, 0) <- quote(bwplot)
+                        #callArg(playState, "origin") <- 0
                         callArg(playState, "varwidth") <- FALSE
                     }
 
@@ -738,13 +787,89 @@ makeLatticistTool <- function(dat)
                         callArg(playState, 1) <- call("~", yvar, call("|", xvar, cond))
                     else
                         callArg(playState, 1) <- call("~", yvar, xvar)
-                    ## type
-                    if (!is.unsorted(xVal, na.rm=TRUE))
-                        callArg(playState, "type") <- c("p", "l")
-                    else {              #if (!is.null(groups))
-                        callArg(playState, "type") <- c("p", "smooth")
-                        callArg(playState, "span") <- 1
-                        callArg(playState, "prepanel") <- quote(prepanel.loess)
+
+                    if (doLines) {
+                        ## work out whether x data (in each panel) is spaced out
+                        ## enough to join by lines (rather than smoothing, below)
+                        guessPanelType <- function(panelx) {
+                            ans <- list(lines=TRUE, jitter=FALSE)
+                            if (!any(is.finite(panelx)))
+                                return(ans)
+                            rge <- range(panelx, na.rm=TRUE)
+                            diffs <- diff(sort(panelx))
+                            diffr <- range(diffs)
+                            ans$lines <- FALSE
+                            if (min(diffr) == 0) {
+                                ans$jitter <- TRUE
+                                posdiff <- min(diffs[diffs > 0])
+                                ## join averages by lines if few discrete values
+                                if (posdiff > diff(rge) / 30) {
+                                    ans$lines <- TRUE
+                                }
+                            } else {
+                                if ((max(diffr) - min(diffr) < getOption("ts.eps")) &&
+                                    (min(diffr) > 2 * getOption("ts.eps"))) {
+                                    ## regular differences -- likely time series
+                                    ans$lines <- TRUE
+                                } else {
+                                    if (min(diffr) > diff(rge) / 100) {
+                                        ans$lines <- TRUE
+                                    }
+                                }
+                            }
+                            ans
+                        }
+                        if (is.null(cond) && is.null(groups)) {
+                            panelType <- guessPanelType(xVal[subsetVal])
+                        } else {
+                            ## split into packets by conditioning and/or groups
+                            condList <- list()
+                            if (!is.null(c1)) {
+                                condList$c1 <- c1Val
+                                if (!is.factor(c1Val) && !is.shingle(c1Val))
+                                    condList$c1 <- as.factorOrShingle(c1Val)
+                            }
+                            if (!is.null(c2)) {
+                                condList$c2 <- c2Val
+                                if (!is.factor(c2Val) && !is.shingle(c2Val))
+                                    condList$c2 <- as.factorOrShingle(c2Val)
+                            }
+                            if (!is.null(groups)) {
+                                condList$groups <- groupsVal
+                                if (!is.factor(groupsVal) && !is.shingle(groupsVal))
+                                    condList$groups <- as.factorOrShingle(groupsVal)
+                            }
+                            if (!isTRUE(subset))
+                                condList <- lapply(condList,
+                                                   function(v) v[subsetVal, drop=TRUE])
+                            nlevsList <- lapply(condList, nlevels)
+                            packetDefs <- do.call(expand.grid, lapply(nlevsList, seq_len))
+                            ## make a list for each packet (combination of cond levels)
+                            packetDefs <- as.data.frame(t(packetDefs))
+                            xSubVal <- if (isTRUE(subset)) xVal else xVal[subsetVal]
+                            panelType <- sapply(packetDefs, function(packLev) {
+                                id <- compute.packet(condList, levels=packLev)
+                                unlist(guessPanelType(xSubVal[id]))
+                            })
+                            panelType <- as.data.frame(t(panelType))
+                        }
+
+                        if (any(panelType$jitter)) {
+                            callArg(playState, "jitter.x") <- TRUE
+                            if (all(panelType$lines))
+                                callArg(playState, "type") <- c("p", "a")
+                        } else {
+                            if (all(panelType$lines))
+                                callArg(playState, "type") <- "o"
+                        }
+
+                        if (any(panelType$lines == FALSE)) {
+                            ## use loess smoother
+                            callArg(playState, "type") <- c("p", "smooth")
+                            callArg(playState, "prepanel") <- quote(try.prepanel.loess)
+                            ## do not worry about errors in loess.smooth
+                            callArg(playState, quote(plot.args$panel.error)) <- "warning"
+                        }
                     }
                 }
             }
@@ -764,40 +889,35 @@ makeLatticistTool <- function(dat)
                                 (!is.null(yvar) && !is.categorical(yVal)))
                 ## style settings for points
                 if (anyNumerics) {
-                    if (!is.null(groups)) {
-                        symbol <- callArg(playState, quote(par.settings$superpose.symbol))
-                    } else {
-                        symbol <- callArg(playState, quote(par.settings$plot.symbol))
-                    }
-                    if (ncond >= 4) {
-                        symbol$cex <- 0.5
-                    }
+                    theme <- call("simpleTheme")
+                    if (!is.null(groups))
+                        theme$cex <- 0.6
+                    if (ncond > 2)
+                        theme$cex <- 0.6
+                    if (ncond > 6)
+                        theme$cex <- 0.4
                     if (nPoints >= LOTS) {
-                      ## there's a bug in lattice: grouped lines take alpha from points setting
-                      if (!is.null(groups) ||
-                          (packageDescription("lattice")$Version > "0.17-10"))
-                        symbol$alpha <- if (nPoints >= HEAPS) 0.1 else 0.3
+                        theme$alpha.points <- if (nPoints >= HEAPS) 0.15 else 0.3
+                        ## bug in lattice: grouped lines take alpha from points setting
+                        if (!is.null(groups) &&
+                            (packageDescription("lattice")$Version <= "0.17-12"))
+                            theme$alpha.points <- if (nPoints >= HEAPS) 0.3 else 0.6
                     }
                     if (nPoints >= HEAPS) {
-                        if (!is.call.to(mainCall(playState), "qqmath") &&
-                            !is.call.to(mainCall(playState), "densityplot") &&
-                            !is.call.to(mainCall(playState), "bwplot")) {
-                            symbol$pch <- "." ## or 0 ## empty square
-                            symbol$cex <- 2.5
+                        if (is.call.to(mainCall(playState), "xyplot") ||
+                            is.call.to(mainCall(playState), "stripplot")) {
+                            theme$pch <- "." ## or 0, empty square?
+                            theme$cex <- 3
                         }
                     }
-                    if (!is.null(groups)) {
-                        callArg(playState, quote(par.settings$superpose.symbol)) <- symbol
-                    } else {
-                        callArg(playState, quote(par.settings$plot.symbol)) <- symbol
-                    }
+                    callArg(playState, "par.settings") <- theme
 
                 }
                 ## add a grid if there are multiple panels
                 if (anyNumerics && !is.null(cond)) {
                     type <- callArg(playState, "type")
                     if (is.null(type)) type <- "p" ## assumed!
-                    type <- c(type, "g")
+                    type <- unique(c("g", type))
                     callArg(playState, "type") <- type
                 }
 
@@ -871,17 +991,20 @@ makeLatticistTool <- function(dat)
             #         adj=c(1, -0.5), cex=0.7)
             #    ))
             #callArg(playState, "page") <- pageFn
-            callArg(playState, "sub") <- list(subt, x=0.99, just="right")
-            callArg(playState, quote(par.settings$par.sub.text)) <-
-                list(cex=0.7, font=1)
+            callArg(playState, "sub") <- list(subt, x=0.99, just="right",
+                                              cex=0.7, font=1)
 
             ## check whether anything changed
-            if (identical(mainCall(playState), oldCall))
+            updateMainCall(playState) ## set canonical arguments
+            if (identical(deparse(playState$call, control=NULL),
+                          deparse(oldCall, control=NULL)))
                 return()
+            ## need playNewPlot not playReplot so as to reload latticist
             playNewPlot(playState)
         }
-        doRecompose <- function(widget, playState)
+        doRecompose <- function(widget, playState) {
             composePlot(playState)
+        }
         doRecomposeOnSelect <- function(widget, playState) {
             if (widget["active"] > -1)
                 composePlot(playState)
@@ -904,9 +1027,13 @@ makeLatticistTool <- function(dat)
             if (widget["active"] > -1)
                 doLabels(widget, playState)
         }
+        doLinesSetting <- function(widget, playState) {
+            playState$latticist$linesSetting <- widget["active"]
+            composePlot(playState)
+        }
 
         handler.flip <- function(widget, event, playState) {
-            if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
+            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
             playState$plot.ready <- FALSE
             xvarActive <- xvarW["active"]
             yvarActive <- yvarW["active"]
@@ -924,26 +1051,40 @@ makeLatticistTool <- function(dat)
             composePlot(playState)
             return(FALSE)
         }
+        handler.reset <- function(widget, event, playState) {
+            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
+            playState$plot.ready <- FALSE
+            xvarW["active"] <- 0
+            yvarW["active"] <- 0
+            xonW["sensitive"] <- FALSE
+            yonW["sensitive"] <- FALSE
+            playState$plot.ready <- TRUE
+            composePlot(playState)
+            return(FALSE)
+        }
         handler.superpose <- function(widget, event, playState) {
-            if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
+            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
             playState$plot.ready <- FALSE
             c1Active <- c1W["active"]
             c2Active <- c2W["active"]
-            if (c1Active <= 1) return()
-            groupsW["active"] <- c1Active
-            ## TODO: combine two conditioning variables?
-            c1W["active"] <- 0
-            c2W["active"] <- 0
+            if (c1Active <= 1) return(FALSE)
+            if (c2Active <= 1) {
+                groupsW["active"] <- c1Active
+                c1W["active"] <- 0
+            } else {
+                groupsW["active"] <- c2Active
+                c2W["active"] <- 0
+            }
             widget["visible"] <- FALSE
             playState$plot.ready <- TRUE
             composePlot(playState)
             return(FALSE)
         }
         handler.explode <- function(widget, event, playState) {
-            if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
+            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
             playState$plot.ready <- FALSE
             grActive <- groupsW["active"]
-            if (grActive <= 1) return()
+            if (grActive <= 1) return(FALSE)
             c1Active <- c1W["active"]
             c2Active <- c2W["active"]
             if (c1Active <= 1)
@@ -957,7 +1098,7 @@ makeLatticistTool <- function(dat)
             return(FALSE)
         }
         handler.subsetSelect <- function(widget, event, playState) {
-            if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
+            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
             selectScales <- c(if (!is.null(xvar)) "x",
                               if (!is.null(yvar)) "y")
             foo <- playRectInput(playState, scales=selectScales,
@@ -1021,13 +1162,21 @@ makeLatticistTool <- function(dat)
         ## X Y VARS
         varsBox <- gtkVBox()
         xyBox <- gtkHBox()
-        xyBox$packStart(gtkLabel(" Variables / expressions on axes:"),
+        xyBox$packStart(gtkLabel(" Variables / expressions on axes: "),
                         expand=FALSE)
+        ## "switch" button
         xyflipW <- niceButton("switch")
         xyflipW["visible"] <- !is.null(xvar) || !is.null(yvar)
         gSignalConnect(xyflipW, "button-press-event",
                        handler.flip, data=playState)
         xyBox$packStart(xyflipW)
+        xyBox$packStart(gtkLabel(" "), padding=1)
+        ## "reset" button
+        resetW <- niceButton("reset")
+        resetW["visible"] <- !is.null(xvar) || !is.null(yvar)
+        gSignalConnect(resetW, "button-press-event",
+                       handler.reset, data=playState)
+        xyBox$packStart(resetW, expand=FALSE)
         varsBox$packStart(xyBox, expand=FALSE)
         ## Y VAR
         yvarBox <- gtkHBox()
@@ -1091,6 +1240,7 @@ makeLatticistTool <- function(dat)
         xyOptsBox$packStart(gtkLabel(" Aspect:"), expand=FALSE)
         aspectW <- gtkComboBoxEntryNewText()
         aspectW$show()
+        aspectW["sensitive"] <- !is.null(xvar) || !is.null(yvar)
         aspectW["width-request"] <- 50
         for (item in aspectopts) aspectW$appendText(item)
         if (!is.null(aspectVal)) {
@@ -1103,7 +1253,15 @@ makeLatticistTool <- function(dat)
                        doRecomposeOnSelect, data=playState)
         gSignalConnect(aspectW$getChild(), "activate",
                        doRecompose, data=playState)
-        xyOptsBox$packStart(aspectW)
+        xyOptsBox$packStart(aspectW)#, expand=FALSE)
+        xyOptsBox$packStart(gtkLabel(""), padding=1)
+        ## LINES
+        linesW <- gtkCheckButton("Lines. ")
+        linesW["active"] <- playState$latticist$linesSetting
+        linesW["sensitive"] <- !is.null(xvar) || !is.null(yvar)
+        gSignalConnect(linesW, "clicked",
+                       doLinesSetting, data=playState)
+        xyOptsBox$packStart(linesW, expand=FALSE)
         xyOptsBox$packStart(gtkLabel(""), padding=1)
         ## LEVELS
         xyOptsBox$packStart(gtkLabel("Levels:"), expand=FALSE)
@@ -1123,7 +1281,8 @@ makeLatticistTool <- function(dat)
         cvarsBox <- gtkVBox()
         cvarsBox["sensitive"] <- !is.null(xvar) || !is.null(yvar)
         cBox <- gtkHBox()
-        cBox$packStart(gtkLabel(" Conditioning:"), expand=FALSE)
+        cBox$packStart(gtkLabel(" Conditioning: "), expand=FALSE)
+        ## "superpose" button
         superposeW <- niceButton("superpose")
         superposeW["visible"] <- !is.null(c1)
         gSignalConnect(superposeW, "button-press-event",
@@ -1168,7 +1327,7 @@ makeLatticistTool <- function(dat)
         scalesBox$packStart(gtkLabel("Scales:"), expand=FALSE)
         scalesW <- gtkComboBoxNewText()
         scalesW$show()
-        scalesW["sensitive"] <- !is.null(c1)
+        scalesW["sensitive"] <- (prod(dim(playState$trellis)) > 1)
         scalesW["width-request"] <- 80
         for (item in scalesopts) scalesW$appendText(item)
         if (!is.null(scalesVal)) {
@@ -1190,7 +1349,8 @@ makeLatticistTool <- function(dat)
         gvarsBox["sensitive"] <- !is.null(xvar) || !is.null(yvar)
         ## GROUPS
         grBox <- gtkHBox()
-        grBox$packStart(gtkLabel(" Groups:"), expand=FALSE)
+        grBox$packStart(gtkLabel(" Groups: "), expand=FALSE)
+        ## "explode" button
         explodeW <- niceButton("explode")
         explodeW["visible"] <- !is.null(groups)
         gSignalConnect(explodeW, "button-press-event",
@@ -1216,7 +1376,7 @@ makeLatticistTool <- function(dat)
 
         ## LABELS
         laBox <- gtkHBox()
-        laBox$packStart(gtkLabel(" Labels:"), expand=FALSE)
+        laBox$packStart(gtkLabel(" Labels: "), expand=FALSE)
         gvarsBox$packStart(laBox, expand=FALSE, padding=1)
         labelsW <- gtkComboBoxEntryNewText()
         labelsW$show()
@@ -1239,7 +1399,8 @@ makeLatticistTool <- function(dat)
         setBox <- gtkVBox()
         ## SUBSET
         subsetBox <- gtkHBox()
-        subsetBox$packStart(gtkLabel(" Subset:"), expand=FALSE)
+        subsetBox$packStart(gtkLabel(" Subset: "), expand=FALSE)
+        ## "interactive" subset button
         subsetSelW <- niceButton("interactive...")
         showSub <- !is.null(xvar) || !is.null(yvar)
         if (is.call.to(mainCall(playState), "barchart") &&
@@ -1266,7 +1427,7 @@ makeLatticistTool <- function(dat)
         ## HOTSET
         ## TODO
         hotsetBox <- gtkHBox()
-        hotsetBox$packStart(gtkLabel(" Hot-set:"), expand=FALSE)
+        hotsetBox$packStart(gtkLabel(" Hot-set: "), expand=FALSE)
         hotsetSelW <- niceButton("interactive...")
         hotsetSelW["visible"] <- FALSE #!is.null(xvar) || !is.null(yvar)
         hotsetBox$packStart(hotsetSelW)
@@ -1309,7 +1470,67 @@ cutEq <- function(x, n, type=2, dig.lab=4, ...)
     br <- quantile(x, seq(0, 1, length=n+1), type=type,
                    na.rm=TRUE, names=FALSE)
     br[length(br)] <- max(x, na.rm=TRUE)
+    br <- unique(br)
     cut(x, br, dig.lab=dig.lab, right=FALSE,
         include.lowest=TRUE, ordered_result=TRUE)
 }
 
+try.prepanel.loess <- function(...) {
+    result <- try(prepanel.loess(...), silent=TRUE)
+    if (inherits(result, "try-error"))
+        return(list())
+    result
+}
+
+rectbinplot <- function(x, data, ...)
+    UseMethod("rectbinplot")
+
+rectbinplot.formula <-
+    function(x, data, ..., subset = TRUE,
+             breaks = 32, breaks.x = breaks, breaks.y = breaks,
+             col.regions = grey.colors(100, start = 1, end = 0))
+{
+    x
+}
+
+levelplot.table <-
+    function(x, data = NULL, ...,
+             col.regions = grey.colors(100, start = 1, end = 0))
+{
+    if (!is.null(data))
+        warning("explicit 'data' specification ignored")
+    stopifnot(length(dim(x)) >= 2)
+    data <- as.data.frame(x)
+    nms <- names(data)
+    freq <- which(nms == "Freq")
+    nms <- nms[-freq]
+    form <- sprintf("Freq ~ %s * %s", nms[1], nms[2])
+    nms <- nms[-(1:2)]
+    len <- length(nms)
+    if (len > 0) {
+        rest <- paste(nms, collapse = "+")
+        form <- paste(form, rest, sep = "|")
+    }
+    levelplot(as.formula(form), data, ...)
+}
+
+### copied from lattice
+compute.packet <-
+    function(cond, levels)
+{
+    id <- !(do.call("pmax", lapply(cond, is.na)))
+    stopifnot(any(id))
+    for (i in seq_along(cond))
+    {
+        var <- cond[[i]]
+        id <-
+            id & (
+                  if (is.shingle(var))
+                  ((var >= levels(var)[[levels[i]]][1]) &
+                   (var <= levels(var)[[levels[i]]][2]))
+                  else
+                  (as.numeric(var) == levels[i])
+                  )
+    }
+    id
+}

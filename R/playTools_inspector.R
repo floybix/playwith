@@ -26,9 +26,10 @@ inspector_handler <- function(widget, playState)
     if (length(bblist) == 0) stop("No grobs found.")
 
     foo <- playPointInput(playState,
-                          "Click on any object.")
+                          "Click on an object to see details. Shift-click to destroy.")
     grid.refresh()
     if (is.null(foo)) return()
+    isShift <- (foo$modifiers & GdkModifierType["shift-mask"])
     x.px <- foo$dc$x
     y.px <- foo$dc$y
     ## get a list of all grobs in the scene
@@ -39,6 +40,7 @@ inspector_handler <- function(widget, playState)
     ## build menu of all grobs the click touched
     menu <- gtkMenu()
     headItem <- gtkMenuItem("Choose object to see its details:")
+    if (isShift) headItem <- gtkMenuItem("Choose object to destroy:")
     headItem["sensitive"] <- FALSE
     menu$append(headItem)
     nhits <- 0
@@ -61,7 +63,10 @@ inspector_handler <- function(widget, playState)
             item <- gtkMenuItem(itemName)
             gSignalConnect(item, "activate",
                            function(widget, user.data) {
-                               str(grid.get(user.data))
+                               if (isShift)
+                                   grid.remove(user.data)
+                               else
+                                   str(grid.get(user.data))
                            },
                            data = name)
             menu$append(item)

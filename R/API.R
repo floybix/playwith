@@ -25,7 +25,10 @@ playDevSet <- function(playState)
 
 playDevOff <- function(playState = playDevCur())
 {
-    try(playState$win$destroy(), silent=TRUE)
+    if (inherits(playState$win, "GtkWindow"))
+        try(playState$win$destroy())#, silent=TRUE)
+    ## it seems that memory is not freed! (R2.7.1)
+    rm(list=ls(playState), envir=playState)
     cleanupStateEnv()
 }
 
@@ -51,6 +54,7 @@ cleanupStateEnv <- function()
             rm(list=ID, envir=StateEnv)
         }
     }
+    ## select a new 'current' if it is invalid
     if (!inherits(StateEnv$.current$win, "GtkWindow")) {
         StateEnv$.current <- if (length(ls(StateEnv)))
             StateEnv[[ ls(StateEnv)[1] ]] else NULL
@@ -84,15 +88,16 @@ callArg <- function(playState, arg, expr, eval = TRUE, data = NULL)
     if (is.symbol(arg)) arg <- as.character(arg)
     if (is.null(arg)) return()
     ## instantiate implicit lists as language objects (so deparse is pretty)
-#    if (is.language(arg)) {
-#        xbits <- strsplit(deparseOneLine(arg), "$", fixed=TRUE)[[1]]
-#        for (i in seq_len(length(xbits) - 1)) {
-#            implicitList <- parse(text=paste(xbits[1:i], collapse="$"))[[1]]
-#            if (is.null(callArg(playState, implicitList))) {
-#                callArg(playState, implicitList) <- quote(list())
-#            }
-#        }
-#    }
+    ## this is required for e.g. lattice's scales$x$at <- quote(qnorm(...))
+    if (is.language(arg)) {
+        xbits <- strsplit(deparseOneLine(arg), "$", fixed=TRUE)[[1]]
+        for (i in seq_len(length(xbits) - 1)) {
+            implicitList <- parse(text=paste(xbits[1:i], collapse="$"))[[1]]
+            if (is.null(callArg(playState, implicitList))) {
+                callArg(playState, implicitList) <- quote(list())
+            }
+        }
+    }
     getx <- if (is.numeric(arg)) paste('[[', arg+1, ']]', sep="")
     else if (is.character(arg)) paste("$", arg, sep="")
     else paste("$", deparseOneLine(arg), sep="")
@@ -148,7 +153,16 @@ updateMainCall <- function(playState) {
     playState$main.call.index <- main.call.index
     ## check whether the called function accepts arguments
     playState$accepts.arguments <- !is.null(playState$main.call.index)
-        #((typeof(callFun) == "closure") && !is.null(formals(callFun)))
+    ## put call into canonical form, but with first argument un-named
+    if (playState$accepts.arguments) {
+        mainCall <- mainCall(playState)
+        callFun <- eval(mainCall[[1]])
+        firstArgName <- names(mainCall)[2]
+        mainCall <- match.call(callFun, mainCall)
+        if (is.null(firstArgName) || (firstArgName == ""))
+            if (!is.null(names(mainCall))) names(mainCall)[2] <- ""
+        mainCall(playState) <- mainCall
+    }
 }
 
 playFreezeGUI <- function(playState)
@@ -171,7 +185,9 @@ playSetFreezeGUI <- function(playState, frozen)
         ## similarly, leave page and time scrollbars as sensitive.
         #pageScrollBox["sensitive"] <- !frozen
         #timeScrollBox["sensitive"] <- !frozen
-                                        #callToolbar["sensitive"] <- !frozen
+        #callToolbar["sensitive"] <- !frozen
+        if (!is.null(playState$widgets$latticist))
+            latticist["sensitive"] <- !frozen
     })
     playState$win$getWindow()$setCursor(
       if (frozen) gdkCursorNew("watch") else NULL)
@@ -258,13 +274,6 @@ rawXYLim <- function(playState, space="plot")
     playState
 }
 
-is.somesortoftime <- function(x) {
-  inherits(x, "Date") ||
-  inherits(x, "POSIXt") ||
-  inherits(x, "yearmon") ||
-  inherits(x, "yearqtr")
-}
-
 setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
 {
     playDevSet(playState)
@@ -272,9 +281,9 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
     ## round digits conservatively
     x <- signif(x, digits=8)
     if (playState$is.lattice) {
-        ## TODO: this really sucks
-        x.panel <- xyData(playState, space="page")[[x.or.y]]
-        ## set factor labels explicitly, othewise is coerced to numeric
+        ## TODO: packet 1 may not exist?
+        x.panel <- xyData(playState, space="packet 1")[[x.or.y]]
+        ## set factor labels explicitly, otherwise they are coerced to numeric
         if (is.factor(x.panel)) {
             scales.labels <- substitute(scales[[x.or.y]]$labels,
                                         list(x.or.y=x.or.y))
@@ -298,13 +307,15 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
         }
         else {
           ## numeric
-          isExtended <- switch(x.or.y,
-                               x = playState$trellis$x.scales$axs == "r",
-                               y = playState$trellis$y.scales$axs == "r")
-          f <- lattice.getOption("axis.padding")$numeric
-          if (isExtended) x <- shrinkrange(x, f=f)
+          ## it seems now (lattice 0.17-12) that xlim/ylim are used directly
+          ## so we don't need this:
+          #isExtended <- switch(x.or.y,
+          #                     x = playState$trellis$x.scales$axs == "r",
+          #                     y = playState$trellis$y.scales$axs == "r")
+          #f <- lattice.getOption("axis.padding")$numeric
+          #if (isExtended) x <- shrinkrange(x, f=f)
           ## round digits conservatively
-          x <- signif(x, digits=8)
+          #x <- signif(x, digits=8)
         }
     }
     else if (!is.null(playState$viewport)) {
@@ -334,22 +345,28 @@ shrinkrange <- function(r, f = 0.1)
   orig.r
 }
 
+is.somesortoftime <- function(x) {
+  inherits(x, "Date") ||
+  inherits(x, "POSIXt") ||
+  inherits(x, "yearmon") ||
+  inherits(x, "yearqtr")
+}
+
 ## note space="page" means the root viewport
 playDo <- function(playState, expr, space="plot", clip.off=FALSE)
 {
     playDevSet(playState)
     cur.vp <- current.vpPath()
     upViewport(0) ## go to root viewport
-    on.exit(expression()) ## placeholder
+    on.exit({
+        upViewport(0)
+        if (!is.null(cur.vp)) downViewport(cur.vp)
+    })
     if (space != "page") {
         ## user / plot coordinates
         if (!is.null(playState$viewport)) {
             ## grid graphics plot
-            depth <- try(downViewport(playState$viewport[[space]]))
-            if (inherits(depth, "try-error")) {
-                stop(paste("Viewport", playState$viewport, "not found"))
-            }
-            on.exit(upViewport(depth), add=TRUE)
+            downViewport(playState$viewport[[space]])
         }
         else if (playState$is.lattice) {
             ## lattice plot
@@ -369,8 +386,7 @@ playDo <- function(playState, expr, space="plot", clip.off=FALSE)
             myCol <- col(packets)[whichOne]
             myRow <- row(packets)[whichOne]
             myVp <- trellis.vpname("panel", myCol, myRow, clip.off=clip.off)
-            depth <- try(downViewport(myVp))
-            on.exit(upViewport(depth), add=TRUE)
+            downViewport(myVp)
             ## TODO: should focus panel or just go to viewport?
             ## (if focus, will destroy any previous focus)
             ##trellis.focus("panel", myCol, myRow, highlight=FALSE)
@@ -380,12 +396,9 @@ playDo <- function(playState, expr, space="plot", clip.off=FALSE)
             ## base graphics
             space <- "plot"
             if (clip.off) space <- "plot.clip.off"
-            depth <- downViewport(playState$baseViewports[[space]])
-            on.exit(upViewport(depth), add=TRUE)
+            downViewport(playState$baseViewports[[space]])
         }
     }
-    if (inherits(depth, "try-error")) return()
-    if (!is.null(cur.vp)) on.exit(downViewport(cur.vp), add=TRUE)
     ## do the stuff and return the result
     ##if (is.list(stuff)) lapply(stuff, eval, parent.frame(), playState$env)
     ##else eval(stuff, parent.frame(), playState$env)

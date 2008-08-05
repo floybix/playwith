@@ -10,7 +10,7 @@ toolConstructors$time.mode <- function(playState)
     if (playState$accepts.arguments == FALSE) return(NA)
     ## sensible default for time.mode based on data
     if (playState$.args$missing_time.mode) {
-        dat <- xyData(playState, space="page")
+        dat <- xyData(playState, space="packet 1")
         playState$time.mode <-
             (inherits(dat$x, "ts") ||
              inherits(dat$x, "zoo") ||

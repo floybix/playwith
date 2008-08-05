@@ -24,6 +24,7 @@ annotate_handler <- function(widget, playState)
     if (is.null(foo$coords)) pageAnnotation <- TRUE
     space <- foo$space
     if (pageAnnotation) space <- "page"
+    absXY <- foo$dc
     myXY <- if (space == "page") foo$ndc else foo$coords
     myXY$x <- signif(myXY$x, 8)
     myXY$y <- signif(myXY$y, 8)
@@ -164,12 +165,8 @@ annotate_handler <- function(widget, playState)
         else {
             ## it was a drag, defining a rectangle
             ## choose side of rect to align to
-            x.leftright <- sort(myXY$x)
-            if (is.unsorted(rawXLim(playState, space=space)))
-                x.leftright <- rev(x.leftright)
-            y.bottop <- sort(myXY$y)
-            if (is.unsorted(rawYLim(playState, space=space)))
-                y.bottop <- rev(y.bottop)
+            x.leftright <- myXY$x[order(absXY$x)]
+            y.bottop <- myXY$y[rev(order(absXY$y))]
             myX <- switch(just[1],
                           left=x.leftright[1],
                           right=x.leftright[2],

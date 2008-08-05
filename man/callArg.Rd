@@ -9,8 +9,8 @@
   Part of the \code{\link{playwith}} Application Programming Interface.
 }
 \usage{
-callArg(playState, arg, expr, eval = TRUE, data = NULL)
-callArg(playState, arg, expr) <- value
+callArg(playState, arg, eval = TRUE, data = NULL)
+callArg(playState, arg) <- value
 
 mainCall(playState)
 mainCall(playState) <- value
@@ -21,11 +21,11 @@ updateMainCall(playState)
   \item{playState}{ a \code{\link{playState}} object representing the plot, window and device. }
   \item{arg}{ the argument name or number in the plot call (\code{playState$call}).
   	Argument numbers start from 1 (so 0 refers to the function name).
-  	This can also be a language object (e.g. \code{quote(scales$log)}).
+  	This can also be a language object
+	(e.g. \code{quote(scales$log)}).
+	This is evaluated in the calling environment, so can
+	refer to local variables (e.g. \code{data[[myname]]}).
   }
-  \item{expr}{ an alternative way to specify \code{arg}: as a raw
-    expression. This is evaluated in the calling environment, so can
-    refer to local variables (e.g. \code{data[[myname]]}). }
   \item{eval}{ whether to evaluate the argument before returning it.
     Otherwise, just return the quoted expression that appears in the
     call. }
@@ -68,11 +68,8 @@ playReplot(playState)
 
 ## referring to local variables
 tmp <- "x"
-callArg(playState, expr = scales[[tmp]]$cex) <- 2
+callArg(playState, quote(scales[[tmp]]$cex)) <- 2
 playReplot(playState)
-
-## quoted expressions can also be used
-callArg(playState, quote(scales$x$cex))
 
 }
 }

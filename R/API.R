@@ -61,10 +61,8 @@ cleanupStateEnv <- function()
     }
 }
 
-callArg <- function(playState, arg, expr, eval = TRUE, data = NULL)
+callArg <- function(playState, arg, eval = TRUE, data = NULL)
 {
-    if (missing(expr) == missing(arg)) stop("give 'arg' or 'expr'")
-    if (!missing(expr)) arg <- substitute(expr)
     if (is.symbol(arg)) arg <- as.character(arg)
     ## work-around since the `exact` argument only appeared in R 2.6
     exactbit <- if (getRversion() <= "2.6") '"]]' else '", exact=TRUE]]'
@@ -81,10 +79,8 @@ callArg <- function(playState, arg, expr, eval = TRUE, data = NULL)
         eval(zap, envir=data, enclos=playState$env)
 }
 
-"callArg<-" <- function(playState, arg, expr, value)
+"callArg<-" <- function(playState, arg, value)
 {
-    if (missing(expr) == missing(arg)) stop("give 'arg' or 'expr'")
-    if (!missing(expr)) arg <- substitute(expr)
     if (is.symbol(arg)) arg <- as.character(arg)
     if (is.null(arg)) return()
     ## instantiate implicit lists as language objects (so deparse is pretty)

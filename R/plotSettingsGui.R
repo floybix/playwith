@@ -288,12 +288,12 @@ settings_handler <- function(widget, playState)
         if (playState$is.lattice) {
             newXdraw <- if (svalue(wid$xaxis.show)) NULL else FALSE
             newYdraw <- if (svalue(wid$yaxis.show)) NULL else FALSE
-            callArg(playState, expr=scales$x$draw) <- newXdraw
-            callArg(playState, expr=scales$y$draw) <- newYdraw
+            callArg(playState, quote(scales$x$draw)) <- newXdraw
+            callArg(playState, quote(scales$y$draw)) <- newYdraw
             newXlog <- if (svalue(wid$xaxis.log)) TRUE else NULL
             newYlog <- if (svalue(wid$yaxis.log)) TRUE else NULL
-            callArg(playState, expr=scales$x$log) <- newXlog
-            callArg(playState, expr=scales$y$log) <- newYlog
+            callArg(playState, quote(scales$x$log)) <- newXlog
+            callArg(playState, quote(scales$y$log)) <- newYlog
             newAspect <- if (svalue(wid$aspect.iso)) "iso" else NULL
             callArg(playState, "aspect") <- newAspect
         } else {

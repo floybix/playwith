@@ -332,7 +332,7 @@ playwith(stripplot(yield ~ site, data = barley,
 x <- seq(-4*pi, 4*pi, by = pi/24)
 pts <- data.frame(x = x, y = c(sin(x), cos(x), tan(x)))
 labs <- rep(c("sin", "cos", "tan"), each = length(x))
-labs <- paste(labs, round(180 * x / pi) %% 360)
+labs <- paste(labs, round(180 * x / pi) \%\% 360)
 playwith( {
    plot(x, sin(x), type = "l", xlim = c(-pi, pi),
        ylim = c(-1.2, 1.8), col = 3, lty = 2)

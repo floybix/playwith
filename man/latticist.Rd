@@ -1,5 +1,6 @@
 \name{latticist}
 \alias{latticist}
+\alias{try.prepanel.loess}
 \title{ A Lattice GUI }
 \description{
   Interactively visualise a data set using \code{\link[lattice]{Lattice}} displays.

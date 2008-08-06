@@ -64,6 +64,7 @@
          ## global:
          parameters.toolbar = "bottom",
          toolbar.style = "both",
+         catch.errors = TRUE,
          deparse.options = c("keepInteger")
          )
 

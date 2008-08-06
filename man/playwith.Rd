@@ -398,10 +398,11 @@ doLocalStuff <- function(...) {
    angle <- (atan2(y_local, x_global) / (2*pi)) + 0.5
    color <- hsv(h = angle, v = 0.75)
    mkpolys <- function(z) {
-      p <- rep(z, each = 4); i <- seq(z)
-      p[-i*4+3] <- c(0, 0.05, NA); p
+      p <- runif(4*length(z), -0.05, 0.05)
+      p[4*seq(z)-3] <- z
+      p[4*seq(z)] <- NA; p
    }
-   playwith(plot(x_global, y_local,
+   playwith(plot(x_global, y_local, pch = 8, col = color,
       panel.first = polygon(mkpolys(x_global), mkpolys(y_local),
                             col = color, border = NA)),
    ...)

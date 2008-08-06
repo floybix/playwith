@@ -154,9 +154,9 @@ playwith <-
                             tooltip = "Go back to previous plot call",
                             f = function(widget, playState) {
                                 with(playState$widgets, {
-                                    callEntry["active"] <- callEntry["active"] + 1
-                                    callEntry$getChild()$activate()
                                     redoButton["sensitive"] <- TRUE
+                                    callEntry["active"] <- callEntry["active"] + 1
+                                    #callEntry$getChild()$activate()
                                 })
                             })
     redoButton <- quickTool(playState, "Forward",
@@ -165,7 +165,7 @@ playwith <-
                             f = function(widget, playState) {
                                 with(playState$widgets, {
                                     callEntry["active"] <- callEntry["active"] - 1
-                                    callEntry$getChild()$activate()
+                                    #callEntry$getChild()$activate()
                                 })
                             })
     redrawButton <- quickTool(playState, "Redraw",
@@ -186,6 +186,12 @@ playwith <-
     callToolbar$insert(helpButton, -1)
     callEntry <- gtkComboBoxEntryNewText()
     callEntry$show()
+    ## "changed" emitted on typing and selection
+    gSignalConnect(callEntry, "changed",
+                   function(widget, playState)
+                     if (widget["active"] > -1)
+                       edit.call.inline_handler(widget$getChild(), playState),
+                   data=playState)
     gSignalConnect(callEntry$getChild(), "activate",
                    edit.call.inline_handler, data=playState)
     item <- gtkToolItem()
@@ -442,7 +448,21 @@ playNewPlot <- function(playState)
     updateAddressBar(playState)
     ## eval plot call
     ## (NOTE this will draw the plot UNLESS it is lattice or ggplot)
-    result <- eval(playState$call, playState$env)
+    if (isTRUE(playwith.getOption("catch.errors"))) {
+      result <- tryCatch(eval(playState$call, playState$env),
+                         error = function(e)e)
+      if (inherits(result, "error")) {
+        callText <- deparseOneLine(playState$call)
+        msg <- paste("Error: ",
+                     conditionMessage(result),
+                     "\n in: \n",
+                     callText, sep="")
+        gmessage.error(msg)
+        return(result)
+      }
+    } else {
+      result <- eval(playState$call, playState$env)
+    }
     ## detect lattice
     playState$is.lattice <- (inherits(result, "trellis"))
     if (playState$is.lattice) playState$trellis <- result
@@ -638,8 +658,15 @@ updateAddressBar <- function(playState)
             ## a new call: edited inline OR playState$call modified
             widg$callEntry$prependText(callTxt)
             widg$callEntry["active"] <- 0
+            histLev <- playState$.call.history.level
+            if (any(histLev > 0)) {
+                ## remove later history
+                for (i in seq(histLev-1, 0)+1)
+                  widg$callEntry$removeText(i)
+            }
             widg$undoButton["sensitive"] <- TRUE
         }
+        playState$.call.history.level <- widg$callEntry["active"]
         widg$redoButton["sensitive"] <- (widg$callEntry["active"] > 0)
     }
 }

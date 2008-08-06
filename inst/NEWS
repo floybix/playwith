@@ -7,12 +7,20 @@ Changes in Version 0.9-11
 
   o revised and expanded all examples in help("playwith").
 
+  o common errors in playwith and latticist are caught and shown in
+    a dialog box (unless playwith.options(catch.errors = FALSE)).
+    On Linux this avoids killing R with "stack smashing detected".
+
+  o call history (undo/redo buttons) works correctly.
+
   o improved local cacheing of objects appearing in the plot call.
     now stores local functions as well as objects, and works better.
 
   o re-used playwith windows are resized to account for toolbars etc.
 
   o grob inspector tool allows removing grobs (but note bug in 'grid').
+
+  o fixed zooming with lattice categorical scales (again).
 
 Changes in Version 0.9-10
 

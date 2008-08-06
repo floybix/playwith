@@ -83,17 +83,6 @@ callArg <- function(playState, arg, eval = TRUE, data = NULL)
 {
     if (is.symbol(arg)) arg <- as.character(arg)
     if (is.null(arg)) return()
-    ## instantiate implicit lists as language objects (so deparse is pretty)
-    ## this is required for e.g. lattice's scales$x$at <- quote(qnorm(...))
-    if (is.language(arg)) {
-        xbits <- strsplit(deparseOneLine(arg), "$", fixed=TRUE)[[1]]
-        for (i in seq_len(length(xbits) - 1)) {
-            implicitList <- parse(text=paste(xbits[1:i], collapse="$"))[[1]]
-            if (is.null(callArg(playState, implicitList))) {
-                callArg(playState, implicitList) <- quote(list())
-            }
-        }
-    }
     getx <- if (is.numeric(arg)) paste('[[', arg+1, ']]', sep="")
     else if (is.character(arg)) paste("$", arg, sep="")
     else paste("$", deparseOneLine(arg), sep="")
@@ -101,6 +90,16 @@ callArg <- function(playState, arg, eval = TRUE, data = NULL)
     zap <- parse(text=paste("mainCall", getx, sep=""))[[1]]
     zap <- call("<-", zap, quote(value))
     eval(zap, enclos=parent.frame())
+    ## instantiate implicit lists as language objects
+    ## this is required for e.g. lattice's scales$x$at <- quote(qnorm(...))
+    ## easiest way is just to deparse without showAttributes and then parse
+    if (is.language(arg)) {
+        tmp <- try( parse(text=deparseOneLine(mainCall,
+                           control=playwith.getOption("deparse.options")
+                           ))[[1]] )
+        if (!inherits(tmp, "try-error"))
+            mainCall <- tmp
+    }
     mainCall(playState) <- mainCall
     playState
 }
@@ -812,6 +811,7 @@ xy.coords.qqmath <-
     x <- as.numeric(x)
     if (is.null(subscripts)) subscripts <- seq_along(x)
     if (!is.null(panel.args$f.value)) warning("'f.value' not supported; ignoring")
+    ## TODO: just return NULL if f.value is defined
     distribution <-
         if (is.function(distribution)) distribution
         else if (is.character(distribution)) get(distribution)

@@ -1,6 +1,5 @@
 
 import(RGtk2)
-import(grid)
 import(gridBase)
 importFrom(graphics, par, plot)
 import(grDevices)

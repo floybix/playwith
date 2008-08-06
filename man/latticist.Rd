@@ -62,14 +62,27 @@ R", Springer. \url{http://lmdvr.r-forge.r-project.org/}
 if (interactive()) {
 options(device.ask.default = FALSE)
 
+## CO2 dataset: see ?CO2
+## From an experiment on the cold tolerance of a grass species.
+## Try: uptake ~ conc
+##      uptake ~ conc | Plant
+##      uptake ~ conc | Type, groups = Treatment
 latticist(CO2)
 
+## National Health and Nutrition Examination Survey.
+## Try: ~ Smoke, groups = Sex
+##      Sex ~ Smoke
+##      Smoke ~ Age | Sex
+##      ~ Diet.Iron, groups = Sex
+##      Hemoglobin ~ Diet.Iron | Sex
+##      (with both x and y "discretized")
 if (require(hexbin)) {
   readline("Hit Enter for 'NHANES' example...")
   data(NHANES)
   latticist(NHANES)
 }
 
+## audit dataset: artificial data representing tax work.
 if (require(rattle)) {
   readline("Hit Enter for 'audit' example...")
   audit <- read.csv(system.file("csv", "audit.csv",

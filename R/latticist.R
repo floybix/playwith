@@ -261,7 +261,7 @@ makeLatticistTool <- function(dat)
             #        paste("is.na(", nm, ")", sep="")
             #    else NULL
             #})
-            varexprs <- c(varexprs, unlist(missings))
+            #varexprs <- c(varexprs, unlist(missings))
         }
         varexprs <- unique(c(varexprs,
                       xvarStr, yvarStr,
@@ -352,8 +352,8 @@ makeLatticistTool <- function(dat)
                 msg <- paste("Error parsing ", itemName, ": ",
                              conditionMessage(result), sep="")
                 gmessage.error(msg)
-                stop(result)
-            }
+                stop(result) ## kills R under linux ("stack smashing detected")
+              }
             result
         }
         tryEval <- function(x0, ...) {
@@ -365,7 +365,7 @@ makeLatticistTool <- function(dat)
                 msg <- paste("Error evaluating ", itemName, ": ",
                              conditionMessage(result), sep="")
                 gmessage.error(msg)
-                stop(result)
+                stop(result) ## kills R under linux ("stack smashing detected")
             }
             result
         }
@@ -896,12 +896,14 @@ makeLatticistTool <- function(dat)
                         theme$cex <- 0.6
                     if (ncond > 6)
                         theme$cex <- 0.4
-                    if (nPoints >= LOTS) {
+                    if ((nPoints >= LOTS) &&
+                        is.null(callArg(playState, "f.value")))
+                    {
                         theme$alpha.points <- if (nPoints >= HEAPS) 0.15 else 0.3
                         ## bug in lattice: grouped lines take alpha from points setting
                         if (!is.null(groups) &&
                             (packageDescription("lattice")$Version <= "0.17-12"))
-                            theme$alpha.points <- if (nPoints >= HEAPS) 0.3 else 0.6
+                            theme$alpha.points <- if (nPoints >= HEAPS) 0.4 else 0.6
                     }
                     if (nPoints >= HEAPS) {
                         if (is.call.to(mainCall(playState), "xyplot") ||
@@ -1002,18 +1004,17 @@ makeLatticistTool <- function(dat)
             ## need playNewPlot not playReplot so as to reload latticist
             playNewPlot(playState)
         }
-        doRecompose <- function(widget, playState) {
-            composePlot(playState)
-        }
+        doRecompose <- function(widget, playState)
+            try(composePlot(playState))
+        doRecomposeNewXY <- function(widget, playState)
+            try(composePlot(playState, newXY=TRUE))
         doRecomposeOnSelect <- function(widget, playState) {
             if (widget["active"] > -1)
-                composePlot(playState)
+                doRecompose(playState = playState)
         }
-        doRecomposeNewXY <- function(widget, playState)
-            composePlot(playState, newXY=TRUE)
         doRecomposeNewXYOnSelect <- function(widget, playState) {
             if (widget["active"] > -1)
-                composePlot(playState, newXY=TRUE)
+                doRecomposeNewXY(playState = playState)
         }
         doLabels <- function(widget, playState) {
             labels <- tryParse(labelsW$getActiveText())
@@ -1029,7 +1030,7 @@ makeLatticistTool <- function(dat)
         }
         doLinesSetting <- function(widget, playState) {
             playState$latticist$linesSetting <- widget["active"]
-            composePlot(playState)
+            doRecompose(playState = playState)
         }
 
         handler.flip <- function(widget, event, playState) {
@@ -1048,7 +1049,7 @@ makeLatticistTool <- function(dat)
             xonW["sensitive"] <- ysens
             yonW["sensitive"] <- xsens
             playState$plot.ready <- TRUE
-            composePlot(playState)
+            doRecompose(playState = playState)
             return(FALSE)
         }
         handler.reset <- function(widget, event, playState) {
@@ -1059,7 +1060,7 @@ makeLatticistTool <- function(dat)
             xonW["sensitive"] <- FALSE
             yonW["sensitive"] <- FALSE
             playState$plot.ready <- TRUE
-            composePlot(playState)
+            doRecompose(playState = playState)
             return(FALSE)
         }
         handler.superpose <- function(widget, event, playState) {
@@ -1077,7 +1078,7 @@ makeLatticistTool <- function(dat)
             }
             widget["visible"] <- FALSE
             playState$plot.ready <- TRUE
-            composePlot(playState)
+            doRecompose(playState = playState)
             return(FALSE)
         }
         handler.explode <- function(widget, event, playState) {
@@ -1094,7 +1095,7 @@ makeLatticistTool <- function(dat)
             groupsW["active"] <- 0
             widget["visible"] <- FALSE
             playState$plot.ready <- TRUE
-            composePlot(playState)
+            doRecompose(playState = playState)
             return(FALSE)
         }
         handler.subsetSelect <- function(widget, event, playState) {
@@ -1138,7 +1139,7 @@ makeLatticistTool <- function(dat)
             if (is.null(yvar)) subset <- xsub
             if (is.null(xvar)) subset <- ysub
             subsetW$getChild()$setText(deparseOneLine(subset))
-            composePlot(playState)
+            doRecompose(playState = playState)
             return(FALSE)
         }
 

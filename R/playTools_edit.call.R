@@ -19,8 +19,8 @@ edit.call.inline_handler <- function(widget, playState)
         gmessage.error(conditionMessage(tmp))
     } else {
         ## if more than one call, wrap them in braces
-        playState$call <- if (length(tmp) > 1)
-            as.call(c(as.symbol("{"), tmp)) else tmp[[1]]
+        playState$call <- if (length(tmp) == 1) tmp[[1]]
+            else as.call(c(as.symbol("{"), tmp))
         playNewPlot(playState)
     }
     playState$win$present()

@@ -62,8 +62,13 @@
          arrow.style = NULL,
          arrow.arrow = quote(arrow(length=unit(0.15, "inches"))),
          ## global:
+         ui.menus.xml = system.file("etc", "ui.menus.xml", package="playwith"),
+         ui.toolbars.xml = system.file("etc", "ui.toolbars.xml", package="playwith"),
+         ui.custom.xml = NULL,
+         custom.actions = NULL,
          parameters.toolbar = "bottom",
          toolbar.style = "both",
+         show.statusbar = TRUE,
          catch.errors = TRUE,
          deparse.options = c("keepInteger")
          )

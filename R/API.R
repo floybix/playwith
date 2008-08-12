@@ -25,6 +25,7 @@ playDevSet <- function(playState)
 
 playDevOff <- function(playState = playDevCur())
 {
+    ## TODO: should this run the close action?
     if (inherits(playState$win, "GtkWindow"))
         try(playState$win$destroy())#, silent=TRUE)
     ## it seems that memory is not freed! (R2.7.1)
@@ -148,9 +149,12 @@ updateMainCall <- function(playState) {
     playState$main.call.index <- main.call.index
     ## check whether the called function accepts arguments
     playState$accepts.arguments <- !is.null(playState$main.call.index)
+    playState$callName <- ""
     ## put call into canonical form, but with first argument un-named
     if (playState$accepts.arguments) {
         mainCall <- mainCall(playState)
+        playState$callName <- toString(deparse(mainCall[[1]]))
+        ## apply match.call()
         callFun <- eval(mainCall[[1]])
         firstArgName <- names(mainCall)[2]
         mainCall <- match.call(callFun, mainCall)
@@ -205,30 +209,44 @@ blockRedraws <- function(expr, playState = playDevCur())
     foo
 }
 
+hideWidgetNoRedraw <- function(playState, widget, horiz)
+{
+    whichDim <- if (horiz) "height" else "width"
+    if (widget["visible"]) blockRedraws({
+        widgSize <- widget$getAllocation()
+        winSize <- playState$win$getSize()
+        widget["visible"] <- FALSE
+        winSize[[whichDim]] <- winSize[[whichDim]] - widgSize[[whichDim]]
+        playState$win$resize(winSize$width, winSize$height)
+    })
+}
+
 playPrompt <- function(playState, text=NULL)
 {
     with(playState$widgets, {
         if (is.null(text)) {
             ## hide the prompt widget
-            promptLabel$setMarkup("")
-            promptBox["sensitive"] <- FALSE
-            if (playState$show.call) {
-                callToolbar$show()
-                promptBox$hide()
-            }
+   #         promptLabel$setMarkup("")
+   #         promptBox["sensitive"] <- FALSE
+   #         if (playState$show.call) {
+   #             callToolbar$show()
+   #             promptBox$hide()
+   #         }
             playThawGUI(playState)
+            statusbar$pop(0)
             return(invisible())
         }
         ## show the prompt widget
-        promptBox["sensitive"] <- TRUE
-        if (playState$show.call) {
-            promptBox$show()
-            callToolbar$hide()
-        }
+#        promptBox["sensitive"] <- TRUE
+#        if (playState$show.call) {
+#            promptBox$show()
+#            callToolbar$hide()
+#        }
         playFreezeGUI(playState)
+        statusbar$push(0, toString(text))
         ## set the prompt text
-        promptLabel$setMarkup(paste("<big><b>",
-                                    toString(text), "</b></big>"))
+#        promptLabel$setMarkup(paste("<big><b>",
+#                                    toString(text), "</b></big>"))
     })
     invisible()
 }

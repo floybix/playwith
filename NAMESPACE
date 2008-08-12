@@ -3,7 +3,7 @@ import(RGtk2)
 import(gridBase)
 importFrom(graphics, par, plot)
 import(grDevices)
-importFrom(utils, head, modifyList)
+import(utils)
 
 # the main function
 export(

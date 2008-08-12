@@ -244,6 +244,10 @@ playwith(expr,
   generate random data prior to the plot call. Changes to variables
   in the workspace (if they are not stored locally) may also cause inconsistencies in previously generated
   plots.
+
+  Note also that the playwith device will tend to make itself the active
+  device any time it is clicked on, so be careful if any other devices
+  are left open.
 }
 \value{
   \code{playwith} invisibly returns the \code{\link{playState}} object representing
@@ -292,7 +296,7 @@ playwith(plot(treering, xlim = c(1000, 1300)),
       fontfamily = "HersheySans", cex = 0.7))
 
 ## Multi-panel Lattice plot.
-## Need subscripts=TRUE to correctly identify points.
+## Need subscripts = TRUE to correctly identify points.
 ## Scales are "same" so zooming affects all panels.
 Depth <- equal.count(quakes$depth, number = 3, overlap = 0.1)
 playwith(xyplot(lat ~ long | Depth, data = quakes,
@@ -343,8 +347,10 @@ playwith( {
        merge = TRUE, bg = 'gray90')
 }, data.points = pts, labels = labs)
 
-## Simple spin and zoom for a 3D Lattice plot (slow).
-playwith(wireframe(volcano, drape = TRUE))
+## Simple spin and zoom for a 3D Lattice plot.
+## Coming soon: drag on the plot to rotate in 3D.
+playwith(cloud(depth ~ long * lat, quakes, screen = list()))
+## screen = list(y = 180, z = -30, x = -60)
 
 ## Brushing a multivariate scatterplot.
 playwith(splom(environmental))

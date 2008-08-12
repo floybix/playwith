@@ -246,7 +246,8 @@ makeLatticistTool <- function(dat)
                           if (any(iscat) && any(!iscat))
                           "------------------",
                           names(dat)[!iscat],
-                          "-------------------")
+                          "-------------------",
+                          "1:nrow(dat)")
             ## log() of positive numerics
             #logs <- lapply(names(dat)[!iscat], function(nm) {
             #    if (all(dat[[nm]] > 0, na.rm=TRUE))
@@ -282,16 +283,23 @@ makeLatticistTool <- function(dat)
             })
             subsetopts <- c(subsetopts, unlist(toplev))
             subsetopts <- c(subsetopts, "------------------")
+            if (nrow(dat) >= LOTS) {
+                ## a regular sample down by one order of magnitude
+                subN <- 10 ^ (round(log10(nrow(dat))) - 1)
+                subsetopts <- c(subsetopts,
+                                sprintf("seq(1, nrow(dat), length=%i)", subN))
+            }
             ## is.finite() of variables with missing values
             missings <- lapply(names(dat), function(nm) {
                 if (any(is.na(dat[[nm]])))
                     paste("!is.na(", nm, ")", sep="")
                 else NULL
             })
+            missings <- unlist(missings)
             if (length(missings) > 0) {
                 subsetopts <- c(subsetopts, "complete.cases(dat)")
             }
-            subsetopts <- c(subsetopts, unlist(missings))
+            subsetopts <- c(subsetopts, missings)
         }
         subsetopts <-
             unique(c(subsetopts, if (!is.null(subset) && !isTRUE(subset))
@@ -928,6 +936,20 @@ makeLatticistTool <- function(dat)
                     (is.categorical(xVal) && is.categorical(yVal)))
                 {
                     auto.key <- list()
+                    ## work out key type
+                    typeVal <- callArg(playState, "type")
+                    if (all(c("p","l") %in% typeVal)) {
+                        typeVal <- c(setdiff(typeVal, c("p","l")), "o")
+                    }
+                    ## all type values other than "p" and "g" imply lines
+                    if (any(typeVal %in% c("p","g") == FALSE)) {
+                        auto.key$lines <- TRUE
+                        if (any(c("o", "b") %in% typeVal))
+                            auto.key$type <- "o"
+                        if (("p" %in% typeVal) == FALSE)
+                            auto.key$points <- FALSE
+                    }
+                    ## get group levels that will appear in key
                     levs <- levelsOK(groupsVal)
                     if (is.categorical(xVal) && is.categorical(yVal)) {
                         levs <- levelsOK(xVal)
@@ -1165,6 +1187,9 @@ makeLatticistTool <- function(dat)
         xyBox <- gtkHBox()
         xyBox$packStart(gtkLabel(" Variables / expressions on axes: "),
                         expand=FALSE)
+        ## abbreviate to " Variables on axes: " if need space
+        ## "hexbin" button / "points" button
+
         ## "switch" button
         xyflipW <- niceButton("switch")
         xyflipW["visible"] <- !is.null(xvar) || !is.null(yvar)

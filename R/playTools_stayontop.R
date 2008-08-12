@@ -10,14 +10,14 @@ toolConstructors$stayontop <- function(playState)
     widget <- quickTool(playState,
                         label = "Stay on top",
                         icon = "gtk-leave-fullscreen",
-                        tooltip = "Always show this window",
-                        f = stayontop_handler,
+                        tooltip = "Show this window above all others",
+                        f = stay.on.top_handler,
                         isToggle = TRUE)
     if (isTRUE(playState$stay.on.top)) widget["active"] <- TRUE
     widget
 }
 
-stayontop_handler <- function(widget, playState)
+stay.on.top_handler <- function(widget, playState)
 {
     playState$stay.on.top <- widget["active"]
     playState$win$setKeepAbove(widget["active"])

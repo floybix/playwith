@@ -1,0 +1,81 @@
+<ui>
+  <menubar name='MenuBar'>
+    <menu action='FileMenu'>
+      <menuitem action='Clone'/>
+      <menuitem action='Keep'/>
+      <separator/>
+      <menuitem action='Save'/>
+      <menuitem action='Copy'/>
+      <separator/>
+      <menuitem action='SaveCode'/>
+      <separator/>
+      <menuitem action='Print'/>
+      <separator/>
+      <menuitem action='Close'/>
+    </menu>
+    <menu action='ViewMenu'>
+      <menuitem action='StayOnTop'/>
+      <separator/>
+      <menuitem action='Back'/>
+      <menuitem action='Forward'/>
+      <menuitem action='Redraw'/>
+      <menuitem action='Reload'/>
+      <separator/>
+      <menuitem action='SetSize'/>
+      <menuitem action='IncrFont'/>
+      <menuitem action='DecrFont'/>
+      <separator/>
+      <menuitem action='Toolbars'/>
+      <menuitem action='Statusbar'/>
+      <separator/>
+      <menuitem action='Source'/>
+    </menu>
+    <menu action='LabelsMenu'>
+      <menu action='SetLabelsTo'>
+        <placeholder name='SetLabelsToItems'/>
+      </menu>
+      <menuitem action='SetLabelStyle'/>
+      <separator/>
+      <menuitem action='Identify'/>
+      <menuitem action='IdTable'/>
+      <menuitem action='FindLabels'/>
+      <separator/>
+      <menuitem action='SaveIDs'/>
+    </menu>
+    <menu action='DataMenu'>
+      <menuitem action='SummariseData'/>
+      <menuitem action='EditData'/>
+      <menuitem action='SaveData'/>
+      <separator/>
+      <menuitem action='PurgeObjects'/>
+    </menu>
+    <menu action='ThemeMenu'>
+      <separator/>
+      <menuitem action='CustomTheme'/>
+    </menu>
+    <menu action='ToolsMenu'>
+      <menuitem action='EditCall'/>
+      <menuitem action='PlotSettings'/>
+      <separator/>
+      <menuitem action='Annotation'/>
+      <menuitem action='Arrow'/>
+      <menuitem action='UndoAnnotation'/>
+      <menuitem action='EditAnnotations'/>
+      <menuitem action='Clear'/>
+      <separator/>
+      <menuitem action='Expand'/>
+      <menuitem action='Zoomfit'/>
+      <menuitem action='ZeroY'/>
+      <menuitem action='ZeroX'/>
+      <separator/>
+    </menu>
+    <menu action='HelpMenu'>
+      <menuitem action='HelpPlot'/>
+      <separator/>
+      <menuitem action='HelpPlaywith'/>
+      <separator/>
+      <menuitem action='About'/>
+      <menuitem action='Website'/>
+    </menu>
+  </menubar>
+</ui>

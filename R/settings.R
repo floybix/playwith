@@ -54,7 +54,6 @@
          eval.args = NA,
          ## implicit arguments to playwith():
          ## (can be over-ridden by explicit arguments)
-         show.tooltips = FALSE,
          annotation.mode = "plot",
          clip.annotations = FALSE,
          label.style = NULL,
@@ -67,8 +66,10 @@
          ui.custom.xml = NULL,
          custom.actions = NULL,
          parameters.toolbar = "bottom",
-         toolbar.style = "both",
+         show.tooltips = FALSE,
          show.statusbar = TRUE,
+         show.toolbars = TRUE,
+         toolbar.style = "both",
          catch.errors = TRUE,
          deparse.options = c("keepInteger")
          )

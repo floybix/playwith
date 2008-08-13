@@ -11,9 +11,9 @@ constructUI <- function(playState)
              list("ViewMenu", NULL, "_View"),
              list("LabelsMenu", NULL, "_Labels"),
                list("SetLabelsTo", NULL, "Set _labels to"),
+             list("ToolsMenu", NULL, "_Tools"),
              list("DataMenu", NULL, "_Data"),
              list("ThemeMenu", NULL, "The_me"),
-             list("ToolsMenu", NULL, "_Tools"),
              list("HelpMenu", NULL, "_Help")
              )
     menuGroup <- gtkActionGroupNew("Menus")
@@ -22,10 +22,10 @@ constructUI <- function(playState)
     manager <- gtkUIManagerNew()
     window <- playState$win
     window$setData("ui-manager", manager)
-    manager$insertActionGroup(annotationActionGroup(playState), 0)
-    manager$insertActionGroup(identifyActionGroup(playState), 0)
     manager$insertActionGroup(plotActionGroup(playState), 0)
     manager$insertActionGroup(plot3DActionGroup(playState), 0)
+    manager$insertActionGroup(identifyActionGroup(playState), 0)
+    manager$insertActionGroup(annotationActionGroup(playState), 0)
     manager$insertActionGroup(globalActionGroup(playState), 0)
     ## user-defined actions:
     uact <- eval(playwith.getOption("custom.actions"))
@@ -52,12 +52,16 @@ constructUI <- function(playState)
 
 initActions <- function(playState)
 {
-
+    ## TODO: wrap in try() and maybe catch errors
+    initClickActions(playState)
+    initIdentifyActions(playState)
 }
 
-updateActionStates <- function(playState)
+updateActions <- function(playState)
 {
-    updateGlobalActionStates(playState)
-    updatePlotActionStates(playState)
-    ## ETC
+    ## TODO: wrap in try() and maybe catch errors
+    updateGlobalActions(playState)
+    updateClickActions(playState)
+    updatePlotActions(playState)
+    updateIdentifyActions(playState)
 }

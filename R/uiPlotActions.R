@@ -7,15 +7,15 @@ plotActionGroup <- function(playState)
 {
     entries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback
-             list("PlotSettings", "gtk-preferences", "Plot settings", NULL, "Change the plot type and settings", settings_handler),
-             list("Zoomfit", "gtk-zoom-fit", "Fit data", "<Ctrl>1", "Revert to default plot region", zoomfit_handler),
+             list("PlotSettings", "gtk-preferences", "Plot _settings", NULL, "Change the plot type and settings", settings_handler),
+             list("Zoomfit", "gtk-zoom-fit", "_Fit data", "<Ctrl>space", "Revert to default plot region", zoomfit_handler),
              list("ZeroY", "gtk-goto-bottom", "Full y scale", "<Ctrl>Return", "Show the full y (response) scale starting from zero", zero.y_handler),
-             list("ZeroX", "gtk-goto-start", "Full x scale", "<Ctrl>BackSpace", "Show the full x (domain) scale starting from zero", zero.x_handler)
+             list("ZeroX", "gtk-goto-first", "Full x scale", "<Ctrl>BackSpace", "Show the full x (domain) scale starting from zero", zero.x_handler)
              )
 
     toggleEntries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback, active?
-             list("Expand", "gtk-fullscreen", "Panel", NULL, "Choose a panel to expand to fill the figure (for further interaction)", expand_handler, FALSE)
+             list("Expand", "gtk-fullscreen", "_Panel", NULL, "Choose a panel to expand to fill the figure (for further interaction)", expand_handler, FALSE)
              )
 
     ## construct action group with playState passed to callbacks
@@ -25,7 +25,9 @@ plotActionGroup <- function(playState)
     aGroup
 }
 
-updatePlotActionStates <- function(playState)
+initPlotSettingsDialog <- function(playState) {}
+
+updatePlotActions <- function(playState)
 {
     aGroup <- playState$actionGroups[["PlotActions"]]
     hasArgs <- playState$accepts.arguments
@@ -33,6 +35,8 @@ updatePlotActionStates <- function(playState)
     isSplom <- (playState$callName %in% c("splom"))
     isLatt3D <- isLatt && !is.null(playState$trellis$panel.args.common$scales.3d)
     ## PlotSettings
+    ## create PlotSettings dialog once only
+    initPlotSettingsDialog(playState)
     aGroup$getAction("PlotSettings")$setVisible(hasArgs)
     ## Zoomfit
     nonFit <- hasArgs && (!is.null(callArg(playState, "xlim")) ||

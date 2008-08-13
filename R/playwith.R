@@ -286,7 +286,9 @@ if (FALSE) {
     ## create the statusbar and coords readout
     statusbarBox <- gtkHBox()
     coordsLabel <- gtkLabel()
-    statusbarBox$packStart(coordsLabel, expand=FALSE, padding=2)
+    coordsLabel["single-line-mode"] <- TRUE
+    coordsLabel["selectable"] <- TRUE
+    statusbarBox$packStart(coordsLabel, expand=FALSE)
     statusbar <- gtkStatusbar()
     statusbarBox$packStart(statusbar)
     statusbarBox["visible"] <- isTRUE(playwith.getOption("show.statusbar"))
@@ -297,8 +299,9 @@ if (FALSE) {
     myVBox$packStart(myHBox)
     myHBox$packStart(leftToolbar, expand=FALSE)
     myHBox$packEnd(rightToolbar, expand=FALSE)
-    myVBox$packEnd(statusbar, expand=FALSE)
+    myVBox$packEnd(statusbarBox, expand=FALSE)
     myVBox$packEnd(bottomToolbar, expand=FALSE)
+    statusbar["has-resize-grip"] <- TRUE
 
     ## create the plot area
     myDA <- gtkDrawingArea()
@@ -388,6 +391,8 @@ if (FALSE) {
     playState$pages <- 1
     playState$is.lattice <- FALSE
     playState$is.ggplot <- FALSE
+    playState$show.statusbar <- playwith.getOption("show.statusbar")
+    playState$show.toolbars <- playwith.getOption("show.toolbars")
     playState$show.tooltips <- playwith.getOption("show.tooltips")
     playState$annotation.mode <- playwith.getOption("annotation.mode")
     playState$clip.annotations <- playwith.getOption("clip.annotations")
@@ -493,11 +498,11 @@ playNewPlot <- function(playState)
     on.exit(playThawGUI(playState))
     ## hide scrollbars if they are not needed
     if (playState$time.mode == FALSE) {
-        hideWidgetWithoutRedraw(playState, playState$widgets$timeScrollBox,
+        hideWidgetNoRedraw(playState, playState$widgets$timeScrollBox,
                            horiz=TRUE)
     }
     if (playState$pages == 1) {
-        hideWidgetWithoutRedraw(playState, playState$widgets$pageScrollBox,
+        hideWidgetNoRedraw(playState, playState$widgets$pageScrollBox,
                            horiz=FALSE)
     }
     ## find which component of the call takes arguments (xlim etc)
@@ -686,7 +691,7 @@ playPostPlot <- function(result, playState)
     generateSpaces(playState)
     playState$plot.ready <- TRUE
     ## update toolitem and menuitem states
-    updateActionStates(playState)
+    updateActions(playState)
     ## and update the pages scrollbar
     pages_post.plot.action(playState$widgets$pageScrollBox,
                            playState=playState)

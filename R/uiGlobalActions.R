@@ -19,12 +19,12 @@ globalActionGroup <- function(playState)
              list("CustomTheme", "gtk-select-color", "Custom _Theme...", NULL, "Customise plot style...", custom.theme_handler),
              list("EditCall", "gtk-edit", "_Edit call...", "<Ctrl>E", "Edit the plot call", edit.call_handler),
              list("Back", "gtk-go-back", "Back", "<Alt>Left", "Go back to previous plot call", back_handler),
-             list("Forward", "gtk-go-forward", "Forward", "uparrow", "Go to next plot call", forward_handler),
+             list("Forward", "gtk-go-forward", "Forward", "<Alt>Right", "Go to next plot call", forward_handler),
              list("Redraw", "gtk-refresh", "Re_draw", "<Ctrl>R", NULL, redraw_handler),
              list("Reload", "gtk-refresh", "_Reload and redraw", "<Ctrl><Shift>R", NULL, reload_handler),
-             list("SaveCode", "gtk-save", "Save c_ode", NULL, "Save R code for this plot and (optionally) data", save.code_handler),
+             list("SaveCode", "gtk-save", "Save c_ode", "<Ctrl><Shift>S", "Save R code for this plot and (optionally) data", save.code_handler),
              list("Source", NULL, "Plot s_ource", "<Ctrl>U", NULL, view.source_handler),
-             list("HelpPlot", "gtk-help", "_Help for this plot", "<Ctrl>H", "Open help page for this plot", help_handler),
+             list("HelpPlot", "gtk-help", "_Help for this plot", "F1", "Open help page for this plot", help_handler),
              list("HelpPlaywith", NULL, "help(playwith)", NULL, NULL, help.playwith_handler),
              list("About", NULL, "_About playwith", NULL, NULL, about_handler),
              list("Website", NULL, "_Website", NULL, "The playwith website (for contact, bugs, etc)", website_handler),
@@ -38,7 +38,7 @@ globalActionGroup <- function(playState)
         list( ## : name, stock icon, label, accelerator, tooltip, callback, active?
              list("Keep", "gtk-media-stop", "_Do not replace", "<Ctrl>D", "Do not replace with the next plot", keep_handler, FALSE),
              list("StayOnTop", "gtk-leave-fullscreen", "St_ay on top", NULL, "Show this window above all others", stay.on.top_handler, FALSE),
-             list("Toolbars", NULL, "Toolbars", NULL, NULL, show.toolbars_handler, isTRUE(playState$show.toolbars)),
+             list("Toolbars", NULL, "Toolbars", NULL, NULL, show.toolbars_handler, TRUE),
              list("Statusbar", NULL, "Status _bar", NULL, NULL, show.statusbar_handler, TRUE)
              )
 
@@ -49,7 +49,7 @@ globalActionGroup <- function(playState)
     aGroup
 }
 
-updateGlobalActionStates <- function(playState)
+updateGlobalActions <- function(playState)
 {
     aGroup <- playState$actionGroups[["GlobalActions"]]
     ## Back, Forward
@@ -63,16 +63,97 @@ updateGlobalActionStates <- function(playState)
     aGroup$getAction("StayOnTop")$setActive(isTRUE(playState$stay.on.top))
     ## Statusbar
     aGroup$getAction("Statusbar")$setActive(isTRUE(playState$show.statusbar))
+    ## Toolbars
+    aGroup$getAction("Toolbars")$setActive(isTRUE(playState$show.toolbars))
 }
 
 clone_handler <- function(widget, playState)
     NA
 
+copy_handler <- function(widget, playState)
+{
+    ## disable toolbars until this is over
+    playFreezeGUI(playState)
+    on.exit(playThawGUI(playState))
+    playDevSet(playState)
+    da <- playState$widgets$drawingArea
+    w.px <- da$getAllocation()$width
+    h.px <- da$getAllocation()$height
+    w.in <- w.px / 96
+    h.in <- h.px / 96
+    if (exists("win.metafile")) { ## i.e. in MS Windows
+        copy.exts <- c("wmf", "png")
+        copy.labels <- c("Windows Metafile (wmf)", "Bitmap (png)")
+        sel.label <- select.list(copy.labels, preselect=copy.labels[1],
+                                 title="Copy in which format?")
+        playState$win$present()
+        if (sel.label == "") return()
+        copy.ext <- copy.exts[copy.labels == sel.label]
+        if (copy.ext == "wmf") {
+            dev.copy(win.metafile, width=w.in, height=h.in)
+            dev.off()
+            playState$win$present()
+            return()
+        }
+    }
+    ## save plot to temporary file, to copy as png
+    filename <- paste(tempfile(), ".png", sep="")
+    dev.copy(Cairo_png, file=filename, width=w.in, height=h.in)
+    dev.off()
+    im <- gdkPixbufNewFromFile(filename)$retval
+    gtkClipboardGet("CLIPBOARD")$setImage(im)
+    file.remove(filename)
+}
+
 close_handler <- function(widget, playState)
     window.close_handler(playState = playState)
 
-set.size_handler <- function(widget, playState)
-    NA
+set.size_handler <- function(widget, playState) {
+    da <- playState$widgets$drawingArea
+    owidth <- da$getAllocation()$width
+    oheight <- da$getAllocation()$height
+    ## prompt user for new size
+    widthW <- gedit(toString(owidth), width=7, coerce.with=as.numeric)
+    heightW <- gedit(toString(oheight), width=7, coerce.with=as.numeric)
+    unitVals <- c("pixels", "cm", "inches", "percent")
+    ## functions to convert between selected units and pixels
+    dpi <- dev.size("px")[1] / dev.size("in")[1]
+    px2a <- function(px, unit, ref.px)
+        signif(switch(unit, pixels = round(px), percent = 100 * (px/ref.px),
+                      inches = px/dpi, cm = 2.54 * px/dpi), 3)
+    a2px <- function(a, unit, ref.px)
+        round(switch(unit, pixels = a, percent = ref.px * (a/100),
+                      inches = a*dpi, cm = (a / 2.54)*dpi))
+    unitsW <- gcombobox(unitVals, handler = function(h, ...) {
+        wnum <- px2a(owidth, svalue(h$obj), owidth)
+        hnum <- px2a(oheight, svalue(h$obj), oheight)
+        svalue(widthW) <- toString(wnum)
+        svalue(heightW) <- toString(hnum)
+        })
+    lay <- glayout()
+    lay[1,1] <- "Width: "
+    lay[2,1] <- "Height: "
+    lay[1,2] <- widthW
+    lay[2,2] <- heightW
+    lay[2,3] <- unitsW
+    width <- height <- NA
+    result <- gbasicdialog(title="Set device size", widget=lay,
+                           handler=function(...) {
+                               unit <- svalue(unitsW)
+                               width <<- a2px(svalue(widthW), unit, owidth)
+                               height <<- a2px(svalue(heightW), unit, oheight)
+                           })
+    if (!isTRUE(result)) return()
+    width <- max(10, width)
+    height <- max(10, height)
+    da$setSizeRequest(width, height)
+    playState$win$resize(1, 1) ## as small as possible
+    ## try to force resize
+    gdkWindowProcessAllUpdates()
+    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
+    ## remove constraint after resize
+    da$setSizeRequest(-1, -1)
+}
 
 incr.font_handler <- function(widget, playState)
     NA
@@ -105,6 +186,26 @@ save.code_handler <- function(widget, playState)
 view.source_handler <- function(widget, playState)
     NA
 
+help_handler <- function(widget, playState)
+{
+    if (playState$accepts.arguments == FALSE) {
+        gmessage.error("Do not know the name of the plot function.")
+        return()
+    }
+    ## work out which (S3) method was called, if any
+    callName <- playState$callName
+    methNames <- methods(callName)
+    if (length(methNames) > 0) {
+        myClass <- try(class(callArg(playState, 1)), silent=TRUE)
+        if (!inherits(myClass, "try-error")) {
+            myMeth <- paste(callName, myClass, sep=".")
+            ok <- (myMeth %in% methNames)
+            if (any(ok)) callName <- myMeth[ok][1]
+        }
+    }
+    print(help(callName))
+}
+
 help.playwith_handler <- function(widget, playState)
     print(help("playwith"))
 
@@ -116,6 +217,7 @@ about_handler <- function(widget, playState) {
     gtkAboutDialogSetEmailHook(activate.email)
     gtkAboutDialogSetUrlHook(activate.url)
 
+    ## TODO: this shows the wrong name! ("Rterm.exe")
     gtkShowAboutDialog(playState$win,
                        title = "playwith",
                        name = "playwith",
@@ -141,7 +243,7 @@ stay.on.top_handler <- function(widget, playState) {
 }
 
 show.statusbar_handler <- function(widget, playState) {
-    playState$widgets$statusbar["visible"] <- widget["active"]
+    playState$widgets$statusbarBox["visible"] <- widget["active"]
 }
 
 show.toolbars_handler <- function(widget, playState) {

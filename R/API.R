@@ -172,7 +172,7 @@ playThawGUI <- function(playState)
 
 playSetFreezeGUI <- function(playState, frozen)
 {
-    playState$now.interacting <- if (frozen) TRUE
+    playState$tmp$now.interacting <- frozen
     with(playState$widgets, {
         topToolbar["sensitive"] <- !frozen
         leftToolbar["sensitive"] <- !frozen
@@ -418,7 +418,10 @@ playDo <- function(playState, expr, space="plot", clip.off=FALSE)
     eval(substitute(expr), parent.frame(), playState$env)
 }
 
-playSelectData <- function(playState, prompt="Click or drag to select data points.")
+playSelectData <-
+    function(playState, prompt = paste(
+             "Click or drag to select data points;",
+             "Right-click or Esc to cancel."))
 {
     foo <- playRectInput(playState, prompt=prompt)
     if (is.null(foo)) return(NULL)
@@ -456,8 +459,11 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
     }
     else {
         ## drag
-        ok <- ((min(coords$x) <= data$x) & (data$x <= max(coords$x))
-               & (min(coords$y) <= data$y) & (data$y <= max(coords$y)))
+        ok <- TRUE
+        if (!foo$yOnly)
+            ok <- (min(coords$x) <= data$x) & (data$x <= max(coords$x))
+        if (!foo$xOnly)
+            ok <- ok & (min(coords$y) <= data$y) & (data$y <= max(coords$y))
         which <- which(ok)
     }
     c(list(which=which, x=data$x[which], y=data$y[which],
@@ -466,7 +472,10 @@ playSelectData <- function(playState, prompt="Click or drag to select data point
       foo)
 }
 
-playPointInput <- function(playState, prompt="Click on the plot")
+playPointInput <-
+    function(playState, prompt = paste(
+             "Click on the plot;",
+             "Right-click or Esc to cancel."))
 {
     playDevSet(playState)
     playPrompt(playState, prompt)
@@ -493,24 +502,11 @@ playPointInput <- function(playState, prompt="Click on the plot")
     list(coords=coords, space=space, dc=dc, ndc=ndc, modifiers=modifiers)
 }
 
-playPolyInput <- function(playState, prompt="Click points to define a region; right-click to end")
-{
-    playDevSet(playState)
-    playPrompt(playState, prompt)
-    on.exit(playPrompt(playState, NULL))
-    vp <- current.vpPath()
-    upViewport(0)
-    on.exit(if (!is.null(vp)) downViewport(vp), add=TRUE)
-    ## wait for click
-    xy0 <- grid.locator()
-    if (is.null(xy0)) return(NULL)
-    xy0 <- lapply(xy0, as.numeric)
-    ## TODO...
-    repeat {
-    }
-}
-
-playLineInput <- function(playState, prompt="Click and drag to define a line")
+playLineInput <-
+    function(playState, prompt = paste(
+             "Click and drag to define a line",
+             "(hold Shift to constrain to x or y scales);",
+             "Right-click or Esc to cancel."))
 {
     playDevSet(playState)
     playPrompt(playState, prompt)
@@ -526,11 +522,11 @@ playLineInput <- function(playState, prompt="Click and drag to define a line")
 }
 
 playRectInput <-
-    function(playState,
-             prompt="Click and drag to define a rectangular region",
-             scales=c("x", "y"))
+    function(playState, prompt = paste(
+             "Click and drag to define a rectangular region",
+             "(hold Shift to constrain to x or y scales);",
+             "Right-click or Esc to cancel."))
 {
-    scales <- match.arg(scales, several.ok=TRUE)
     playDevSet(playState)
     playPrompt(playState, prompt)
     on.exit(playPrompt(playState, NULL))
@@ -541,19 +537,18 @@ playRectInput <-
     xy0 <- grid.locator()
     if (is.null(xy0)) return(NULL)
     xy0 <- lapply(xy0, as.numeric)
-    playClickOrDrag(playState, x0=xy0$x, y=xy0$y, shape="rect", scales=scales)
+    playClickOrDrag(playState, x0=xy0$x, y=xy0$y, shape="rect")
 }
 
 ## assumes that the mouse button has already been pressed
 ## converts into user coordinates
 playClickOrDrag <-
     function(playState, x0, y0,
-             shape=c("rect", "line"),
-             scales=c("x", "y"))
+             shape=c("rect", "line"))
 {
     playDevSet(playState)
     foo <- handleClickOrDrag(playState$widgets$drawingArea,
-                             x0=x0, y0=y0, shape=shape, scales=scales)
+                             x0=x0, y0=y0, shape=shape)
     if (is.null(foo)) return(NULL)
     dc <- foo$dc
     coords <- NULL
@@ -576,13 +571,12 @@ playClickOrDrag <-
 ## assumes that the mouse button has already been pressed
 handleClickOrDrag <-
     function(da, x0, y0,
-             shape=c("rect", "line"),
-             scales=c("x", "y"))
+             shape = c("rect", "line"))
 {
+    CLICKDUR <- 0.25 ## seconds
     shape <- match.arg(shape)
-    scales <- match.arg(scales, several.ok=TRUE)
-    ## px0 is the original click location
-    px0 <- list(x=x0, y=y0)
+    ## xyInit is the original click location
+    xyInit <- list(x=x0, y=y0)
     da.w <- da$getAllocation()$width
     da.h <- da$getAllocation()$height
     buf <- gdkPixbufGetFromDrawable(src=da$window, src.x=0, src.y=0,
@@ -595,66 +589,92 @@ handleClickOrDrag <-
     gc$setLineAttributes(line.width=1, line.style=GdkLineStyle["double-dash"],
                          cap.style=GdkCapStyle["butt"], join.style=GdkJoinStyle["miter"])
     gc$setDashes(c(8, 4))
-    px00 <- px0
-    px00.prev <- px0
-    CLICKDUR <- 0.25 ## seconds
+    ## xyDrag is the drag-to location while dragging
+    xyDrag <- xyInit
+    ## these are used to constrain the drag to x or y scales
+    xOnly <- FALSE
+    yOnly <- FALSE
+    ## xyEnd is the final drag-to location
     release_handler <- function(widget, event, env) {
         ## mouse button was released
-        env$px1 <- list(x=event$x, y=event$y)
+        env$xyEnd <- list(x=event$x, y=event$y)
         return(TRUE)
     }
-    expose_handler <- function(widget, event, env) {
+    expose_handler <- function(widget, event) {
         area <- event$area
-        gdkDrawPixbuf(event$window, pixbuf=env$buf,
+        gdkDrawPixbuf(event$window, pixbuf=buf,
                       src.x=area$x, src.y=area$y, dest.x=area$x, dest.y=area$y,
                       width=area$width, height=area$height)
-        xx <- range(c(env$px0$x, env$px00$x))
-        yy <- range(c(env$px0$y, env$px00$y))
-        ## restrict rectangle to x or y scales, according to `scales`
-        if (!("x" %in% scales)) xx <- c(-1, da.w)
-        if (!("y" %in% scales)) yy <- c(-1, da.h)
-        wd <- xx[2] - xx[1]
-        ht <- yy[2] - yy[1]
-        switch(env$shape,
-               line = gdkDrawLine(event$window, gc=env$gc,
-                 x1=env$px0$x, y1=env$px0$y,
-                 x2=env$px00$x, y2=env$px00$y),
-               rect = gdkDrawRectangle(event$window, gc=env$gc, filled=FALSE,
-                 x=xx[1], yy[1], width=wd, height=ht)
+        xx <- c(xyInit$x, xyDrag$x)
+        yy <- c(xyInit$y, xyDrag$y)
+        ## constrain drag along x or y scales
+        if (shape == "rect") {
+            if (xOnly) yy <- c(-1, da.h)
+            if (yOnly) xx <- c(-1, da.w)
+        }
+        if (shape == "line") {
+            if (xOnly) yy[2] <- yy[1]
+            if (yOnly) xx[2] <- xx[1]
+        }
+         switch(shape,
+               line = gdkDrawLine(event$window, gc=gc,
+                   x1=xx[1], y1=yy[1],
+                   x2=xx[2], y2=yy[2]),
+               rect = gdkDrawRectangle(event$window, gc=gc,
+                   filled=FALSE, x=min(xx), min(yy),
+                   width=abs(diff(xx)), height=abs(diff(yy)))
                )
         return(TRUE) ## stop event here
     }
-    tmpSigE <- gSignalConnect(da, "expose-event", expose_handler, data=environment())
-    tmpSigR <- gSignalConnect(da, "button-release-event", release_handler, data=environment())
+    tmpSigE <- gSignalConnect(da, "expose-event", expose_handler)
+    tmpSigR <- gSignalConnect(da, "button-release-event", release_handler,
+                              data=environment())
+    rectx <- xyInit$x
+    recty <- xyInit$y
     init_time <- proc.time()[3]
     repeat {
-        ## px1 is the final drag location, set by event handler
-        if (exists("px1", inherits=FALSE)) break
-        px00.prev <- px00
-        px00 <- da$window$getPointer()
+        ## xyEnd is the final drag location, set by event handler
+        if (exists("xyEnd", inherits=FALSE)) break
+        xyDrag <- da$window$getPointer()
         ## check that pointer is inside the window
-        ## TODO -- fails on linux?
-#        if (is.null(px00$retval)) break
-        if ((as.flag(px00$mask) & GdkModifierType["button1-mask"]) == 0) {
+        ## -- fails on linux?
+        #if (is.null(xyDrag$retval)) break
+        if ((as.flag(xyDrag$mask) & GdkModifierType["button1-mask"]) == 0) {
             ## mouse button was released
-            px1 <- px00
+            xyEnd <- xyDrag
             break
         }
-        xx <- range(c(px0$x, px00$x, px00.prev$x))
-        yy <- range(c(px0$y, px00$y, px00.prev$y))
-        ## restrict rectangle to x or y scales, according to `scales`
-        if (!("x" %in% scales)) xx <- c(-1, da.w)
-        if (!("y" %in% scales)) yy <- c(-1, da.h)
-        wd <- xx[2] - xx[1] + 2
-        ht <- yy[2] - yy[1] + 2
-        if ((proc.time()[3] - init_time) > CLICKDUR)
-            da$window$invalidateRect(list(x=xx[1], y=yy[1], width=wd, height=ht),
+        ## (if it is a drag, not a click)
+        if ((proc.time()[3] - init_time) > CLICKDUR) {
+            ## constrain to x or y scales if holding Shift
+            if ((as.flag(xyDrag$mask) & GdkModifierType["shift-mask"])) {
+                ## decide which scale to constrain by direction of drag
+                dragHoriz <- (abs(xyInit$x - xyDrag$x) >
+                              abs(xyInit$y - xyDrag$y))
+                xOnly <- dragHoriz
+                yOnly <- !dragHoriz
+            } else {
+                xOnly <- yOnly <- FALSE
+            }
+        }
+        ## work out the region that needs to be redrawn
+        rectx <- range(c(xyInit$x, xyDrag$x, rectx))
+        recty <- range(c(xyInit$y, xyDrag$y, recty))
+        ## constrain rectangle along x or y scales
+        if (shape == "rect") {
+            if (xOnly) recty <- c(-1, da.h)
+            if (yOnly) rectx <- c(-1, da.w)
+        }
+        wd <- rectx[2] - rectx[1] + 2
+        ht <- recty[2] - recty[1] + 2
+        da$window$invalidateRect(list(x=rectx[1], y=recty[1],
+                                      width=wd, height=ht),
                                  invalidate.children=FALSE)
         ## try to force redraw
         gdkWindowProcessAllUpdates()
         while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
-
     }
+    end_time <- proc.time()[3]
     gSignalHandlerDisconnect(da, tmpSigR)
     gSignalHandlerDisconnect(da, tmpSigE)
     ## check for modifier keys
@@ -664,15 +684,23 @@ handleClickOrDrag <-
         modifiers <- as.flag(ptrInfo$mask)
     ## clean up
     da$window$invalidateRect(invalidate.children=FALSE)
-    if (!exists("px1", inherits=FALSE)) return(NULL)
-    dc <- list(x=c(px0$x, px1$x), y=c(px0$y, px1$y))
+    if (!exists("xyEnd", inherits=FALSE)) return(NULL)
+    ## device coordinates
+    dc <- list(x = c(xyInit$x, xyEnd$x),
+               y = c(xyInit$y, xyEnd$y))
+    if (shape == "line") {
+        if (xOnly) dc$y[2] <- dc$y[1]
+        if (yOnly) dc$x[2] <- dc$x[1]
+    }
+    ## normalised device coordinates
+    ndc <- list(x = dc$x / da.w, y = (da.h - dc$y) / da.h)
     ## was it a click or drag? (click = no slower than 1/4 second)
-    is.click <- (proc.time()[3] - init_time) <= CLICKDUR
+    is.click <- (end_time - init_time) <= CLICKDUR
     ## alternative criteria for click: moved less than 10 pixels
     is.click <- is.click ||
                 ((abs(diff(dc$x)) < 10) && (abs(diff(dc$y)) < 10))
-    ndc <- list(x=dc$x / da.w, y=(da.h - dc$y) / da.h)
-    list(dc=dc, ndc=ndc, is.click=is.click, modifiers=modifiers)
+    list(dc = dc, ndc = ndc, xOnly = xOnly, yOnly = yOnly,
+         is.click = is.click, modifiers = modifiers)
 }
 
 xyCoords <- function(playState, space="plot")

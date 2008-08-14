@@ -1,7 +1,7 @@
 
 Changes in Version 0.9-20
 
-  o GUI overhaul! Menus, new tool management structure, etc.
+  o GUI overhaul! Menus, new tools, new infrastructure, etc.
 
 Changes in Version 0.9-11
 
@@ -15,7 +15,7 @@ Changes in Version 0.9-11
     a dialog box (unless playwith.options(catch.errors = FALSE)).
     On Linux this avoids killing R with "stack smashing detected".
 
-  o call history (undo/redo buttons) works correctly.
+  o call history (back/forward buttons) works correctly.
 
   o improved local cacheing of objects appearing in the plot call.
     now stores local functions as well as objects, and works better.

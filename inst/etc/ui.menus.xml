@@ -31,9 +31,7 @@
       <menuitem action='Source'/>
     </menu>
     <menu action='LabelsMenu'>
-      <menu action='SetLabelsTo'>
-        <placeholder name='SetLabelsToItems'/>
-      </menu>
+      <menuitem action='SetLabelsTo'/>
       <menuitem action='SetLabelStyle'/>
       <separator/>
       <menuitem action='Identify'/>

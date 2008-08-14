@@ -7,6 +7,8 @@ identifyActionGroup <- function(playState)
 {
     entries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback
+             list("SetLabelsTo", "gtk-index", "Set _labels to...", "<Ctrl>L", NULL, set.labels_handler),
+             list("SetLabelStyle", NULL, "Set label st_yle...", NULL, NULL, set.label.style_handler),
              list("Identify", "gtk-info", "_Identify...", NULL, "Identify all points in a selected region", identify_handler),
              list("IdTable", "gtk-info", "Select from _table...", NULL, "Select points from a table", id.table_handler),
              list("FindLabels", "gtk-find", "_Find...", "<Ctrl>F", "Find points with labels matching...", id.find_handler),
@@ -24,6 +26,7 @@ initIdentifyActions <- function(playState)
     playState$tmp$identify.ok <- FALSE
     hasArgs <- playState$accepts.arguments
     isLatt <- playState$is.lattice
+    isLatt3D <- isLatt && !is.null(playState$trellis$panel.args.common$scales.3d)
     isBase <- !isLatt && is.null(playState$viewport)
     isBaseMulti <- isBase && any(par("mfrow") > 1)
     ## detect known plots that this will not work with
@@ -32,10 +35,11 @@ initIdentifyActions <- function(playState)
         if (!hasArgs) return()
         if (isBaseMulti) return()
         ## lattice package:
+        if (isLatt3D) return()
         if (playState$callName %in%
-            c("splom", "cloud", "wireframe",
-              "contourplot", "levelplot",
+            c("splom", "contourplot", "levelplot",
               "histogram", "densityplot", "barchart")) return()
+        ## TODO: what about tileplot? z ~ x * y
         ## what about parellel?
         ## from graphics package:
         if (playState$callName %in%
@@ -50,6 +54,9 @@ initIdentifyActions <- function(playState)
     if (is.null(labels)) {
         if (is.null(playState$data.points)) {
             ## try to construct labels from the plot call
+
+            tmp.data <- getDataArg(playState)
+
             if (length(mainCall > 1)) {
                 ## check for named "data" argument
                 tmp.data <- callArg(playState, "data")
@@ -161,41 +168,57 @@ drawLabels <- function(playState, which, space="plot", pos=1)
         y <- data$y[subwhich]
     }
     labels <- playState$labels[which]
-    style <- eval(playState$label.style)
-    if (is.null(playState$label.style)) {
-        ## default style is taken (at plot time) from lattice settings
-        style <- do.call(gpar, trellis.par.get("add.text"))
-    }
-    annots <- expression()
     pos <- rep(pos, length=length(labels))
-    offset <- playState$label.offset
-    if (!inherits(offset, "unit"))
-        offset <- unit(offset, "char")
-    ## TODO: do this without a loop
+    offset <- as.numeric(playState$label.offset)
+    annots <- expression()
     for (i in seq_along(labels)) {
-        ux <- unit(x[i], "native")
-        uy <- unit(y[i], "native")
-        if (pos[i] == 1) {
-            uy <- uy - offset
-            adj <- c(0.5, 1)
-        }
-        else if (pos[i] == 2) {
-            ux <- ux - offset
-            adj <- c(1, 0.5)
-        }
-        else if (pos[i] == 3) {
-            uy <- uy + offset
-            adj <- c(0.5, 0)
-        }
-        else if (pos[i] == 4) {
-            ux <- ux + offset
-            adj <- c(0, 0.5)
-        }
-        annots[[i]] <- call("grid.text", labels[i], x=ux, y=uy,
-                            just=adj, gp=style)
+        annots[[i]] <- call("panel.text", x[i], y[i],
+                            labels[i], pos = pos[i])
+        if (offset != 0.5)
+            annots[[i]]$offset <- offset
     }
     playDo(playState, eval(annots), space=space,
            clip.off=identical(playState$clip.annotations, FALSE))
+}
+
+set.labels_handler <- function(widget, playState)
+{
+    ## TODO
+}
+
+
+set.label.style_handler <- function(widget, playState)
+{
+    style <- playState$label.style
+    if (is.null(playState$label.style)) {
+        style <- do.call(gpar, trellis.par.get("add.text"))
+    }
+    if (inherits(style, "gpar"))
+        style <- as.call(c(quote(gpar), style))
+
+    callTxt <- deparseOneLine(style)
+
+    repeat {
+        newTxt <- NA
+        editbox <- gedit(callTxt, width=120)
+        gbasicdialog("Edit label style", widget=editbox, action=environment(),
+                     handler=function(h, ...) {
+                         h$action$newTxt <- svalue(editbox)
+                     })
+        if (is.na(newTxt)) break
+        if (newTxt == "") break
+        if (identical(newTxt, callTxt)) break
+        callTxt <- newTxt
+        tmp <- tryCatch(parse(text=callTxt), error=function(e)e)
+        ## check whether there was a syntax error
+        if (inherits(tmp, "error")) {
+            gmessage.error(conditionMessage(tmp))
+        } else {
+            playState$label.style <- eval(tmp)
+            break
+        }
+    }
+    playState$win$present()
 }
 
 identify_handler <- function(widget, playState)
@@ -221,7 +244,7 @@ identify_handler <- function(widget, playState)
     updateAnnotationActionStates(playState)
 }
 
-identifyCore <- function(playState, foo)
+identifyCore <- function(playState, foo, deidentify = FALSE)
 {
     if (!isTRUE(playState$tmp$identify.ok)) return()
     if (is.null(playState$labels)) return()

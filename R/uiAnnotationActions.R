@@ -71,6 +71,7 @@ clear_handler <- function(widget, playState)
         result <- gbasicdialog(title="Clear what?", widget=widg,
                                handler=function(...)
                                clear.types <<- svalue(widg) )
+        playState$win$present()
         if (!isTRUE(result)) return()
     }
     for (x in clear.types)

@@ -27,10 +27,7 @@ playwith <-
              labels = NULL,
              data.points = NULL,
              viewport = NULL,
-             top.tools = playwith.getOption("top.tools"),
-             left.tools = playwith.getOption("left.tools"),
-             bottom.tools = playwith.getOption("bottom.tools"),
-             right.tools = playwith.getOption("right.tools"),
+             tools = list(),
              parameters = list(),
              ...,
              width = playwith.getOption("width"),
@@ -38,7 +35,6 @@ playwith <-
              pointsize = playwith.getOption("pointsize"),
              modal = FALSE,
              on.close = NULL,
-             show.call = TRUE,
              eval.args = playwith.getOption("eval.args"),
              invert.match = FALSE,
              envir = parent.frame(),
@@ -63,15 +59,6 @@ playwith <-
     if (missing(main.function)) main.function <- NULL
     if (is.character(main.function))
         main.function <- get(main.function)
-    ## set defaults for named arguments from playwith.options()
-#    missingname <- function(x)
-#        eval.parent(substitute(missing(nm), list(nm=as.symbol(x))))
-#    for (nm in c("new", "top.tools", "left.tools", "bottom.tools",
-#                 "right.tools", "width", "height", "pointsize",
-#                 "show.call", "eval.args"))
-#        if (missingname(nm)) assign(nm, playwith.getOption(nm))
-#    if (missing(playState))
-#        playState <- if (new) NULL else playDevCur()
     ## check types
     if (!is.call(plot.call)) stop("'expr' / 'plot.call' should be a call")
     if (!is.null(title) && !is.character(title)) stop("'title' should be character")
@@ -175,114 +162,24 @@ playwith <-
     item$add(callEditButton)
     callToolbar$insert(item, -1)
     callToolbar$show()
-
-
-
-if (FALSE) {
-
-    ## call toolbar: shares space with the prompt (used for interaction)
-    toolbarPromptHBox <- gtkHBox()
-    myVBox$packStart(toolbarPromptHBox, expand=FALSE)
-    ## create the call toolbar (similar to web browser address bar)
-    callToolbar <- gtkToolbar()
-    callToolbar["toolbar-style"] <- GtkToolbarStyle["icons"]
-    callToolbar["show-arrow"] <- FALSE
-    undoButton <- quickTool(playState, "Back",
-                            icon = "gtk-undo-ltr",
-                            tooltip = "Go back to previous plot call",
-                            f = function(widget, playState) {
-                                with(playState$widgets, {
-                                    #redoButton["sensitive"] <- TRUE
-                                    callEntry["active"] <- callEntry["active"] + 1
-                                })
-                            })
-    redoButton <- quickTool(playState, "Forward",
-                            icon = "gtk-redo-ltr",
-                            tooltip = "Go forward to next plot call",
-                            f = function(widget, playState) {
-                                with(playState$widgets, {
-                                    callEntry["active"] <- callEntry["active"] - 1
-                                })
-                            })
-    redrawButton <- quickTool(playState, "Redraw",
-                              icon = "gtk-refresh",
-                              tooltip = "Redraw the current plot (hold Shift for full reload)",
-                              f = function(widget, playState) {
-                                  px <- playState$win$window$getPointer()
-                                  if ((as.flag(px$mask) & GdkModifierType["shift-mask"]))
-                                      playNewPlot(playState)
-                                  else playReplot(playState)
-                              })
-    undoButton["sensitive"] <- FALSE
-    redoButton["sensitive"] <- FALSE
-    helpButton <- toolConstructors$help(playState)
-    callToolbar$insert(undoButton, -1)
-    callToolbar$insert(redoButton, -1)
-    callToolbar$insert(redrawButton, -1)
-    callToolbar$insert(helpButton, -1)
-    callEntry <- gtkComboBoxEntryNewText()
-    callEntry$show()
-    ## "changed" emitted on typing and selection
-    gSignalConnect(callEntry, "changed",
-                   function(widget, playState)
-                     if (widget["active"] > -1)
-                       edit.call.inline_handler(widget$getChild(), playState),
-                   data=playState)
-    gSignalConnect(callEntry$getChild(), "activate",
-                   edit.call.inline_handler, data=playState)
-    item <- gtkToolItem()
-    item$add(callEntry)
-    item$setExpand(TRUE)
-    callToolbar$insert(item, -1)
-    callEditButton <- gtkButton(label="Edit call...")
-    gSignalConnect(callEditButton, "clicked",
-                   edit.call_handler, data=playState)
-    item <- gtkToolItem()
-    item$add(callEditButton)
-    callToolbar$insert(item, -1)
-    toolbarPromptHBox$packStart(callToolbar)
-    ## create the prompt
-    promptBox <- gtkEventBox(show=FALSE)
-    promptBox["sensitive"] <- FALSE
-    promptLabel <- gtkLabel()
-    promptBox$add(promptLabel)
-    promptBox$modifyBg(GtkStateType["normal"], "yellow")
-    promptLabel$modifyFg(GtkStateType["normal"], "black")
-    toolbarPromptHBox$packStart(promptBox)
-    ## try to force resize
-    gdkWindowProcessAllUpdates()
-    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
-    promptBox["height-request"] <-
-        callToolbar$getAllocation()$height
-    if (show.call == FALSE) {
-        promptBox$show()
-        callToolbar$hide()
-    }
-}
-
-
-
+    tbStyle <- GtkToolbarStyle[playwith.getOption("toolbar.style")]
     ## create the top toolbar
     topToolbar <- uiManager$getWidget("/TopToolbar")
-    #if (!is.null(topToolbar)) {
     topToolbar$setTooltips(TRUE)
-    topToolbar["toolbar-style"] <-
-        GtkToolbarStyle[playwith.getOption("toolbar.style")]
+    topToolbar["toolbar-style"] <- tbStyle
+    ## create the bottom toolbar
+    bottomToolbar <- uiManager$getWidget("/BottomToolbar")
+    leftToolbar$setTooltips(TRUE)
+    bottomToolbar["toolbar-style"] <- tbStyle
     ## create the left toolbar
     leftToolbar <- uiManager$getWidget("/LeftToolbar")
     leftToolbar$setTooltips(TRUE)
+    leftToolbar["toolbar-style"] <- tbStyle
     leftToolbar["orientation"] <- GtkOrientation["vertical"]
-    leftToolbar["toolbar-style"] <-
-        GtkToolbarStyle[playwith.getOption("toolbar.style")]
     ## create the right toolbar
     rightToolbar <- uiManager$getWidget("/RightToolbar")
+    rightToolbar["toolbar-style"] <- tbStyle
     rightToolbar["orientation"] <- GtkOrientation["vertical"]
-    rightToolbar["toolbar-style"] <-
-        GtkToolbarStyle[playwith.getOption("toolbar.style")]
-    ## create the bottom toolbar
-    bottomToolbar <- uiManager$getWidget("/BottomToolbar")
-    bottomToolbar["toolbar-style"] <-
-        GtkToolbarStyle[playwith.getOption("toolbar.style")]
     ## create the statusbar and coords readout
     statusbarBox <- gtkHBox()
     coordsLabel <- gtkLabel()
@@ -301,7 +198,7 @@ if (FALSE) {
     myHBox$packEnd(rightToolbar, expand=FALSE)
     myVBox$packEnd(statusbarBox, expand=FALSE)
     myVBox$packEnd(bottomToolbar, expand=FALSE)
-    statusbar["has-resize-grip"] <- TRUE
+    #statusbar["has-resize-grip"] <- TRUE
 
     ## create the plot area
     myDA <- gtkDrawingArea()
@@ -391,9 +288,11 @@ if (FALSE) {
     playState$pages <- 1
     playState$is.lattice <- FALSE
     playState$is.ggplot <- FALSE
-    playState$show.statusbar <- playwith.getOption("show.statusbar")
-    playState$show.toolbars <- playwith.getOption("show.toolbars")
     playState$show.tooltips <- playwith.getOption("show.tooltips")
+    playState$show.toolbars <- playwith.getOption("show.toolbars")
+    playState$show.calltoolbar <- playwith.getOption("show.calltoolbar")
+    playState$show.menubar <- playwith.getOption("show.menubar")
+    playState$show.statusbar <- playwith.getOption("show.statusbar")
     playState$annotation.mode <- playwith.getOption("annotation.mode")
     playState$clip.annotations <- playwith.getOption("clip.annotations")
     playState$label.style <- playwith.getOption("label.style")
@@ -439,7 +338,6 @@ if (FALSE) {
     playState$data.points <- data.points
     playState$viewport <- viewport
     playState$parameters <- parameters
-    playState$show.call <- show.call
     playState$ids <- list()
     playState$brushed <- list()
     playState$annotations <- list()
@@ -454,8 +352,6 @@ if (FALSE) {
              rightToolbar = rightToolbar,
              callToolbar = callToolbar,
              callEntry = callEntry,
-#             undoButton = undoButton,
-#             redoButton = redoButton,
              pageEntry = pageEntry,
              pageScrollbar = pageScrollbar,
              pageScrollBox = pageScrollBox,
@@ -465,17 +361,11 @@ if (FALSE) {
              coordsLabel = coordsLabel,
              statusbar = statusbar,
              statusbarBox = statusbarBox,
-             #promptBox = promptBox,
-             #promptLabel = promptLabel,
              vbox = myVBox,
              hbox = myHBox)
     playState$on.close <- on.close
     playState$.args <-
-        list(top.tools = top.tools,
-             left.tools = left.tools,
-             bottom.tools = bottom.tools,
-             right.tools = right.tools,
-             missing_time.mode = missing_time.mode,
+        list(missing_time.mode = missing_time.mode,
              data.points = data.points,
              labels = labels,
              title = title,
@@ -517,8 +407,7 @@ playNewPlot <- function(playState)
                          error = function(e)e)
       if (inherits(result, "error")) {
         callText <- deparseOneLine(playState$call)
-        msg <- paste("Error: ",
-                     conditionMessage(result),
+        msg <- paste(conditionMessage(result),
                      "\n in: \n",
                      callText, sep="")
         gmessage.error(msg)
@@ -613,8 +502,17 @@ playNewPlot <- function(playState)
  #   if (playState$is.lattice || playState$is.ggplot) eval(doToolbars)
  #   else blockRedraws(eval(doToolbars), playState)
 
+    ## initialise tools for a new plot (see ui.R)
     initActions(playState)
-
+    ## hide empty toolbars
+    blockRedraws{
+        for (nm in paste("/", c("Top", "Left", "Bottom", "Right"),
+                         "Toolbar", sep="")) {
+            tbar <- playState$uiManager$getWidget(nm)
+            if (length(tbar$getChildren())) tbar$show()
+            else tbar$hide()
+        }
+    }
     ## try to force redraw
     gdkWindowProcessAllUpdates()
     while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)

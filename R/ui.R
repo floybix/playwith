@@ -10,7 +10,6 @@ constructUI <- function(playState)
              list("FileMenu", NULL, "_File"),
              list("ViewMenu", NULL, "_View"),
              list("LabelsMenu", NULL, "_Labels"),
-               list("SetLabelsTo", NULL, "Set _labels to"),
              list("ToolsMenu", NULL, "_Tools"),
              list("DataMenu", NULL, "_Data"),
              list("ThemeMenu", NULL, "The_me"),
@@ -55,6 +54,19 @@ initActions <- function(playState)
     ## TODO: wrap in try() and maybe catch errors
     initClickActions(playState)
     initIdentifyActions(playState)
+    ## make dynamic parameter tools
+    nm <- paste("/", playwith.getOption("parameters.toolbar"), sep="")
+    paramTbar <- playState$uiManager$getWidget(nm)
+    horiz <- (paramTbar["orientation"] == GtkOrientation["horizontal"])
+    params <- playState$parameters
+    for (i in seq_along(params)) {
+        parname <- names(params)[i]
+        parval <- params[[i]]
+        newTool <- try(parameterControlTool(playState, name=parname,
+                                            value=parval, horizontal=horiz))
+        if (inherits(newTool, "try-error")) next
+        paramToolbar$insert(newTool, -1)
+    }
 }
 
 updateActions <- function(playState)

@@ -703,6 +703,39 @@ handleClickOrDrag <-
          is.click = is.click, modifiers = modifiers)
 }
 
+getDataArg <- function(playState)
+{
+    if (is.null(playState$data.points)) {
+        mainCall <- mainCall(playState)
+        if (length(mainCall > 1)) {
+            ## check for named "data" argument
+            tmp.data <- callArg(playState, "data")
+            if (is.null(tmp.data)) {
+                ## look at first argument
+                tmp.x <- callArg(playState, 1)
+                if (inherits(tmp.x, "formula")) {
+                    ## if 1st arg is formula, 2nd is `data` (by convention)
+                    if (is.null(tmp.data) &&
+                        (length(mainCall) >= 3) &&
+                        (is.null(names(mainCall)) ||
+                         identical(names(mainCall)[[3]], ""))
+                        )
+                        tmp.data <- callArg(playState, 2)
+                }
+            }
+        }
+        if (is.null(tmp.data)) {
+            ## objects may also come from a with() block
+            if (identical(playState$call[[1]], as.symbol("with")))
+                tmp.data <- eval(playState$call[[2]], playState$env)
+        }
+    } else {
+        ## data.points were supplied
+        tmp.data <- playState$data.points
+    }
+    tmp.data
+}
+
 xyCoords <- function(playState, space="plot")
 {
     foo <- xyData(playState, space=space)
@@ -763,7 +796,7 @@ xyData <- function(playState, space="plot")
     ## look at first argument (tmp.data may be NULL)
     tmp.x <- callArg(playState, 1, data=tmp.data)
     if (inherits(tmp.x, "formula")) {
-        ## if 1st arg is formula, 2nd is `data`
+        ## if 1st arg is formula, 2nd is `data` (by convention)
         if (is.null(tmp.data) && (length(mainCall) > 2) &&
             (is.null(names(mainCall)) ||
              identical(names(mainCall)[[3]], "")))
@@ -807,13 +840,11 @@ xy.coords_with_class <- function(playState, x, y=NULL, recycle=TRUE, data=NULL)
             x <- Re(x)
         }
         else if (is.matrix(x) || is.data.frame(x)) {
-            x <- data.matrix(x)
             if (ncol(x) == 1) {
                 y <- x[, 1]
                 x <- seq_along(y)
             }
             else {
-                colnames <- dimnames(x)[[2]]
                 y <- x[, 2]
                 x <- x[, 1]
             }
@@ -823,7 +854,6 @@ xy.coords_with_class <- function(playState, x, y=NULL, recycle=TRUE, data=NULL)
             x <- x[["x"]]
         }
         else {
-            if (is.factor(x)) x <- as.numeric(x)
             y <- x
             x <- seq_along(x)
         }

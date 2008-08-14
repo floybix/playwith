@@ -75,6 +75,11 @@ device.click_handler <- function(widget, event, playState)
                 ## alt-click
                 if (actions$nav2D)
                     zoomoutCore(playState, foo)
+            } else
+            if (foo$modifiers & GdkModifierType["shift-mask"]) {
+                ## shift-click
+                if (actions$ident)
+                    identifyCore(playState, foo, deidentify=TRUE)
             } else {
                 ## click
                 if (actions$ident)

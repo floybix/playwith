@@ -15,7 +15,6 @@ globalActionGroup <- function(playState)
              list("SetSize", NULL, "Set device _size...", "<Ctrl>0", NULL, set.size_handler),
              list("IncrFont", NULL, "_Increase font size", "<Ctrl>plus", NULL, incr.font_handler),
              list("DecrFont", NULL, "De_crease font size", "<Ctrl>minus", NULL, decr.font_handler),
-             list("SetLabelStyle", NULL, "Set label st_yle...", NULL, NULL, set.label.style_handler),
              list("CustomTheme", "gtk-select-color", "Custom _Theme...", NULL, "Customise plot style...", custom.theme_handler),
              list("EditCall", "gtk-edit", "_Edit call...", "<Ctrl>E", "Edit the plot call", edit.call_handler),
              list("Back", "gtk-go-back", "Back", "<Alt>Left", "Go back to previous plot call", back_handler),
@@ -143,6 +142,7 @@ set.size_handler <- function(widget, playState) {
                                width <<- a2px(svalue(widthW), unit, owidth)
                                height <<- a2px(svalue(heightW), unit, oheight)
                            })
+    playState$win$present()
     if (!isTRUE(result)) return()
     width <- max(10, width)
     height <- max(10, height)

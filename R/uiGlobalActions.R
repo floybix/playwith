@@ -104,8 +104,69 @@ copy_handler <- function(widget, playState)
     file.remove(filename)
 }
 
+print_handler <- function(widget, playState)
+{
+    playDevSet(playState)
+    isWindows <- (.Platform$OS.type == "windows")
+    if (isWindows) dev.print(win.print)
+    else dev.print()
+}
+
 close_handler <- function(widget, playState)
     window.close_handler(playState = playState)
+
+edit.call_handler <- function(widget, playState)
+{
+    callTxt <-
+        paste(deparse(playState$call, width=42, control=
+                      playwith.getOption("deparse.options")),
+              collapse="\n")
+    repeat {
+        newTxt <- guiTextInput(callTxt, title="Edit plot call",
+                               prompt="", accepts.tab=F)
+        ## possible with gWidgets, but way too slow.
+        #txtBox <- gtext(callTxt, font.attr=c(family="monospace"), wrap=FALSE, width=600)
+        #gbasicdialog(title="Edit plot call", widget=txtBox,
+        #             action=environment(), handler=function(h, ...)
+        #             assign("newTxt", svalue(h[[1]]), env=h$action)
+        #             )
+        if (is.null(newTxt)) break
+        callTxt <- newTxt
+        tmp <- tryCatch(parse(text=callTxt), error=function(e)e)
+        ## check whether there was a syntax error
+        if (inherits(tmp, "error")) {
+            gmessage.error(conditionMessage(tmp))
+        } else {
+            ## if more than one call, wrap them in braces
+            playState$call <- if (length(tmp) > 1)
+                as.call(c(as.symbol("{"), tmp)) else tmp[[1]]
+            playNewPlot(playState)
+            break
+        }
+    }
+    playState$win$present()
+}
+
+edit.call.inline_handler <- function(widget, playState)
+{
+    ## the original call
+    callTxt <- deparseOneLine(playState$call, control=
+                              playwith.getOption("deparse.options"))
+    newTxt <- widget["text"]
+    if (identical(newTxt, callTxt)) return()
+    if (identical(newTxt, "")) return()
+    tmp <- tryCatch(parse(text=newTxt), error=function(e)e)
+    ## check whether there was a syntax error
+    if (inherits(tmp, "error")) {
+        gmessage.error(conditionMessage(tmp))
+    } else {
+        ## if more than one call, wrap them in braces
+        playState$call <- if (length(tmp) == 1) tmp[[1]]
+            else as.call(c(as.symbol("{"), tmp))
+        playNewPlot(playState)
+    }
+    playState$win$present()
+}
 
 set.size_handler <- function(widget, playState) {
     da <- playState$widgets$drawingArea

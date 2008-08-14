@@ -28,7 +28,6 @@ export(
 export(
        playNewPlot,
        playReplot,
-       quickTool,
        parameterControlTool,
        playDevCur,
        playDevSet,

@@ -44,16 +44,16 @@
       <menuitem action='EditCall'/>
       <menuitem action='PlotSettings'/>
       <separator/>
+      <menuitem action='Expand'/>
+      <menuitem action='Zoomfit'/>
+      <menuitem action='ZeroY'/>
+      <menuitem action='ZeroX'/>
+      <separator/>
       <menuitem action='Annotation'/>
       <menuitem action='Arrow'/>
       <menuitem action='UndoAnnotation'/>
       <menuitem action='EditAnnotations'/>
       <menuitem action='Clear'/>
-      <separator/>
-      <menuitem action='Expand'/>
-      <menuitem action='Zoomfit'/>
-      <menuitem action='ZeroY'/>
-      <menuitem action='ZeroX'/>
       <separator/>
     </menu>
     <menu action='DataMenu'>

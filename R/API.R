@@ -291,9 +291,7 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
 {
     playDevSet(playState)
     x.or.y <- match.arg(x.or.y)
-    ## round digits conservatively
-    x <- signif(x, digits=8)
-    if (playState$is.lattice) {
+     if (playState$is.lattice) {
         ## TODO: packet 1 may not exist?
         x.panel <- xyData(playState, space="packet 1")[[x.or.y]]
         ## set factor labels explicitly, otherwise they are coerced to numeric
@@ -327,8 +325,6 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
           #                     y = playState$trellis$y.scales$axs == "r")
           #f <- lattice.getOption("axis.padding")$numeric
           #if (isExtended) x <- shrinkrange(x, f=f)
-          ## round digits conservatively
-          #x <- signif(x, digits=8)
         }
     }
     else if (!is.null(playState$viewport)) {
@@ -341,11 +337,14 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
                            x = (par("xaxs") == "r"),
                            y = (par("yaxs") == "r"))
       if (isExtended) x <- shrinkrange(x, f=0.04)
-      ## round digits conservatively
-      x <- signif(x, digits=8)
     }
     ## convert back from log scale if required
     x <- spaceCoordsToDataCoordsXY(playState, x, x.or.y=x.or.y)
+    ## round such that approximation error is within 1/1000 of x/y range
+    if (is.numeric(x)) {
+        digits <- max(3 - floor(log10(abs(diff(x)))), 0)
+        x <- round(x, digits = digits)
+    }
     if (x.or.y == "x") callArg(playState, "xlim") <- x
     if (x.or.y == "y") callArg(playState, "ylim") <- x
 }
@@ -703,16 +702,16 @@ handleClickOrDrag <-
          is.click = is.click, modifiers = modifiers)
 }
 
-getDataArg <- function(playState)
+getDataArg <- function(playState, eval = TRUE)
 {
     if (is.null(playState$data.points)) {
         mainCall <- mainCall(playState)
         if (length(mainCall > 1)) {
             ## check for named "data" argument
-            tmp.data <- callArg(playState, "data")
+            tmp.data <- callArg(playState, "data", eval=eval)
             if (is.null(tmp.data)) {
                 ## look at first argument
-                tmp.x <- callArg(playState, 1)
+                tmp.x <- callArg(playState, 1, eval=TRUE)
                 if (inherits(tmp.x, "formula")) {
                     ## if 1st arg is formula, 2nd is `data` (by convention)
                     if (is.null(tmp.data) &&
@@ -720,18 +719,21 @@ getDataArg <- function(playState)
                         (is.null(names(mainCall)) ||
                          identical(names(mainCall)[[3]], ""))
                         )
-                        tmp.data <- callArg(playState, 2)
+                        tmp.data <- callArg(playState, 2, eval=eval)
                 }
             }
         }
         if (is.null(tmp.data)) {
             ## objects may also come from a with() block
-            if (identical(playState$call[[1]], as.symbol("with")))
-                tmp.data <- eval(playState$call[[2]], playState$env)
+            if (identical(playState$call[[1]], as.symbol("with"))) {
+                tmp.data <- playState$call[[2]]
+                if (eval) tmp.data <- eval(tmp.data, playState$env)
+            }
         }
     } else {
         ## data.points were supplied
-        tmp.data <- playState$data.points
+        tmp.data <- if (eval) playState$data.points
+        else quote(playDevCur()$data.points)
     }
     tmp.data
 }

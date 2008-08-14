@@ -183,10 +183,45 @@ drawLabels <- function(playState, which, space="plot", pos=1)
 
 set.labels_handler <- function(widget, playState)
 {
-    ## TODO
+    box <- ggroup(horizontal = FALSE)
+    datArg <- getDataArg(playState, eval = FALSE)
+    dat <- try(eval(datArg, playState$env))
+    labcode <- c("NULL",
+                 "xyData(playDevCur())$x",
+                 "xyData(playDevCur())$y",
+                 'with(xyData(playDevCur()), paste(x, y, sep=", "))')
+    labdesc <- c("data subscripts",
+                 "data x values",
+                 "data y values",
+                 "data (x,y) values")
+    if (!is.null(dat)) {
+        datOpts <- c(deparseOneLine(call("rownames", datArg)),
+                     colnames(dat))
+        labcode <- c(labcode, datOpts)
+        labdesc <- c(labdesc, datOpts)
+    }
+    labradio <- gradio(labdesc, selected = 0, container = box,
+                       handler = function(h, ...) {
+                           svalue(labedit) <- labcode[svalue(labradio, index=TRUE)]
+                       })
+    labedit <- gedit(labcode[1], container = box)
+    ## show dialog
+    gbasicdialog("Set labels to...", widget = box,
+                 handler = function(h, ...) {
+                     tmp <- tryCatch(
+                             eval(parse(text=svalue(labedit)), playState$env),
+                                     error=function(e)e)
+                     ## check whether there was an error
+                     if (inherits(tmp, "error")) {
+                         gmessage.error(conditionMessage(tmp))
+                     } else {
+                         playState$labels <- tmp
+                     }
+                 })
+    ## TODO: refresh?
 }
 
-
+## TODO: get rid of this -- set label style now means changing lattice settings
 set.label.style_handler <- function(widget, playState)
 {
     style <- playState$label.style

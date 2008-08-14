@@ -169,7 +169,7 @@ playwith <-
     topToolbar["toolbar-style"] <- tbStyle
     ## create the bottom toolbar
     bottomToolbar <- uiManager$getWidget("/BottomToolbar")
-    leftToolbar$setTooltips(TRUE)
+    bottomToolbar$setTooltips(TRUE)
     bottomToolbar["toolbar-style"] <- tbStyle
     ## create the left toolbar
     leftToolbar <- uiManager$getWidget("/LeftToolbar")
@@ -178,6 +178,7 @@ playwith <-
     leftToolbar["orientation"] <- GtkOrientation["vertical"]
     ## create the right toolbar
     rightToolbar <- uiManager$getWidget("/RightToolbar")
+    rightToolbar$setTooltips(TRUE)
     rightToolbar["toolbar-style"] <- tbStyle
     rightToolbar["orientation"] <- GtkOrientation["vertical"]
     ## create the statusbar and coords readout
@@ -504,15 +505,15 @@ playNewPlot <- function(playState)
 
     ## initialise tools for a new plot (see ui.R)
     initActions(playState)
-    ## hide empty toolbars
-    blockRedraws{
+    ## hide empty toolbars (TODO: this can not actually change with a new plot...)
+    blockRedraws({
         for (nm in paste("/", c("Top", "Left", "Bottom", "Right"),
                          "Toolbar", sep="")) {
             tbar <- playState$uiManager$getWidget(nm)
             if (length(tbar$getChildren())) tbar$show()
             else tbar$hide()
         }
-    }
+    })
     ## try to force redraw
     gdkWindowProcessAllUpdates()
     while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)

@@ -63,6 +63,7 @@ save_handler <- function(widget, user.data)
     ## assuming 96 d.p.i. in both dimensions
     w.in <- w.px / 96
     h.in <- h.px / 96
+    ## TODO: pointsize = playState$pointsize
     if (ext %in% "pdf") {
         dev.copy(pdf, file=filename, width=w.in, height=h.in)
         dev.off()

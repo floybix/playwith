@@ -3,6 +3,8 @@ Changes in Version 0.9-20
 
   o GUI overhaul! Menus, new tools, new infrastructure, etc.
 
+  o note that playwith() arguments and playwith.options have changed.
+
 Changes in Version 0.9-11
 
   o latticist uses hexbinplot, and many other changes.

@@ -9,6 +9,7 @@ annotationActionGroup <- function(playState)
         list( ## : name, stock icon, label, accelerator, tooltip, callback
              list("Annotation", "gtk-italic", "Annotate", NULL, "Add custom labels to the plot", annotate_handler),
              list("Arrow", "gtk-connect", "Arrow", NULL, "Add an arrow to the plot", arrow_handler),
+             list("Legend", "gtk-sort-ascending", "Legend", NULL, "Place a legend", legend_handler),
              list("UndoAnnotation", "gtk-undo", "Undo ann.", "<Ctrl>Z", "Remove last annotation", undo.annotation_handler),
              list("Clear", "gtk-clear", "Clear", "<Shift>Delete", "Remove labels and annotations", clear_handler),
              list("EditAnnotations", "gtk-edit", "Edit ann.", "<Ctrl><Shift>E", "Edit annotations (including arrows) code", edit.annotations_handler)
@@ -158,4 +159,9 @@ arrow_handler <- function(widget, playState)
         if (exists("undo.annotation", inherits=F))
             undo.annotation["visible"] <- TRUE
     })
+}
+
+legend_handler <- function(widget, playState)
+{
+    ## TODO
 }

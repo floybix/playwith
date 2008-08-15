@@ -12,6 +12,7 @@
          height = 5,
          pointsize = 10,
          eval.args = NA,
+         on.close = NULL,
          ## implicit arguments to playwith():
          ## (can be over-ridden by explicit arguments)
          annotation.mode = "plot",
@@ -21,10 +22,13 @@
          arrow.style = NULL,
          arrow.arrow = quote(arrow(length=unit(0.15, "inches"))),
          ## global:
+         save.as.format = "pdf",
          ui.menus.xml = system.file("etc", "ui.menus.xml", package="playwith"),
          ui.toolbars.xml = system.file("etc", "ui.toolbars.xml", package="playwith"),
          ui.custom.xml = NULL,
-         custom.actions = NULL,
+         custom.tools = NULL,
+         update.actions = NULL,
+         init.actions = NULL,
          parameters.toolbar = "BottomToolbar",
          toolbar.style = "both",
          show.toolbars = TRUE,

@@ -27,17 +27,17 @@ playwith <-
              labels = NULL,
              data.points = NULL,
              viewport = NULL,
-             tools = list(),
              parameters = list(),
+             tools = list(),
+             update.actions = list(),
+             init.actions = list(),
              ...,
              width = playwith.getOption("width"),
              height = playwith.getOption("height"),
              pointsize = playwith.getOption("pointsize"),
-             modal = FALSE,
-             on.close = NULL,
              eval.args = playwith.getOption("eval.args"),
-             invert.match = FALSE,
-             envir = parent.frame(),
+             on.close = playwith.getOption("on.close"),
+             modal = FALSE,
              playState = if (!new) playDevCur(),
              plot.call,
              main.function)
@@ -80,6 +80,13 @@ playwith <-
     ## env is the <environment> containing local cached objects
     env <- new.env(parent = globalenv())
     ## work out evaluation rules
+    envir <- parent.frame() ## where to look for variables
+    invert.match <- FALSE
+    if (is.list(eval.args)) {
+        if (!is.null(eval.args$envir)) envir <- eval.args$envir
+        if (!is.null(eval.args$invert)) invert.match <- eval.args$invert
+        eval.args <- eval.args[[1]]
+    }
     evalGlobals <- !is.na(eval.args)
     if (is.na(eval.args))
         eval.args <- (environmentName(envir) != "R_GlobalEnv")
@@ -128,7 +135,7 @@ playwith <-
     myVBox <- gtkVBox()
     myWin$add(myVBox)
     playState$win <- myWin
-    uiManager <- constructUI(playState)
+    uiManager <- constructUIManager(playState)
     actionGroups <- uiManager$getActionGroups()
     names(actionGroups) <- sapply(actionGroups, gtkActionGroupGetName)
     ## construct menus
@@ -339,10 +346,13 @@ playwith <-
     playState$data.points <- data.points
     playState$viewport <- viewport
     playState$parameters <- parameters
+    playState$tools <- tools
+    playState$update.actions <- update.actions
+    playState$init.actions <- init.actions
+    ## TODO: store ids etc in an environment for linking
     playState$ids <- list()
     playState$brushed <- list()
     playState$annotations <- list()
-    playState$tools <- list()
     playState$uiManager <- uiManager
     playState$actionGroups <- actionGroups
     playState$widgets <-

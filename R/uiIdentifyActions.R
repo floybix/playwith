@@ -186,20 +186,24 @@ set.labels_handler <- function(widget, playState)
     box <- ggroup(horizontal = FALSE)
     datArg <- getDataArg(playState, eval = FALSE)
     dat <- try(eval(datArg, playState$env))
-    labcode <- c("NULL",
-                 "xyData(playDevCur())$x",
-                 "xyData(playDevCur())$y",
-                 'with(xyData(playDevCur()), paste(x, y, sep=", "))')
-    labdesc <- c("data subscripts",
-                 "data x values",
-                 "data y values",
-                 "data (x,y) values")
+    labcode <- NULL
+    labdesc <- NULL
     if (!is.null(dat)) {
         datOpts <- c(deparseOneLine(call("rownames", datArg)),
                      colnames(dat))
-        labcode <- c(labcode, datOpts)
-        labdesc <- c(labdesc, datOpts)
+        labcode <- datOpts
+        labdesc <- datOpts
     }
+    labcode <- c(labcode,
+                 "NULL",
+                 "xyData(playDevCur())$x",
+                 "xyData(playDevCur())$y",
+                 'with(xyData(playDevCur()), paste(x, y, sep=", "))')
+    labdesc <- c(labdesc,
+                 "data subscripts",
+                 "data x values",
+                 "data y values",
+                 "data (x,y) values")
     labradio <- gradio(labdesc, selected = 0, container = box,
                        handler = function(h, ...) {
                            svalue(labedit) <- labcode[svalue(labradio, index=TRUE)]

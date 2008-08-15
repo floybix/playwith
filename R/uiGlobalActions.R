@@ -69,17 +69,92 @@ updateGlobalActions <- function(playState)
 clone_handler <- function(widget, playState)
     NA
 
+save_handler <- function(widget, playState)
+{
+    ## disable toolbars until this is over
+    playFreezeGUI(playState)
+    on.exit(playThawGUI(playState))
+    ## get filename
+    myExt <- playwith.getOption("save.as.format")
+    myDefault <- if (!is.null(playState$title))
+        playState$title else playState$callName
+    myDefault <- paste(myDefault, myExt, sep=".")
+    ## construct save file dialog
+    okExt <- c("pdf","png","jpg","jpeg","ps","eps","svg","wmf","emf","fig")
+    filter <- list("All files" = list(patterns = c("*")),
+                   "PDF" = list(patterns = c("*.pdf")),
+                   "PNG (bitmap)" = list(patterns = c("*.png")),
+                   "EPS" = list(patterns = c("*.eps")),
+                   "SVG" = list(patterns = c("*.svg")),
+                   "WMF (metafile)" = list(patterns = c("*.wmf", "*.emf")),
+                   "JPEG" = list(patterns = c("*.jpg", "*.jpeg")),
+                   "xfig" = list(patterns = c("*.fig")))
+    ## TODO: pdfWriter with bitmap()
+    filename <- gfile("Export plot to image file", type = "save",
+                      filter = filter, initialfilename = myDefault)
+    if (is.na(filename)) return()
+    ext <- tolower(get.extension(filename))
+    if ((ext %in% okExt) == FALSE) {
+        filename <- paste(filename, myExt, sep=".")
+        ext <- myExt
+    }
+    ## save plot to file
+    playDevSet(playState)
+    ## note: baseViewports will be corrupted if device size changes
+    ## so need to keep the same size with dev.copy()...
+    w.in <- dev.size("in")[1]
+    h.in <- dev.size("in")[2]
+    w.px <- dev.size("px")[1]
+    h.px <- dev.size("px")[2]
+    h.px <- da$getAllocation()$height
+    ## TODO: pointsize = playState$pointsize
+    if (ext %in% "pdf") {
+        dev.copy(pdf, file=filename, width=w.in, height=h.in)
+        dev.off()
+    }
+    else if (ext %in% "ps") {
+        dev.copy(postscript, file=filename, width=w.in, height=h.in)
+        dev.off()
+    }
+    else if (ext %in% "eps") {
+        dev.copy(postscript, file=filename, width=w.in, height=h.in,
+                 horizontal=FALSE, onefile=FALSE, paper="special")
+        dev.off()
+    }
+    else if (ext %in% "png") {
+        dev.copy(Cairo_png, file=filename, width=w.in, height=h.in)
+        dev.off()
+    }
+    else if (ext %in% c("jpeg","jpg")) {
+        dev.copy(jpeg, file=filename, width=w.px, height=h.px, units="px")
+        dev.off()
+    }
+    else if (ext %in% "svg") {
+        dev.copy(Cairo_svg, file=filename, width=w.in, height=h.in)
+        dev.off()
+    }
+    else if (ext %in% c("wmf", "emf")) {
+        dev.copy(win.metafile, file=filename, width=w.in, height=h.in)
+        dev.off()
+    }
+    else if (ext %in% "fig") {
+        dev.copy(xfig, file=filename, width=w.in, height=h.in)
+        dev.off()
+    }
+    else {
+        gmessage.error("Unrecognised filename extension")
+        return()
+    }
+}
+
 copy_handler <- function(widget, playState)
 {
     ## disable toolbars until this is over
     playFreezeGUI(playState)
     on.exit(playThawGUI(playState))
     playDevSet(playState)
-    da <- playState$widgets$drawingArea
-    w.px <- da$getAllocation()$width
-    h.px <- da$getAllocation()$height
-    w.in <- w.px / 96
-    h.in <- h.px / 96
+    w.in <- dev.size("in")[1]
+    h.in <- dev.size("in")[2]
     if (exists("win.metafile")) { ## i.e. in MS Windows
         copy.exts <- c("wmf", "png")
         copy.labels <- c("Windows Metafile (wmf)", "Bitmap (png)")

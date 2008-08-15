@@ -198,22 +198,23 @@ set.labels_handler <- function(widget, playState)
                  "NULL",
                  "xyData(playDevCur())$x",
                  "xyData(playDevCur())$y",
-                 'with(xyData(playDevCur()), paste(x, y, sep=", "))')
+                 'with(xyData(playDevCur()), paste(y, x, sep="@"))')
     labdesc <- c(labdesc,
                  "data subscripts",
                  "data x values",
                  "data y values",
-                 "data (x,y) values")
+                 "data (y@x) values")
     labradio <- gradio(labdesc, selected = 0, container = box,
                        handler = function(h, ...) {
-                           svalue(labedit) <- labcode[svalue(labradio, index=TRUE)]
+                           idx <- max(1, svalue(labradio, index=TRUE))
+                           svalue(labedit) <- labcode[idx]
                        })
     labedit <- gedit(labcode[1], container = box)
     ## show dialog
     gbasicdialog("Set labels to...", widget = box,
                  handler = function(h, ...) {
                      tmp <- tryCatch(
-                             eval(parse(text=svalue(labedit)), playState$env),
+                             eval(parse(text=svalue(labedit)), dat, playState$env),
                                      error=function(e)e)
                      ## check whether there was an error
                      if (inherits(tmp, "error")) {

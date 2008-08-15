@@ -32,7 +32,7 @@ latticist <-
     isnum <- sapply(dat, is.numeric)
     for (nm in names(dat)[isnum]) {
         dd <- dat[[nm]]
-        ## test first 50 values first (fail fast)
+        ## test first 50 values first (quick check)
         vals <- unique(head(dd, n=50))
         if (all(vals %in% -1:1)) {
             if (all(range(dd, na.rm=TRUE) %in% -1:1) &&
@@ -75,10 +75,10 @@ latticist <-
              labels = labels,
              time.mode = time.mode,
              latticist = list(), ## to replace (reset) any existing one
-             bottom.tools = list(latticist = makeLatticistTool(dat)))
+             init.actions = list(latticist = makeLatticist(dat)))
 }
 
-makeLatticistTool <- function(dat)
+makeLatticist <- function(dat)
 {
     isInteraction <- function(x)
         is.call.to(x, "*") || is.call.to(x, "+")
@@ -107,13 +107,21 @@ makeLatticistTool <- function(dat)
             playState$latticist <- list()
         ## get arguments to current call
         callName <- toString(callArg(playState, 0, eval=FALSE))
+        is3D <- !is.null(playState$trellis$panel.args.common$scales.3d)
+        isTrivar <- (callName %in%
+                     c("levelplot", "contourplot", "segplot", "tileplot"))
+        isTrivar <- isTrivar || is3D
         arg1 <- callArg(playState, 1, eval=FALSE)
         groups <- callArg(playState, "groups", eval=FALSE)
+        col <- callArg(playState, "col", eval=FALSE)
+        ## TODO: remove colRamp() from col and set groups
+        level <- callArg(playState, "level", eval=FALSE)
         subset <- callArg(playState, "subset", eval=FALSE)
 
         ## parse variables from existing plot call
-        xvar <- yvar <- c1 <- c2 <- NULL
+        xvar <- yvar <- zvar <- c1 <- c2 <- NULL
         ## if is formula
+        aserrorVal <- FALSE
         if (is.call.to(arg1, "~")) {
             if (length(arg1) == 2) {
                 xvar <- arg1[[2]]
@@ -124,6 +132,27 @@ makeLatticistTool <- function(dat)
             if (is.call.to(xvar, "|")) {
                 c1 <- xvar[[3]]
                 xvar <- xvar[[2]]
+            }
+            if (isTrivar && isInteraction(xvar)) {
+                if (callName == "segplot") {
+                    ## y ~ x + z
+                    zvar <- xvar[[3]]
+                    xvar <- xvar[[2]]
+                    ## as.error form: y ~ I(x-z) + I(x+z)
+                    if (is.call.to(xvar, "I") && is.call.to(zvar, "I")) {
+                        if (length(xvar[[2]]) == 3) {
+                            zvar <- xvar[[2]][[3]]
+                            xvar <- xvar[[2]][[2]]
+                            aserrorVal <- TRUE
+                        }
+                    }
+                    groups <- level
+                } else {
+                    ## z ~ x * y
+                    zvar <- yvar
+                    yvar <- xvar[[3]]
+                    xvar <- xvar[[2]]
+                }
             }
             ## qqmath by convention has var on y axis
             if (callName == "qqmath") {
@@ -230,6 +259,7 @@ makeLatticistTool <- function(dat)
         ## set up variables and options
         xvarStr <- deparseOneLine(xvar)
         yvarStr <- deparseOneLine(yvar)
+        zvarStr <- deparseOneLine(zvar)
         c1Str <- deparseOneLine(c1)
         c2Str <- deparseOneLine(c2)
         groupsStr <- deparseOneLine(groups)
@@ -343,13 +373,6 @@ makeLatticistTool <- function(dat)
             playState$latticist$linesSetting <- linesVal
         }
 
-        ## labels
-        labelsopts <- c("rownames(dat)", "1:nrow(dat)", names(dat))
-        labelsSetting <- playState$latticist$labels.setting
-        if (is.null(labelsSetting))
-            labelsSetting <- labelsopts[[1]]
-        labelsopts <- unique(c(labelsopts, labelsSetting))
-
         tryParse <- function(x0) {
             x <- x0
             if (x %in% NULLNAMES) x <- "NULL"
@@ -385,14 +408,18 @@ makeLatticistTool <- function(dat)
             ## parse variables / expressions
             xvar <- tryParse(xvarW$getActiveText())
             yvar <- tryParse(yvarW$getActiveText())
+            zvar <- tryParse(zvarW$getActiveText())
             if (xonW["active"] == FALSE) xvar <- NULL
             if (yonW["active"] == FALSE) yvar <- NULL
             c1 <- tryParse(c1W$getActiveText())
             c2 <- tryParse(c2W$getActiveText())
             groups <- tryParse(groupsW$getActiveText())
+            doTile <- tileW["active"]
+            doAsError <- aserrorW["active"]
             ## keep for titles etc
             xvarOrigStr <- deparseOneLine(xvar)
             yvarOrigStr <- deparseOneLine(yvar)
+            zvarOrigStr <- deparseOneLine(zvar)
             c1OrigStr <- deparseOneLine(c1)
             c2OrigStr <- deparseOneLine(c2)
             groupsOrigStr <- deparseOneLine(groups)
@@ -415,6 +442,7 @@ makeLatticistTool <- function(dat)
             ## evaluate to check types
             xVal <- tryEval(xvar, dat)
             yVal <- tryEval(yvar, dat)
+            zVal <- tryEval(zvar, dat)
             c1Val <- tryEval(c1, dat)
             c2Val <- tryEval(c2, dat)
             groupsVal <- tryEval(groups, dat)
@@ -694,7 +722,7 @@ makeLatticistTool <- function(dat)
                     }
                 }
 
-            } else {
+            } else if (is.null(zVal)) {
                 ## BIVARIATE
 
                 if (is.categorical(xVal) && is.categorical(yVal)) {
@@ -796,6 +824,15 @@ makeLatticistTool <- function(dat)
                     else
                         callArg(playState, 1) <- call("~", yvar, xvar)
 
+                    if (doTile) {
+                        callArg(playState, 0) <- quote(tileplot)
+                        form <- call("~", groups, call("*", xvar, yvar))
+                        if (!is.null(cond))
+                            form[[3]] <- call("|", form[[3]], cond)
+                        callArg(playState, 1) <- form
+                        callArg(playState, "groups") <- NULL
+                    }
+
                     if (doLines) {
                         ## work out whether x data (in each panel) is spaced out
                         ## enough to join by lines (rather than smoothing, below)
@@ -879,6 +916,47 @@ makeLatticistTool <- function(dat)
                             callArg(playState, quote(plot.args$panel.error)) <- "warning"
                         }
                     }
+                }
+            } else {
+                ## TRIVARIATE
+
+                if (is.categorical(yVal) || is.categorical(xVal)) {
+                    ## TRIVARIATE WITH CATEGORICAL
+                    ## use segplot
+                    if (is.categorical(xVal) && !is.categorical(yVal)) {
+                        ## switch x and y, so categorical is on y axis
+                        tmp <- xvar
+                        xvar <- yvar
+                        yvar <- tmp
+                        tmp <- xVal
+                        xVal <- yVal
+                        yVal <- tmp
+                    }
+                    callArg(playState, 0) <- quote(segplot)
+                    form <- call("~", yvar, call("+", xvar, zvar))
+                    if (doAsError) {
+                        ## I(x-z) + I(x+z)
+                        form[[3]] <- call("+", call("I", call("-", xvar, zvar)),
+                                          call("I", call("+", xvar, zvar)))
+                        callArg(playState, "centers") <- xvar
+                        callArg(playState, "draw.bands") <- FALSE
+                    }
+                    if (!is.null(cond))
+                        form[[3]] <- call("|", form[[3]], cond)
+                    callArg(playState, 1) <- form
+                    ## colors coded by "level"
+                    callArg(playState, "level") <- groups
+                    callArg(playState, "groups") <- NULL
+
+                } else {
+                    ## TRIVARIATE NUMERIC
+                    ## use cloud
+                    callArg(playState, 0) <- quote(cloud)
+                    form <- call("~", zvar, call("*", xvar, yvar))
+                    if (!is.null(cond))
+                        form[[3]] <- call("|", form[[3]], cond)
+                    callArg(playState, 1) <- form
+
                 }
             }
 
@@ -1038,18 +1116,6 @@ makeLatticistTool <- function(dat)
             if (widget["active"] > -1)
                 doRecomposeNewXY(playState = playState)
         }
-        doLabels <- function(widget, playState) {
-            labels <- tryParse(labelsW$getActiveText())
-            playState$labels <- tryEval(labels, dat)
-            playState$.args$labels <- playState$labels
-            playState$latticist$labels.setting <-
-                labelsW$getActiveText()
-            ## TODO: replot if showing labels?
-        }
-        doLabelsOnSelect <- function(widget, playState) {
-            if (widget["active"] > -1)
-                doLabels(widget, playState)
-        }
         doLinesSetting <- function(widget, playState) {
             playState$latticist$linesSetting <- widget["active"]
             doRecompose(playState = playState)
@@ -1115,6 +1181,32 @@ makeLatticistTool <- function(dat)
             else
                 c2W["active"] <- grActive
             groupsW["active"] <- 0
+            widget["visible"] <- FALSE
+            playState$plot.ready <- TRUE
+            doRecompose(playState = playState)
+            return(FALSE)
+        }
+        handler.go3D <- function(widget, event, playState) {
+            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
+            playState$plot.ready <- FALSE
+            grActive <- groupsW["active"]
+            if (grActive <= 1) return(FALSE)
+            #zActive <- zvarW["active"]
+            zvarW["active"] <- grActive
+            groupsW["active"] <- 0
+            widget["visible"] <- FALSE
+            playState$plot.ready <- TRUE
+            doRecompose(playState = playState)
+            return(FALSE)
+        }
+        handler.squash <- function(widget, event, playState) {
+            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
+            playState$plot.ready <- FALSE
+            zActive <- zvarW["active"]
+            if (zActive <= 1) return(FALSE)
+            #grActive <- groupsW["active"]
+            groupsW["active"] <- zActive
+            zvarW["active"] <- 0
             widget["visible"] <- FALSE
             playState$plot.ready <- TRUE
             doRecompose(playState = playState)
@@ -1303,6 +1395,81 @@ makeLatticistTool <- function(dat)
 
         box$packStart(gtkVSeparator(), expand=FALSE, padding=1)
 
+        ## GROUPS / Z VARIABLE
+        gvarsBox <- gtkVBox()
+        gvarsBox["sensitive"] <- !is.null(xvar) || !is.null(yvar)
+        ## GROUPS
+        grBox <- gtkHBox()
+        grBox$packStart(gtkLabel(" Groups / Color: "), expand=FALSE)
+        ## "explode" button
+        explodeW <- niceButton("explode")
+        explodeW["visible"] <- !is.null(groups) ## TODO (show when groups are categorical)
+        gSignalConnect(explodeW, "button-press-event",
+                       handler.explode, data=playState)
+        grBox$packStart(explodeW)
+        gvarsBox$packStart(grBox, expand=FALSE, padding=1)
+        ## "go 3D" button
+        go3DW <- niceButton("go 3D")
+        go3DW["visible"] <- FALSE ## TODO (show when groups are numeric)
+        gSignalConnect(go3DW, "button-press-event",
+                       handler.go3D, data=playState)
+        grBox$packStart(go3DW)
+        gvarsBox$packStart(grBox, expand=FALSE, padding=1)
+        ## groups
+        gBox <- gtkHBox()
+        groupsW <- gtkComboBoxEntryNewText()
+        groupsW$show()
+        groupsW["width-request"] <- 100
+        for (item in varexprs) groupsW$appendText(item)
+        index <- match(deparseOneLine(groups), varexprs)
+        if (is.na(index)) index <- 1
+        groupsW["active"] <- (index - 1)
+        ## "changed" emitted on typing and selection
+        gSignalConnect(groupsW, "changed",
+                       doRecomposeOnSelect, data=playState)
+        gSignalConnect(groupsW$getChild(), "activate",
+                       doRecompose, data=playState)
+        gBox$packStart(groupsW)
+        tileW <- gtkCheckbox("tile")
+        gBox$packStart(tileW)
+        gvarsBox$packStart(gBox, expand=FALSE)
+
+        ## Z / X2 VARIABLE
+        zBox <- gtkHBox()
+        zBox$packStart(gtkLabel(" Z / x2 variable: "), expand=FALSE) # " 3D or segments: "
+        ## "squash" button
+        squashW <- niceButton("squash")
+        squashW["visible"] <- !is.null(zvar)
+        gSignalConnect(squashW, "button-press-event",
+                       handler.squash, data=playState)
+        zBox$packStart(squashW)
+        gvarsBox$packStart(zBox, expand=FALSE, padding=1)
+        ## zvar
+        zvarBox <- gtkHBox()
+        # "z= "
+        zvarW <- gtkComboBoxEntryNewText()
+        zvarW$show()
+        zvarW["sensitive"] <- !is.null(xvar) && !is.null(yvar)
+        zvarW["width-request"] <- 100
+        for (item in varexprs) zvarW$appendText(item)
+        index <- match(deparseOneLine(zvar), varexprs)
+        if (is.na(index)) index <- 1
+        zvarW["active"] <- (index - 1)
+        ## "changed" emitted on typing and selection
+        gSignalConnect(zvarW, "changed",
+                       doRecomposeOnSelect, data=playState)
+        gSignalConnect(zvarW$getChild(), "activate",
+                       doRecompose, data=playState)
+        zvarBox$packStart(zvarW)
+        ## asError option
+        aserrorW <- gtkCheckbox("as error")
+        aserrorW["active"] <- aserrorVal
+        zvarBox$packStart(aserrorW)
+        gvarsBox$packStart(zvarBox, expand=FALSE)
+        box$packStart(gvarsBox, expand=FALSE, padding=1)
+
+        box$packStart(gtkVSeparator(), expand=FALSE, padding=1)
+
         ## CONDITIONING VARS
         cvarsBox <- gtkVBox()
         cvarsBox["sensitive"] <- !is.null(xvar) || !is.null(yvar)
@@ -1370,57 +1537,6 @@ makeLatticistTool <- function(dat)
 
         box$packStart(gtkVSeparator(), expand=FALSE, padding=1)
 
-        ## GROUPS
-        gvarsBox <- gtkVBox()
-        gvarsBox["sensitive"] <- !is.null(xvar) || !is.null(yvar)
-        ## GROUPS
-        grBox <- gtkHBox()
-        grBox$packStart(gtkLabel(" Groups: "), expand=FALSE)
-        ## "explode" button
-        explodeW <- niceButton("explode")
-        explodeW["visible"] <- !is.null(groups)
-        gSignalConnect(explodeW, "button-press-event",
-                       handler.explode, data=playState)
-        grBox$packStart(explodeW)
-        gvarsBox$packStart(grBox, expand=FALSE, padding=1)
-        ## groups
-        gBox <- gtkHBox()
-        groupsW <- gtkComboBoxEntryNewText()
-        groupsW$show()
-        groupsW["width-request"] <- 100
-        for (item in varexprs) groupsW$appendText(item)
-        index <- match(deparseOneLine(groups), varexprs)
-        if (is.na(index)) index <- 1
-        groupsW["active"] <- (index - 1)
-        ## "changed" emitted on typing and selection
-        gSignalConnect(groupsW, "changed",
-                       doRecomposeOnSelect, data=playState)
-        gSignalConnect(groupsW$getChild(), "activate",
-                       doRecompose, data=playState)
-        gBox$packStart(groupsW)
-        gvarsBox$packStart(gBox, expand=FALSE)
-
-        ## LABELS
-        laBox <- gtkHBox()
-        laBox$packStart(gtkLabel(" Labels: "), expand=FALSE)
-        gvarsBox$packStart(laBox, expand=FALSE, padding=1)
-        labelsW <- gtkComboBoxEntryNewText()
-        labelsW$show()
-        labelsW["width-request"] <- 100
-        for (item in labelsopts) labelsW$appendText(item)
-        index <- match(labelsSetting, labelsopts)
-        if (is.na(index)) index <- 0
-        labelsW["active"] <- (index - 1)
-        ## "changed" emitted on typing and selection
-        gSignalConnect(labelsW, "changed",
-                       doLabelsOnSelect, data=playState)
-        gSignalConnect(labelsW$getChild(), "activate",
-                       doLabels, data=playState)
-        gvarsBox$packStart(labelsW, expand=FALSE)
-        box$packStart(gvarsBox, expand=FALSE, padding=1)
-
-        box$packStart(gtkVSeparator(), expand=FALSE, padding=1)
-
         ## SETS
         setBox <- gtkVBox()
         ## SUBSET
@@ -1469,7 +1585,7 @@ makeLatticistTool <- function(dat)
         if (!is.null(playState$widgets$latticist))
             playState$widgets$latticist$destroy()
         playState$widgets$latticist <- box
-        playState$widgets$vbox$packStart(box, expand=FALSE)
+        playState$widgets$vbox$packEnd(box, expand=FALSE)
 
         return(NA)
     }

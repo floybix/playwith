@@ -112,8 +112,7 @@ playwith <-
         if (!inherits(myWin, "GtkWindow"))
             stop(paste("Could not create the GTK window.",
                        "Make sure you have recent versions of",
-                       "RGtk2 and the GTK+ libraries.",
-                       "See http://www.ggobi.org/rgtk2/"))
+                       "RGtk2 and the GTK+ libraries."))
         ## set approx window size; NOTE: device size is adjusted below
         myWin["default-width"] <- width * 96
         myWin["default-height"] <- height * 96
@@ -206,7 +205,6 @@ playwith <-
     myHBox$packEnd(rightToolbar, expand=FALSE)
     myVBox$packEnd(statusbarBox, expand=FALSE)
     myVBox$packEnd(bottomToolbar, expand=FALSE)
-    #statusbar["has-resize-grip"] <- TRUE
 
     ## create the plot area
     myDA <- gtkDrawingArea()
@@ -272,26 +270,11 @@ playwith <-
     gSignalConnect(timeScrollbar, "value-changed",
                    time.mode_scrollbar_handler, data=playState)
     timeScrollBox$packStart(timeScrollbar)
-    ## add dummy toolbar buttons to force plot device to approx size
-#    initTbar <- function(tbar, horiz) {
-#        tbar$show()
-#        tbar$insert(quickTool(playState, label="Loading...",
-#                              icon="gtk-execute"), -1)
-#        ## try to force resize
-#        gdkWindowProcessAllUpdates()
-#        while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
-#        if (horiz) tbar$setSizeRequest(-1, tbar$getAllocation()$height)
-#        else tbar$setSizeRequest(tbar$getAllocation()$width, -1)
-#    }
-#    if (length(top.tools)) initTbar(topToolbar, horiz=TRUE)
-#    if (length(bottom.tools)) initTbar(bottomToolbar, horiz=TRUE)
-#    if (length(left.tools)) initTbar(leftToolbar, horiz=FALSE)
-#    if (length(right.tools)) initTbar(rightToolbar, horiz=FALSE)
     myHBox["resize-mode"] <- GtkResizeMode["queue"] ## does nothing?
     ## after resize, remove minimum size constraint from device
     myDA$setSizeRequest(-1, -1)
     ## store the state of this plot window in a new environment
-    ## set defaults -- these can be replaced by explicit arguments
+    ## set per-window options -- these can be replaced by explicit arguments
     playState$page <- 1
     playState$pages <- 1
     playState$is.lattice <- FALSE
@@ -329,12 +312,6 @@ playwith <-
         env$cur.time <- playState$time.vector[env$cur.index]
         env$time.vector <- playState$time.vector
     }
-    ## set initial values of any parameters
-    for (i in seq_along(parameters)) {
-        parname <- names(parameters)[i]
-        parval <- parameters[[i]]
-        assign(parname, parval[1], envir=env)
-    }
     ## construct the state object (playState)
     playState$win <- myWin
     playState$dev <- dev.cur()
@@ -349,6 +326,12 @@ playwith <-
     playState$tools <- tools
     playState$update.actions <- update.actions
     playState$init.actions <- init.actions
+    playState$on.close <- on.close
+    playState$main.function <- main.function
+    playState$.args <-
+        list(missing_time.mode = missing_time.mode,
+             labels = labels,
+             title = title)
     ## TODO: store ids etc in an environment for linking
     playState$ids <- list()
     playState$brushed <- list()
@@ -374,13 +357,36 @@ playwith <-
              statusbarBox = statusbarBox,
              vbox = myVBox,
              hbox = myHBox)
-    playState$on.close <- on.close
-    playState$.args <-
-        list(missing_time.mode = missing_time.mode,
-             data.points = data.points,
-             labels = labels,
-             title = title,
-             main.function = main.function)
+    ## set initial values of any parameters
+    for (i in seq_along(parameters)) {
+        parname <- names(parameters)[i]
+        parval <- parameters[[i]]
+        assign(parname, parval[1], envir=env)
+    }
+    ## make dynamic parameter tools
+    paramTbarNm <- paste("/", playwith.getOption("parameters.toolbar"), sep="")
+    paramTbar <- playState$uiManager$getWidget(paramTbarNm)
+    horiz <- (paramTbar["orientation"] == GtkOrientation["horizontal"])
+    for (i in seq_along(parameters)) {
+        parname <- names(parameters)[i]
+        parval <- parameters[[i]]
+        newTool <- try(parameterControlTool(playState, name=parname,
+                                            value=parval, horizontal=horiz))
+        if (inherits(newTool, "try-error")) next
+        paramTbar$insert(newTool, -1)
+    }
+    ## hide empty toolbars
+    blockRedraws({
+        for (nm in paste("/", c("Top", "Left", "Bottom", "Right"),
+                         "Toolbar", sep="")) {
+            tbar <- playState$uiManager$getWidget(nm)
+            if (length(tbar$getChildren())) tbar$show()
+            else tbar$hide()
+        }
+    })
+    ## try to force redraw
+    gdkWindowProcessAllUpdates()
+    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
     ## do the plot
     playNewPlot(playState)
     invisible(playState)
@@ -445,95 +451,15 @@ playNewPlot <- function(playState)
                          title="Warning", icon="warning")
         }
     }
-
-    ## initialise tools and add them to the toolbars
-    ## note that these may be user-defined constructor functions
-    ## if a constructor evaluates to NA it is skipped
-    populateToolbar <- function(toolbar, tools)
-    {
-        for (i in seq_along(tools)) {
-            myName <- names(tools)[i]
-            if (!any(nchar(myName))) myName <- NA
-            toolFun <- eval(tools[[i]])
-            if (is.character(toolFun)) {
-                myName <- toolFun
-                toolFun <- toolConstructors[[myName]]
-            }
-            if (is.na(myName)) myName <-
-                paste(deparse(substitute(tools)), i, sep="_")
-            if (!is.function(toolFun)) {
-                warning("constructor for ", myName, " is not a function")
-                next
-            }
-            ## call the tool constructor
-            newTool <- try(toolFun(playState))
-            if (inherits(newTool, "try-error") || is.null(newTool)) {
-                warning("constructor for ", myName, " failed")
-                next
-            }
-            if (identical(newTool, NA)) next
-            result <- try(toolbar$insert(newTool, -1))
-            if (inherits(result, "try-error")) next
-            playState$tools[[myName]] <- newTool
-        }
-    }
-    ## set up toolbar tools
-    playState$tools <- list()
-    tbars <- playState$widgets[c("topToolbar", "leftToolbar",
-                                 "bottomToolbar", "rightToolbar")]
-    doToolbars <- quote({
-        for (tbar in tbars) {
-            for (x in rev(tbar$getChildren())) x$destroy()
-        }
-        with(playState$widgets, {
-            populateToolbar(topToolbar, playState$.args$top.tools)
-            populateToolbar(leftToolbar, playState$.args$left.tools)
-            populateToolbar(bottomToolbar, playState$.args$bottom.tools)
-            populateToolbar(rightToolbar, playState$.args$right.tools)
-        })
-        paramToolbar <- playState$widgets[[
-            paste(playwith.getOption("parameters.toolbar"), "Toolbar", sep="") ]]
-        horiz <- playwith.getOption("parameters.toolbar") %in% c("bottom","top")
-        params <- playState$parameters
-        for (i in seq_along(params)) {
-            parname <- names(params)[i]
-            parval <- params[[i]]
-            newTool <- try(parameterControlTool(playState, name=parname,
-                                                value=parval, horizontal=horiz))
-            if (inherits(newTool, "try-error")) next
-            if (i == 1) populateToolbar(paramToolbar, list("~~"))
-            paramToolbar$insert(newTool, -1)
-            populateToolbar(paramToolbar, list("~~"))
-        }
-        for (tbar in tbars) {
-            if (length(tbar$getChildren())) tbar$show()
-            else tbar$hide()
-        }
-    })
- #   if (playState$is.lattice || playState$is.ggplot) eval(doToolbars)
- #   else blockRedraws(eval(doToolbars), playState)
-
-    ## initialise tools for a new plot (see ui.R)
+    ## initialisation actions for a new plot (see uiManager.R)
     initActions(playState)
-    ## hide empty toolbars (TODO: this can not actually change with a new plot...)
-    blockRedraws({
-        for (nm in paste("/", c("Top", "Left", "Bottom", "Right"),
-                         "Toolbar", sep="")) {
-            tbar <- playState$uiManager$getWidget(nm)
-            if (length(tbar$getChildren())) tbar$show()
-            else tbar$hide()
-        }
-    })
-    ## try to force redraw
-    gdkWindowProcessAllUpdates()
-    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
     ## continue
     playPostPlot(result, playState)
 }
 
 playReplot <- function(playState)
 {
-    if (isTRUE(playState$skip.redraws)) return()
+    if (isTRUE(playState$tmp$skip.redraws)) return()
     playState$plot.ready <- FALSE
     on.exit(playState$plot.ready <- TRUE)
     playDevSet(playState)
@@ -599,32 +525,11 @@ playPostPlot <- function(result, playState)
     ## store coordinate system(s)
     generateSpaces(playState)
     playState$plot.ready <- TRUE
-    ## update toolitem and menuitem states
+    ## update toolitem and menuitem states (see uiManager.R)
     updateActions(playState)
     ## and update the pages scrollbar
     pages_post.plot.action(playState$widgets$pageScrollBox,
                            playState=playState)
-
-
-    ## run update actions on buttons
-if (FALSE) {
-    blockRedraws({
-        for (x in playState$tools) {
-            playDevSet(playState)
-            xUpd <- attr(x, "post.plot.action")
-            if (!is.null(xUpd)) {
-                if (!is.function(xUpd)) {
-                    warning("post.plot.action not a function")
-                    next
-                }
-                xUpd(x, playState=playState)
-            }
-        }
-        ## the pages scrollbar
-        pages_post.plot.action(playState$widgets$pageScrollBox,
-                               playState=playState)
-    })
-}
     invisible(result)
 }
 
@@ -793,18 +698,6 @@ gtkmainquit_handler <- function(widget, event, playState)
 }
 
 ## General utility functions
-
-## NOT USED. +.layer approach better i think.
-plotadd <- function(FUN, ..., add.stuff=expression()) {
-    force(FUN)
-    foo <- sys.call()
-    foo[[1]] <- foo[[2]]
-    foo <- foo[-2]
-    foo$add.stuff <- NULL
-    retval <- eval.parent(foo)
-    for (x in add.stuff) eval.parent(x)
-    retval
-}
 
 ## TODO: this fails with one-line inline functions
 deparseOneLine <-

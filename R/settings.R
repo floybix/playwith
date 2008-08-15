@@ -9,7 +9,7 @@
          ## named arguments to playwith():
          new = FALSE,
          width = 6,
-         height = 5,
+         height = 6,
          pointsize = 10,
          eval.args = NA,
          on.close = NULL,

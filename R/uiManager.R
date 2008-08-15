@@ -52,43 +52,33 @@ constructUIManager <- function(playState)
 initActions <- function(playState)
 {
     ## TODO: wrap in try() and maybe catch errors
+    playDevSet(playState)
     initClickActions(playState)
     initIdentifyActions(playState)
     ## custom init actions
     customAct <- c(playwith.getOption("init.actions"),
-                   playwith$init.actions)
+                   playState$init.actions)
     for (x in customAct) {
+        playDevSet(playState)
         if (is.character(x)) x <- get(x)
         if (is.function(x)) x(playState)
         if (is.language(x)) eval(x, playState$env)
-    }
-    ## make dynamic parameter tools
-    ## TODO: make these once only (in playwith())
-    nm <- paste("/", playwith.getOption("parameters.toolbar"), sep="")
-    paramTbar <- playState$uiManager$getWidget(nm)
-    horiz <- (paramTbar["orientation"] == GtkOrientation["horizontal"])
-    params <- playState$parameters
-    for (i in seq_along(params)) {
-        parname <- names(params)[i]
-        parval <- params[[i]]
-        newTool <- try(parameterControlTool(playState, name=parname,
-                                            value=parval, horizontal=horiz))
-        if (inherits(newTool, "try-error")) next
-        paramToolbar$insert(newTool, -1)
     }
 }
 
 updateActions <- function(playState)
 {
     ## TODO: wrap in try() and maybe catch errors
+    playDevSet(playState)
     updateGlobalActions(playState)
     updateClickActions(playState)
     updatePlotActions(playState)
     updateIdentifyActions(playState)
     ## custom update actions
     customAct <- c(playwith.getOption("update.actions"),
-                   playwith$update.actions)
+                   playState$update.actions)
     for (x in customAct) {
+        playDevSet(playState)
         if (is.character(x)) x <- get(x)
         if (is.function(x)) x(playState)
         if (is.language(x)) eval(x, playState$env)

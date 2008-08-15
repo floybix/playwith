@@ -116,7 +116,7 @@ mainCall <- function(playState) {
 
 updateMainCall <- function(playState) {
     ## find which component of the call takes arguments (xlim etc)
-    main.function <- playState$.args$main.function
+    main.function <- playState$main.function
     tmpCall <- playState$call
     okCallPath <- function(tmpCall, main.function) {
         tmpFun <- eval(tmpCall[[1]])
@@ -174,17 +174,14 @@ playSetFreezeGUI <- function(playState, frozen)
 {
     playState$tmp$now.interacting <- frozen
     with(playState$widgets, {
+        ## TODO: freeze GlobalActions etc?
         topToolbar["sensitive"] <- !frozen
         leftToolbar["sensitive"] <- !frozen
         rightToolbar["sensitive"] <- !frozen
         ## leave bottom toolbar alone as this is where parameter
         ## control tools go (otherwise long slider drags interrupted).
         ## these tools check plot.ready before redrawing (threads...).
-        #bottomToolbar["sensitive"] <- !frozen
         ## similarly, leave page and time scrollbars as sensitive.
-        #pageScrollBox["sensitive"] <- !frozen
-        #timeScrollBox["sensitive"] <- !frozen
-        #callToolbar["sensitive"] <- !frozen
         if (!is.null(playState$widgets$latticist))
             latticist["sensitive"] <- !frozen
     })
@@ -194,8 +191,8 @@ playSetFreezeGUI <- function(playState, frozen)
 
 blockRedraws <- function(expr, playState = playDevCur())
 {
-    oval <- playState$skip.redraws
-    playState$skip.redraws <- TRUE
+    oval <- playState$tmp$skip.redraws
+    playState$tmp$skip.redraws <- TRUE
     da <- playState$widgets$drawingArea
     da$setSizeRequest(da$getAllocation()$width, da$getAllocation()$height)
                                         #playState$win$setGeometryHints(da, list(max.width=myW, min.width=myW,
@@ -205,7 +202,7 @@ blockRedraws <- function(expr, playState = playDevCur())
                                         #da$window$thawUpdates()
                                         #playState$win$setGeometryHints(da, list())
     da$setSizeRequest(-1, -1)
-    playState$skip.redraws <- oval
+    playState$tmp$skip.redraws <- oval
     foo
 }
 

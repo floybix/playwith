@@ -41,8 +41,9 @@
       <menuitem action='SaveIDs'/>
     </menu>
     <menu action='ToolsMenu'>
-      <menuitem action='EditCall'/>
       <menuitem action='PlotSettings'/>
+      <menuitem action='EditCall'/>
+      <menuitem action='EditAnnotations'/>
       <separator/>
       <menuitem action='Expand'/>
       <menuitem action='Zoomfit'/>
@@ -52,7 +53,6 @@
       <menuitem action='Annotation'/>
       <menuitem action='Arrow'/>
       <menuitem action='UndoAnnotation'/>
-      <menuitem action='EditAnnotations'/>
       <menuitem action='Clear'/>
       <separator/>
     </menu>

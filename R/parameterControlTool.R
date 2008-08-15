@@ -60,6 +60,9 @@ parameterControlTool <-
         if (!playState$plot.ready) return()
         playReplot(playState)
     }
+    ## construct widget based on the type of value.
+    ## note that the initial value has been set in playwith()
+    ## integer or AsIs : spinbutton
     if (is.integer(value) || inherits(value, "AsIs")) {
         if (inherits(value, "AsIs")) value <- as.vector(value)
         box <- gtkVBox()
@@ -82,6 +85,7 @@ parameterControlTool <-
         foo$add(box)
         return(foo)
     }
+    ## numeric: entry or slider
     if (is.numeric(value)) {
         if (length(value) == 1) {
             ## entry coercing to numeric
@@ -128,6 +132,7 @@ parameterControlTool <-
         foo$add(box)
         return(foo)
     }
+    ## character: entry or combobox
     if (is.character(value)) {
         box <- gtkVBox()
         box$packStart(gtkLabel(label))
@@ -159,6 +164,7 @@ parameterControlTool <-
         foo$add(box)
         return(foo)
     }
+    ## logical: checkbutton
     if (is.logical(value)) {
         ## toggle button / checkbox
         widget <- gtkCheckButton(label)

@@ -3,10 +3,9 @@
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
-
 .defaultPlaywithOptions <- function()
     list(
-         ## named arguments to playwith():
+         ## explicit arguments to playwith():
          new = FALSE,
          width = 6,
          height = 6,
@@ -14,13 +13,79 @@
          eval.args = NA,
          on.close = NULL,
          ## implicit arguments to playwith():
-         ## (can be over-ridden by explicit arguments)
          annotation.mode = "plot",
          clip.annotations = FALSE,
          label.style = NULL,
          label.offset = 0.5,
          arrow.style = NULL,
          arrow.arrow = quote(arrow(length=unit(0.15, "inches"))),
+         ## themes:
+         themes = alist(
+         "Default" = standard.theme("pdf"),
+         "WhiteBG" = col.whitebg(),
+         "Greyscale (for print)" = standard.theme("postscript"),
+         "DarkBG" = standard.theme("X11"),
+         "ColorBrewer 1" = custom.theme(
+             symbol = brewer.pal(n = 9, name = "Set1")[c(2:1, 3:9)], ## blue first
+             fill = brewer.pal(n = 8, name = "Set2"),
+             region = brewer.pal(n = 9, name = "YlOrRd")),
+         "ColorBrewer 2" = custom.theme( ## the defaults
+             symbol = brewer.pal(n = 8, name = "Dark2"),
+             fill = brewer.pal(n = 12, name = "Set3"),
+             region = brewer.pal(n = 11, name = "Spectral")),
+         "ColorBrewer DarkBG 1" = modifyList(
+             custom.theme(
+                 symbol = brewer.pal(n = 9, name = "Set1")[c(6:8, 1:5)], ## yellow, brown, pink...
+                 fill = brewer.pal(n = 8, name = "Set2")[c(4, 1:3, 5:8)], ## purple first
+                 region = brewer.pal(n = 9, name = "YlOrRd"),
+                 reference = "#aaaaaa", bg = "#909090", fg = "black"),
+             list(plot.line = list(lwd = 2),
+                  superpose.line = list(lwd = 2))),
+         "ColorBrewer DarkBG 2" = modifyList(
+             custom.theme(
+                 symbol = brewer.pal(n = 8, name = "Dark2")[c(4, 2:3, 5:6, 7:8)], ## pink, brown, purple...
+                 fill = brewer.pal(n = 8, name = "Pastel2"),
+                 region = brewer.pal(n = 11, name = "Spectral"),
+                 reference = "#aaaaaa", bg = "#909090", fg = "black"),
+             list(plot.line = list(lwd = 2),
+                  superpose.line = list(lwd = 2)))
+         ),
+         styleOptions = alist(
+         "Filled points" =
+             simpleTheme(pch = 16),
+         "Translucent points" =
+             simpleTheme(alpha.points = 0.5),
+         "Thick lines" =
+             list(plot.line = list(lwd = 2),
+                  superpose.line = list(lwd = 2)),
+         "Grey strips" =
+             list(strip.background = list(col = grey(7:1/8)),
+                  strip.shingle = list(col = grey(6:0/8))),
+         "Black background" =
+             modifyList(custom.theme(symbol = trellis.par.get("superpose.symbol")$col,
+                          fill = trellis.par.get("superpose.polygon")$col,
+                          region = trellis.par.get("regions")$col,
+                          reference = "#333333", bg = "black", fg = "white"),
+                        list(add.text = list(col = "yellow"),
+                             plot.line = list(lwd = 2),
+                             superpose.line = list(lwd = 2),
+                             plot.polygon = list(border = "transparent"),
+                             superpose.polygon = list(border = "transparent"),
+                             strip.background = list(col = grey(2:8/8)),
+                             strip.shingle = list(col = grey(1:7/8))))
+         ),
+         colorKeyPalettes = alist(
+         "Seq. blues (YlGnBu)" =
+             list(regions = colorRampPalette(brewer.pal(9, "YlGnBu"))(100)),
+         "Seq. oranges (YlOrRd)" =
+             list(regions = colorRampPalette(brewer.pal(9, "YlOrRd"))(100)),
+         "Seq. greys (Greys)" =
+             list(regions = colorRampPalette(brewer.pal(9, "Greys"))(100)),
+         "Div. red/blue (Spectral)" =
+             list(regions = colorRampPalette(brewer.pal(11, "Spectral"))(100)),
+         "Div. dry/wet (BrBG)" =
+             list(regions = colorRampPalette(brewer.pal(11, "BrBG"))(100))
+         ),
          ## global:
          save.as.format = "pdf",
          ui.menus.xml = system.file("etc", "ui.menus.xml", package="playwith"),

@@ -37,10 +37,10 @@ initIdentifyActions <- function(playState)
         ## lattice package:
         if (isLatt3D) return()
         if (playState$callName %in%
-            c("splom", "contourplot", "levelplot",
+            c("splom", "contourplot",
               "histogram", "densityplot", "barchart")) return()
-        ## TODO: what about tileplot? z ~ x * y
-        ## what about parellel?
+        if (playState$callName %in% "marginal.plot") return()
+        ## what about parallel?
         ## from graphics package:
         if (playState$callName %in%
             c("hist", "barplot", "spineplot", "mosaic",

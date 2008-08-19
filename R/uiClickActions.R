@@ -36,7 +36,7 @@ updateClickActions <- function(playState)
                                      "Alt-click to zoom out",
                                      "Middle-click to reset"),
                         if (nav3D) c("Drag to rotate (hold Shift to constrain)",
-                                        # "Alt-drag to zoom", "Alt-click to zoom out"
+                                     "Alt-drag to zoom", "Alt-click to zoom out",
                                      "Middle-click to reset")
                         ), collapse = ", "))
     ## TODO: "Right-click for more" (context menu)
@@ -54,10 +54,20 @@ device.click_handler <- function(widget, event, playState)
     y <- event$y
     ## work out which actions are relevant to the plot
     actions <- playState$tmp$click.actions
-    isCtrlClick <- as.flag(event$state) & GdkModifierType["control-mask"]
+    isCtrlClick <- (as.flag(event$state) & GdkModifierType["control-mask"])
+    isAltClick <- ((as.flag(event$state) & GdkModifierType["mod1-mask"]) ||
+                   (as.flag(event$state) & GdkModifierType["mod2-mask"]))
+    isShiftClick <- (as.flag(event$state) & GdkModifierType["shift-mask"])
+    isPlainClick <- !isCtrlClick && !isAltClick && !isShiftClick
+    ## take actions
     if ((event$button == 1) && !isCtrlClick) {
         ## standard (left) mouse button
-        foo <- playClickOrDrag(playState, x0=x, y0=y, shape="rect")
+        dragShape <- "rect"
+        if (actions$nav3D && !isAltClick)
+            dragShape <- "line"
+        ## handle click or drag
+        foo <- playClickOrDrag(playState, x0=x, y0=y,
+                               shape=dragShape)
         if (is.null(foo)) {
             ## drag went off device
             coordsCore(playState, NULL)
@@ -71,28 +81,33 @@ device.click_handler <- function(widget, event, playState)
         if (foo$is.click) {
             ## click, not drag
             coordsCore(playState, foo)
-            if (foo$modifiers & GdkModifierType["mod1-mask"]) {
-                ## alt-click
-                if (actions$nav2D)
+            if (actions$nav2D) {
+                if (isAltClick)
                     zoomoutCore(playState, foo)
-            } else
-            if (foo$modifiers & GdkModifierType["shift-mask"]) {
-                ## shift-click
-                if (actions$ident)
+            }
+            if (actions$nav3D) {
+                if (isAltClick)
+                    zoomout3DCore(playState, foo)
+            }
+            if (actions$ident) {
+                if (isShiftClick)
                     identifyCore(playState, foo, deidentify=TRUE)
-            } else {
-                ## click
-                if (actions$ident)
+                if (isPlainClick)
                     identifyCore(playState, foo)
             }
         }
         else {
             ## drag
             coordsCore(playState, NULL)
-            if (actions$nav2D)
+            if (actions$nav2D) {
                 zoomCore(playState, foo)
-            if (actions$nav3D)
-                NA ## TODO
+            }
+            if (actions$nav3D) {
+                if (!isAltClick)
+                    rotate3DCore(playState, foo)
+                if (isAltClick)
+                    zoom3DCore(playState, foo)
+            }
         }
     } else {
         coordsCore(playState, NULL)
@@ -164,5 +179,67 @@ zoomoutCore <- function(playState, foo)
     ## this converts from raw numeric to original format (including unlog)
     if (nav.x) rawXLim(playState) <- xlim
     if (nav.y) rawYLim(playState) <- ylim
+    playReplot(playState)
+}
+
+zoom3DCore <- function(playState, foo)
+{
+    ## work out zoom factor by size of drag
+    ## ideally this would set xlim/ylim/zlim to drag region?
+    xlim <- rawXLim(playState)
+    ylim <- rawYLim(playState)
+    xfactor <- abs(diff(foo$coords$x)) / abs(diff(xlim))
+    yfactor <- abs(diff(foo$coords$y)) / abs(diff(ylim))
+    zoomfactor <- 1 / max(xfactor, yfactor)
+    zoom <- callArg(playState, "zoom")
+    if (is.null(zoom)) zoom <- 0.8
+    callArg(playState, "zoom") <- signif(zoom * zoomfactor, 3)
+    playReplot(playState)
+}
+
+zoomout3DCore <- function(playState, foo)
+{
+    zoom <- callArg(playState, "zoom")
+    if (is.null(zoom)) zoom <- 0.8
+    callArg(playState, "zoom") <- signif(zoom / 1.25, 3)
+    playReplot(playState)
+}
+
+rotate3DCore <- function(playState, foo)
+{
+    ## work out current viewpoint (rotation)
+    screen <- callArg(playState, "screen")
+    if (is.null(screen)) screen <- list(z=40, x=-60)
+    R.mat <- callArg(playState, "R.mat")
+    if (is.null(R.mat)) R.mat <- diag(4)
+    ## incorporate existing 'screen' into existing 'R.mat'
+    R.mat <- ltransform3dMatrix(screen, R.mat)
+    ## apply rotation defined by drag (direction and length)
+    ## drag down corresponds to a positive 'x' arg
+    ## drag right corresponds to a positive 'y' arg
+    ## drag anticlockwise (in corner) corresponds to a positive 'z' arg
+    pan.x <- rawXLim(playState)
+    pan.y <- rawYLim(playState)
+    x <- foo$coords$x
+    y <- foo$coords$y
+    xdelta <- diff(x)
+    ydelta <- diff(y)
+    angle <- atan2(y[2], x[2]) - atan2(y[1], x[1])
+    dist <- c(max(abs(x/pan.x)[1], abs(y/pan.y)[1]),
+              max(abs(x/pan.x)[2], abs(y/pan.y)[2]))
+    if ((abs(angle) < pi/2) && all(dist > 0.5)) {
+        rot <- list(z = 180 * angle / (2*pi))
+    } else {
+        ## TODO: should normalise by panel limits?
+        rot <- list(y = xdelta * 180,
+                    x = -ydelta * 180)
+    }
+    R.mat <- ltransform3dMatrix(rot, R.mat)
+    R.mat <- round(R.mat, digits = 3)
+    callArg(playState, "R.mat") <- call("matrix", c(R.mat), nc = 4)
+    callArg(playState, "screen") <- list() ## replace default
+    ## keep 3D scales on the same axes
+    ## (it is confusing if they switch while rotating)
+    callArg(playState, "scpos") <- list(x = 1, y = 8, z = 4)
     playReplot(playState)
 }

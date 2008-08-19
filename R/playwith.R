@@ -701,9 +701,9 @@ gtkmainquit_handler <- function(widget, event, playState)
 
 ## TODO: this fails with one-line inline functions
 deparseOneLine <-
-    function(expr, width.cutoff=500, ...)
+    function(expr, width.cutoff = 500, ...)
 {
-    tmp <- deparse(expr, width.cutoff=width.cutoff, ...)
+    tmp <- deparse(expr, width.cutoff = width.cutoff, ...)
     indents <- attr(regexpr("^ *", tmp), "match.length")
     breaks <- c(diff(indents) <= 0, FALSE)
     tmp <- gsub("^ +", "", tmp)
@@ -713,6 +713,8 @@ deparseOneLine <-
     tmp <- gsub("\\{;", "\\{", tmp)
     tmp <- gsub(";\\}", " \\}", tmp)
     tmp <- gsub(";\\{", " \\{", tmp)
+    ## update: need this for long inline vectors:
+    tmp <- gsub(";,", ",", tmp)
     tmp
 }
 

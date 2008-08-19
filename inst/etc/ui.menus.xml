@@ -30,6 +30,11 @@
       <separator/>
       <menuitem action='Source'/>
     </menu>
+    <menu action='StyleMenu'>
+      <menuitem action='CustomStyle'/>
+      <separator/>
+      <menuitem action='ApplyStyleToBase'/>
+    </menu>
     <menu action='LabelsMenu'>
       <menuitem action='SetLabelsTo'/>
       <menuitem action='SetLabelStyle'/>
@@ -62,10 +67,6 @@
       <menuitem action='SaveData'/>
       <separator/>
       <menuitem action='PurgeObjects'/>
-    </menu>
-    <menu action='ThemeMenu'>
-      <separator/>
-      <menuitem action='CustomTheme'/>
     </menu>
     <menu action='HelpMenu'>
       <menuitem action='HelpPlot'/>

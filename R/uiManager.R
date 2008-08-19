@@ -9,10 +9,10 @@ constructUIManager <- function(playState)
         list(
              list("FileMenu", NULL, "_File"),
              list("ViewMenu", NULL, "_View"),
+             list("StyleMenu", NULL, "_Style"),
              list("LabelsMenu", NULL, "_Labels"),
              list("ToolsMenu", NULL, "_Tools"),
              list("DataMenu", NULL, "_Data"),
-             list("ThemeMenu", NULL, "The_me"),
              list("HelpMenu", NULL, "_Help")
              )
     menuGroup <- gtkActionGroupNew("Menus")
@@ -22,7 +22,6 @@ constructUIManager <- function(playState)
     window <- playState$win
     window$setData("ui-manager", manager)
     manager$insertActionGroup(plotActionGroup(playState), 0)
-    manager$insertActionGroup(plot3DActionGroup(playState), 0)
     manager$insertActionGroup(identifyActionGroup(playState), 0)
     manager$insertActionGroup(annotationActionGroup(playState), 0)
     manager$insertActionGroup(globalActionGroup(playState), 0)
@@ -45,6 +44,40 @@ constructUIManager <- function(playState)
         uifile <- playwith.getOption(opt)
         if (is.character(uifile) && (nchar(uifile) > 0))
             manager$addUiFromFile(uifile)
+    }
+    ## add style items
+    # manager$addUi(manager$newMergeId(), path, name, action = NULL, type, top)
+    # type = GtkUIManagerItemType["auto"]
+    # gtkActionGroup("foo")
+    # manager$insertActionGroup(...)
+    styleMenu <- manager$getWidget("/MenuBar/StyleMenu")$getSubmenu()
+    styleMenu$append(gtkSeparatorMenuItem())
+    set.style_handler<- function(widget, theme) {
+        trellis.par.set(eval(theme))
+        playReplot(playState)
+    }
+    ## themes
+    themes <- playwith.getOption("themes")
+    foo <- gtkMenuItem("Themes:")
+    foo["sensitive"] <- FALSE
+    styleMenu$append(foo)
+    for (nm in names(themes)) {
+        item <- gtkMenuItem(nm)
+        styleMenu$append(item)
+        gSignalConnect(item, "activate", set.style_handler,
+                       data = themes[[nm]])
+    }
+    styleMenu$append(gtkSeparatorMenuItem())
+    ## style options
+    styleOptions <- playwith.getOption("styleOptions")
+    foo <- gtkMenuItem("Style options:")
+    foo["sensitive"] <- FALSE
+    styleMenu$append(foo)
+    for (nm in names(styleOptions)) {
+        item <- gtkMenuItem(nm)
+        styleMenu$append(item)
+        gSignalConnect(item, "activate", set.style_handler,
+                       data = styleOptions[[nm]])
     }
     manager
 }

@@ -40,8 +40,12 @@ updatePlotActions <- function(playState)
     aGroup$getAction("PlotSettings")$setVisible(hasArgs)
     ## Zoomfit
     nonFit <- hasArgs && (!is.null(callArg(playState, "xlim")) ||
-                          !is.null(callArg(playState, "ylim")) ||
-                          !is.null(callArg(playState, "zlim")))
+                          !is.null(callArg(playState, "ylim")))
+    if (isLatt3D) nonFit <- (nonFit ||
+                             !is.null(callArg(playState, "zlim")) ||
+                             !is.null(callArg(playState, "zoom")) ||
+                             !is.null(callArg(playState, "screen")) ||
+                             !is.null(callArg(playState, "R.mat")))
     aGroup$getAction("Zoomfit")$setVisible(nonFit)
     ## ZeroY
     eps <- .Machine$double.eps * 2
@@ -80,10 +84,17 @@ updatePlotActions <- function(playState)
 
 zoomfit_handler <- function(widget, playState)
 {
+    isLatt <- playState$is.lattice
+    isLatt3D <- isLatt && !is.null(playState$trellis$panel.args.common$scales.3d)
     ## update scales
     callArg(playState, "xlim") <- NULL
     callArg(playState, "ylim") <- NULL
-    callArg(playState, "zlim") <- NULL
+    if (isLatt3D) {
+        callArg(playState, "zlim") <- NULL
+        callArg(playState, "zoom") <- NULL
+        callArg(playState, "screen") <- NULL
+        callArg(playState, "R.mat") <- NULL
+    }
     playReplot(playState)
 }
 

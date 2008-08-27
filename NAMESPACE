@@ -1,8 +1,10 @@
 
 import(RGtk2)
+import(gWidgets)
 import(gridBase)
-importFrom(graphics, par, plot)
+import(grid)
 import(grDevices)
+importFrom(graphics, par, plot)
 import(utils)
 
 # the main function
@@ -18,6 +20,14 @@ export(
        reorderByFreq,
        cutEq,
        try.prepanel.loess)
+
+## latticeStyleGUI
+export(
+       latticeStyleGUI,
+       panel.usertext,
+       latticeStyleDemo,
+       custom.theme.2,
+       custom.theme.black)
 
 # settings
 export(

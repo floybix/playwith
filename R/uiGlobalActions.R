@@ -9,7 +9,7 @@ globalActionGroup <- function(playState)
         list( ## : name, stock icon, label, accelerator, tooltip, callback
              list("Clone", "gtk-new", "Clo_ne window", "<Ctrl>N", "Duplicate this window", clone_handler),
              list("Save", "gtk-save", "_Save", "<Ctrl>S", "Export current plot to an image file", save_handler),
-             list("Copy", "gtk-copy", "_Copy", "<Ctrl>C", "Copy current plot as an image", copy_handler),
+             list("Copy", "gtk-copy", "_Copy", "<Ctrl><Shift>C", "Copy current plot as an image", copy_handler),
              list("Print", "gtk-print", "_Print", "<Ctrl>P", "Print current plot", print_handler),
              list("Close", "gtk-close", "Close", "<Ctrl>W", "Close window and device", close_handler),
              list("SetSize", NULL, "Set device _size...", "<Ctrl>0", NULL, set.size_handler),
@@ -22,7 +22,7 @@ globalActionGroup <- function(playState)
              list("Forward", "gtk-go-forward", "Forward", "<Alt>Right", "Go to next plot call", forward_handler),
              list("Redraw", "gtk-refresh", "Re_draw", "<Ctrl>R", NULL, redraw_handler),
              list("Reload", "gtk-refresh", "_Reload and redraw", "<Ctrl><Shift>R", NULL, reload_handler),
-             list("SaveCode", "gtk-save", "Save c_ode", "<Ctrl><Shift>S", "Save R code for this plot and (optionally) data", save.code_handler),
+             list("SaveCode", "gtk-save", "Save c_ode", "<Ctrl><Shift>S", "Save R code for this plot (and optionally data)", save.code_handler),
              list("Source", NULL, "Plot s_ource", "<Ctrl>U", NULL, view.source_handler),
              list("HelpPlot", "gtk-help", "_Help for this plot", "F1", "Open help page for this plot", help_handler),
              list("HelpPlaywith", NULL, "help(playwith)", NULL, NULL, help.playwith_handler),
@@ -297,7 +297,10 @@ incr.font_handler <- function(widget, playState)
 decr.font_handler <- function(widget, playState)
     NA
 
-custom.theme_handler <- function(widget, playState)
+custom.style_handler <- function(widget, playState)
+    NA
+
+apply.style.to.base_handler <- function(widget, playState)
     NA
 
 back_handler <- function(widget, playState) {

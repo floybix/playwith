@@ -223,8 +223,6 @@ playwith <-
                    data=playState)
     gSignalConnect(myHBox, "remove", devoff_handler,
                    data=playState, after=TRUE)
-    ## initialise trellis settings for the device
-    trellis.device(new=FALSE)
     ## create the page scrollbar
     pageScrollBox <- gtkVBox(show=FALSE)
     myHBox$packStart(pageScrollBox, expand=FALSE)

@@ -227,7 +227,8 @@ rotate3DCore <- function(playState, foo)
     angle <- atan2(y[2], x[2]) - atan2(y[1], x[1])
     dist <- c(max(abs(x/pan.x)[1], abs(y/pan.y)[1]),
               max(abs(x/pan.x)[2], abs(y/pan.y)[2]))
-    if ((abs(angle) < pi/2) && all(dist > 0.5)) {
+    ## TODO: avoid threshold for changing behaviour -- should be gradual
+    if ((abs(angle) < pi/2) && all(dist > 0.7)) {
         rot <- list(z = 180 * angle / (2*pi))
     } else {
         ## TODO: should normalise by panel limits?
@@ -240,6 +241,7 @@ rotate3DCore <- function(playState, foo)
     callArg(playState, "screen") <- list() ## replace default
     ## keep 3D scales on the same axes
     ## (it is confusing if they switch while rotating)
-    callArg(playState, "scpos") <- list(x = 1, y = 8, z = 4)
+    ## ## no, bad for long axis labels
+    #callArg(playState, "scpos") <- list(x = 1, y = 8, z = 4)
     playReplot(playState)
 }

@@ -146,9 +146,11 @@ updateMainCall <- function(playState) {
         }
     }
     if (isTRUE(main.call.index)) main.call.index <- NA ## top-level
-    playState$main.call.index <- main.call.index
     ## check whether the called function accepts arguments
-    playState$accepts.arguments <- !is.null(playState$main.call.index)
+    playState$accepts.arguments <- !is.null(main.call.index)
+    ## set index to top-level even if looks invalid, so callArg() works
+    if (is.null(main.call.index)) main.call.index <- NA ## top-level
+    playState$main.call.index <- main.call.index
     playState$callName <- ""
     ## put call into canonical form, but with first argument un-named
     if (playState$accepts.arguments) {

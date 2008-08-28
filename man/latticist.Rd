@@ -3,7 +3,7 @@
 \alias{try.prepanel.loess}
 \title{ A Lattice GUI }
 \description{
-  Interactively visualise a data set using \code{\link[lattice]{Lattice}} displays.
+  Interactively explore a data set using \code{\link[lattice]{Lattice}} displays.
 }
 \usage{
 latticist(dat,
@@ -40,11 +40,6 @@ latticist(dat,
   \code{source("http://bioconductor.org/biocLite.R")}
 
   \code{biocLite("hexbin")}
-
-  To change the style of lattice graphics, use \code{lattice.options(default.theme=...)}.
-See \code{\link[lattice]{show.settings}},
-\code{\link[lattice]{simpleTheme}}
-and \code{\link[latticeExtra]{custom.theme}}.
 }
 \value{
   invisibly returns the \code{playState} object representing the plot

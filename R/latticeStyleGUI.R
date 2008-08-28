@@ -306,16 +306,6 @@ latticeStyleGUI <-
     }
 
     ## CUSTOM WIDGETS
-    gedit <- function(..., width = 25) {
-        ## hack to resize gedit fields
-        ## (broken in gWidgetsRGtk2 0.0-38)
-        foo <- gWidgets::gedit(..., width = width)
-        if (inherits(guiToolkit(), "guiWidgetsToolkitRGtk2")) {
-            foo.gtk <- getToolkitWidget(foo)
-            foo.gtk["width-chars"] <- width
-        }
-        foo
-    }
     gdroplist <- function(..., width = 80) {
         foo <- gWidgets::gdroplist(...)
         size(foo) <- c(width, -1)
@@ -979,5 +969,16 @@ custom.theme.black <-
                     strip.shingle = list(col = grey(2:7/8)))
     if (etc)
         foo <- modifyList(foo, etcList)
+    foo
+}
+
+gedit <- function(..., width = 25) {
+    ## hack to resize gedit fields
+    ## (broken in gWidgetsRGtk2 0.0-38)
+    foo <- gWidgets::gedit(..., width = width)
+    if (inherits(guiToolkit(), "guiWidgetsToolkitRGtk2")) {
+        foo.gtk <- getToolkitWidget(foo)
+        foo.gtk["width-chars"] <- width
+    }
     foo
 }

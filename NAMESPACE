@@ -2,7 +2,7 @@
 import(RGtk2)
 import(gWidgets)
 import(gridBase)
-import(grid)
+#import(grid) ## gridBase needs grid attached
 import(grDevices)
 importFrom(graphics, par, plot)
 import(utils)

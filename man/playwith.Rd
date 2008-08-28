@@ -14,21 +14,17 @@ playwith(expr,
          labels = NULL,
          data.points = NULL,
          viewport = NULL,
-         top.tools = playwith.getOption("top.tools"),
-         left.tools = playwith.getOption("left.tools"),
-         bottom.tools = playwith.getOption("bottom.tools"),
-         right.tools = playwith.getOption("right.tools"),
          parameters = list(),
+         tools = list(),
+         update.actions = list(),
+         init.actions = list(),
          ...,
          width = playwith.getOption("width"),
          height = playwith.getOption("height"),
          pointsize = playwith.getOption("pointsize"),
-         modal = FALSE,
-         on.close = NULL,
-         show.call = TRUE,
          eval.args = playwith.getOption("eval.args"),
-         invert.match = FALSE,
-         envir = parent.frame(),
+         on.close = playwith.getOption("on.close"),
+         modal = FALSE,
          playState = if (!new) playDevCur(),
          plot.call,
          main.function)
@@ -47,13 +43,6 @@ playwith(expr,
   \item{viewport}{ name or \code{\link[grid]{vpPath}} of the \code{\link[grid]{viewport}}
     representing the data space. This allows interaction with grid graphics plots
     (but ignore this for Lattice plots). }
-  \item{top.tools, left.tools, bottom.tools, right.tools}{
-    each a list of tools for toolbars at the top, left, bottom or right sides of the window.
-    Each list element should be the name of one of the pre-defined tools,
-    or a function to construct a \code{\link[RGtk2]{gtkToolItem}}.
-    See \link{playTools} for a description of the pre-defined tools,
-    and \link{playwith.API} for help on defining new tools.
-  }
   \item{parameters}{
     defines simple tools for controlling values of any parameters
     appearing in the plot call. This must be a named list, where the value given for
@@ -71,6 +60,8 @@ playwith(expr,
       \item \code{logical}: creates a checkbox.
     }
   }
+  \item{tools}{  }
+
   \item{\dots}{ extra arguments are stored in the \code{\link{playState}} object.
     These can then be accessed by user-defined tools. The default tools will recognise the following
     extra arguments:
@@ -130,24 +121,18 @@ playwith(expr,
     }
   }
   \item{width, height}{ initial size of the plot device in inches. }
-  \item{pointsize}{ default point size for text, used in the
+  \item{pointsize}{ default point size for text in the
     \code{\link[cairoDevice]{Cairo}} device. }
-  \item{modal}{ whether the window is modal: if \code{TRUE},
-    the session will freeze until the window is closed. }
+  \item{eval.args}{ whether to evaluate the plot call arguments: can be
+    \code{TRUE}, \code{FALSE}, \code{NA} (don't eval global vars)
+    or a \link[=regex]{regular expression} matching symbols to evaluate.
+    Or a list. See below. }
   \item{on.close}{ a function to be called when the user closes the plot
     window. The \code{\link{playState}} object
     will passed to the function. If the function returns \code{TRUE},
     the window will not be closed. }
-  \item{show.call}{ set to \code{FALSE} to hide the plot call text-box
-    ("address bar") and associated buttons.}
-  \item{eval.args}{ whether to evaluate the plot call arguments: can be
-    \code{TRUE}, \code{FALSE}, \code{NA} (don't eval global vars)
-    or a \link[=regex]{regular expression} matching symbols to evaluate.
-    See below. }
-  \item{invert.match}{ whether to evaluate arguments that do NOT match
-    the  regular expression given in \code{eval.args}. }
-  \item{envir}{ \code{\link{environment}} to use in evaluating the call
-    arguments (see \code{eval.args}) }
+  \item{modal}{ whether the window is modal: if \code{TRUE},
+    the session will freeze until the window is closed. }
   \item{playState}{ the \code{\link{playState}} object for an existing plot window.
     If given, the new plot will appear in that window, replacing the old plot.
     This over-rides the \code{new} argument.}
@@ -160,7 +145,7 @@ playwith(expr,
 }
 \details{
   This function opens a GTK+ window containing a plot device
-  (from the \code{cairoDevice} package) and several toolbars.
+  (from the \pkg{cairoDevice} package) and several toolbars.
   There is a call toolbar (similar to the "address bar" of a web browser) at the top,
   showing the current plot call, which can also be edited in-place.
   Then there are up to four toolbars, one on each side of the plot.
@@ -178,11 +163,11 @@ playwith(expr,
 
   Four types of plots are handled somewhat differently:
   \itemize{
-    \item Lattice graphics: recognised by returning an object of class
+    \item \pkg{Lattice} graphics: recognised by returning an object of class
     \code{trellis}. This is the best-supported case.
-    \item ggplot2 graphics: recognised by returning an object of class \code{ggplot}.
+    \item \pkg{ggplot2} graphics: recognised by returning an object of class \code{ggplot}.
     This case is rather poorly supported.
-    \item other grid graphics: you must give the \code{viewport}
+    \item other \pkg{grid} graphics: you must give the \code{viewport}
     argument to enable interaction.
     \item base graphics: this is the default case. If a multiple-plot
     layout is used, interaction can only work in the last sub-plot, i.e.
@@ -235,17 +220,17 @@ playwith(expr,
   as with \code{eval.args=TRUE}. In this case you can set \code{invert.match=TRUE}
   to store variables that are not matched.
   For example \code{eval.args="^tmp"} will store variables whose names
-  begin with "tmp"; \code{eval.args="^foo$", invert.match=TRUE} will store
+  begin with "tmp"; \code{eval.args=list("^foo$", invert.match=TRUE)} will store
   everything except \code{foo}.
 
-  \emph{Warning:} function calls appearing in the plot call will be evaluated each
+  \emph{Note:} function calls appearing in the plot call will be evaluated each
   time the plot is updated -- so random data as in \code{plot(rnorm(100))}
   will keep changing, with confusing consequences! You should therefore
   generate random data prior to the plot call. Changes to variables
   in the workspace (if they are not stored locally) may also cause inconsistencies in previously generated
   plots.
 
-  Note also that the playwith device will tend to make itself the active
+  \emph{Warning:} the playwith device will tend to make itself the active
   device any time it is clicked on, so be careful if any other devices
   are left open.
 }
@@ -348,9 +333,9 @@ playwith( {
 }, data.points = pts, labels = labs)
 
 ## Simple spin and zoom for a 3D Lattice plot.
-## Coming soon: drag on the plot to rotate in 3D.
-playwith(cloud(depth ~ long * lat, quakes, screen = list()))
-## screen = list(y = 180, z = -30, x = -60)
+## Drag on the plot to rotate in 3D.
+playwith(cloud(-depth ~ long * lat, quakes,
+    zlab = "altitude", screen = list()))
 
 ## Brushing a multivariate scatterplot.
 playwith(splom(environmental))
@@ -403,14 +388,11 @@ doLocalStuff <- function(...) {
    y_local <- rnorm(100)
    angle <- (atan2(y_local, x_global) / (2*pi)) + 0.5
    color <- hsv(h = angle, v = 0.75)
-   mkpolys <- function(z) {
-      p <- runif(4*length(z), -0.05, 0.05)
-      p[4*seq(z)-3] <- z
-      p[4*seq(z)] <- NA; p
+   doRays <- function(x, y, col) {
+      segments(0, 0, x, y, col = col)
    }
    playwith(plot(x_global, y_local, pch = 8, col = color,
-      panel.first = polygon(mkpolys(x_global), mkpolys(y_local),
-                            col = color, border = NA)),
+      panel.first = doRays(x_global, y_local, color)),
    ...)
 }
 doLocalStuff(title = "locals only") ## eval.args = NA is default
@@ -433,16 +415,16 @@ gc()
 bigobj <- rpois(5000000, 1)
 object.size(bigobj) / 1048576 ## in MB
 gc()
-playwith(qqmath(~ bigobj, f.value=ppoints(500)),
-   data.points=NA, labels=NA, time.mode=FALSE)
+playwith(qqmath(~ bigobj, f.value = ppoints(500)),
+   data.points = NA, labels = NA, time.mode = FALSE)
 playDevOff()
 gc()
 ## or generate the trellis object first:
-trel <- qqmath(~ bigobj, f.value=ppoints(500))
+trel <- qqmath(~ bigobj, f.value = ppoints(500))
 playwith(update(trel))
 rm(trel)
 ## in this case, better to compute the sample first:
-subobj <- quantile(foo, ppoints(500), na.rm=TRUE)
+subobj <- quantile(foo, ppoints(500), na.rm = TRUE)
 playwith(qqmath(~ subobj))
 rm(subobj)
 rm(bigobj)

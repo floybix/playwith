@@ -5,6 +5,11 @@ Changes in Version 0.9-20
 
   o note that playwith() arguments and playwith.options have changed.
 
+  o latticeStyleGUI(), a stand-alone function to edit the lattice theme.
+
+  o latticist supports a depth variable (3D) and a color covariate.
+    Also produces better plots with multiple categoricals.
+
 Changes in Version 0.9-11
 
   o latticist uses hexbinplot, and many other changes.

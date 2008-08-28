@@ -15,7 +15,7 @@ globalActionGroup <- function(playState)
              list("SetSize", NULL, "Set device _size...", "<Ctrl>0", NULL, set.size_handler),
              list("IncrFont", NULL, "_Increase font size", "<Ctrl>plus", NULL, incr.font_handler),
              list("DecrFont", NULL, "De_crease font size", "<Ctrl>minus", NULL, decr.font_handler),
-             list("CustomStyle", "gtk-select-color", "Custom _Style...", NULL, "Customise plot style...", custom.style_handler),
+             list("CustomStyle", "gtk-select-color", "Custom _Style...", "<Ctrl>B", "Customise plot style...", custom.style_handler),
              list("ApplyStyleToBase", NULL, "Apply to base graphics", NULL, "Apply the Lattice theme to base graphics plots too", apply.style.to.base_handler),
              list("EditCall", "gtk-edit", "_Edit call...", "<Ctrl>E", "Edit the plot call", edit.call_handler),
              list("Back", "gtk-go-back", "Back", "<Alt>Left", "Go back to previous plot call", back_handler),
@@ -68,7 +68,7 @@ updateGlobalActions <- function(playState)
 }
 
 clone_handler <- function(widget, playState)
-    NA
+    stop("not yet implemented")
 
 save_handler <- function(widget, playState)
 {
@@ -293,15 +293,17 @@ set.size_handler <- function(widget, playState) {
 }
 
 incr.font_handler <- function(widget, playState)
-    NA
+    stop("not yet implemented")
 decr.font_handler <- function(widget, playState)
-    NA
+    stop("not yet implemented")
 
-custom.style_handler <- function(widget, playState)
-    NA
+custom.style_handler <- function(widget, playState) {
+    playDevSet(playState)
+    latticeStyleGUI()
+}
 
 apply.style.to.base_handler <- function(widget, playState)
-    NA
+    stop("not yet implemented")
 
 back_handler <- function(widget, playState) {
     with(playState$widgets,

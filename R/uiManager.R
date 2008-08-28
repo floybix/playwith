@@ -107,6 +107,7 @@ updateActions <- function(playState)
     updateClickActions(playState)
     updatePlotActions(playState)
     updateIdentifyActions(playState)
+    updateAnnotationActions(playState)
     ## custom update actions
     customAct <- c(playwith.getOption("update.actions"),
                    playState$update.actions)

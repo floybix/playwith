@@ -1,6 +1,6 @@
 ## playwith: interactive plots in R using GTK+
 ##
-## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
+## Copyright (c) 2008 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
 

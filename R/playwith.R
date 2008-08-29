@@ -557,55 +557,59 @@ updateAddressBar <- function(playState)
     }
 }
 
-## TODO: use new stuff in gridwork.R
-## store current.transform() for each viewport?
 generateSpaces <- function(playState)
 {
-    playState$deviceToSpace <- list()
+    ## enumerate spaces in the current plot
+    ## (named list of viewports)
+    playState$spaces <- list()
     if (!is.null(playState$viewport)) {
         ## grid graphics plot
-        for (space in names(playState$viewport)) {
-            playState$deviceToSpace[[space]] <-
-                playDo(playState, deviceToUserCoordsFunction(), space=space)
-        }
-    }
-    else if (playState$is.lattice) {
+        playState$spaces <- names(playState$viewport)
+    } else if (playState$is.lattice) {
         ## lattice plot
         packets <- trellis.currentLayout(which="packet")
-        for (pn in packets[packets > 0]) {
-            space <- paste("packet", pn)
-            playState$deviceToSpace[[space]] <-
-                playDo(playState, deviceToUserCoordsFunction(), space=space)
-        }
-    }
-    else {
+        playState$spaces <- paste("packet", packets[packets > 0])
+    } else {
         ## base graphics plot
+        playState$spaces <- "plot"
+        ## use gridBase to make viewports
         upViewport(0)
-        if (length(playState$baseViewports$plot.clip.off)) {
-            test <- try(downViewport(playState$baseViewports$plot.clip.off),
+        if (length(playState$tmp$baseVps$plot.clip.off)) {
+            test <- try(downViewport(playState$tmp$baseVps$plot.clip.off),
                         silent=TRUE)
             if (!inherits(test, "try-error") && length(current.vpPath()))
                 popViewport(0)
         }
-        ## suppressWarnings about log scale
+        ## suppress warnings about log scale
         vps <- suppressWarnings(baseViewports())
-        playState$baseViewports <- list()
+        playState$tmp$baseVps <- list()
         pushViewport(vps$inner)
-        playState$baseViewports$inner <- current.vpPath()
+        playState$tmp$baseVps$inner <- current.vpPath()
         pushViewport(vps$figure)
-        playState$baseViewports$figure <- current.vpPath()
+        playState$tmp$baseVps$figure <- current.vpPath()
         ## set clipping
         vps$plot$clip <- TRUE
         pushViewport(vps$plot)
-        playState$baseViewports$plot <- current.vpPath()
-        pushViewport(viewport(
-                              xscale=convertX(unit(0:1, "npc"), "native"),
+        playState$tmp$baseVps$plot <- current.vpPath()
+        pushViewport(viewport(xscale=convertX(unit(0:1, "npc"), "native"),
                               yscale=convertY(unit(0:1, "npc"), "native"),
                               clip="off"))
-        playState$baseViewports$plot.clip.off <- current.vpPath()
-        upViewport(4)
-        playState$deviceToSpace[["plot"]] <-
-            playDo(playState, deviceToUserCoordsFunction(), space="plot")
+        playState$tmp$baseVps$plot.clip.off <- current.vpPath()
+        upViewport(0)
+    }
+    ## store coordinate transformations for each space
+    playState$tmp$spaceLimNative <- list()
+    playState$tmp$spaceLimDevice <- list()
+    for (space in playState$spaces) {
+        ## bounds in native coordinates
+#        playState$tmp$spaceLimNative[[space]] <-
+#            rawXYLim(playState, space = space)
+        ## bounds in device coordinates
+        playState$tmp$spaceLimDevice[[space]] <-
+            playDo(playState,
+                   convertToDevicePixels(x = unit(0:1, "npc"),
+                                         y = unit(0:1, "npc")),
+                   space = space)
     }
     playState$tmp$need.reconfig <- FALSE
 }
@@ -697,7 +701,6 @@ gtkmainquit_handler <- function(widget, event, playState)
 
 ## General utility functions
 
-## TODO: this fails with one-line inline functions
 deparseOneLine <-
     function(expr, width.cutoff = 500, ...)
 {

@@ -85,6 +85,12 @@ clear_handler <- function(widget, playState)
     playReplot(playState)
 }
 
+undo.annotation_handler <- function(widget, playState)
+{
+    ## TODO
+    stop("not yet implemented")
+}
+
 edit.annotations_handler <- function(widget, playState)
 {
     annotSpaces <- names(playState$annotations)
@@ -122,8 +128,9 @@ edit.annotations_handler <- function(widget, playState)
 arrow_handler <- function(widget, playState)
 {
     pageAnnotation <- identical(playState$annotation.mode, "page")
-    foo <- playLineInput(playState, prompt=
-                         "Click and drag to draw an arrow. (Right-click to cancel)")
+    foo <- playLineInput(playState, prompt = paste(
+                                    "Click and drag to draw an arrow;",
+                                    "Right-click or Esc to cancel."))
     if (is.null(foo)) return()
     if (is.null(foo$coords)) pageAnnotation <- TRUE
     if (foo$is.click) return()
@@ -134,8 +141,6 @@ arrow_handler <- function(widget, playState)
     myXY$y <- signif(myXY$y, 7)
     annot <- call("panel.arrows", myXY$x[1], myXY$y[1],
                   myXY$x[2], myXY$y[2])
-    #annot <- call("grid.lines", x=myXY$x, y=myXY$y)
-    #if (space != "page") annot$default.units <- "native"
     arrow <- playState$arrow.arrow
     annot$angle <- arrow$angle
     if (is.unit(arrow$length)) {
@@ -144,8 +149,8 @@ arrow_handler <- function(widget, playState)
     }
     annot$type <- arrow$type
     annot$code <- arrow$ends
-    annot$arrow <- playState$arrow.arrow
 
+    ## TODO: delete this?
     originalPlot <- if (isBasicDeviceMode(playState))
         try(recordPlot())
     ## draw it
@@ -163,8 +168,9 @@ arrow_handler <- function(widget, playState)
 annotate_handler <- function(widget, playState)
 {
     pageAnnotation <- identical(playState$annotation.mode, "page")
-    foo <- playRectInput(playState, prompt=
-                         "Click or drag to place an annotation. (Right-click to cancel)")
+    foo <- playRectInput(playState, prompt = paste(
+                                    "Click or drag to place text annotation;",
+                                    "Right-click or Esc to cancel."))
     if (is.null(foo)) return()
     if (is.null(foo$coords)) pageAnnotation <- TRUE
     space <- foo$space
@@ -192,8 +198,8 @@ annotate_handler <- function(widget, playState)
     wid$label <- gtext(width = 200, height = 50, container = labgroup)
     wid$label.expr <- gcheckbox("plotmath", container = labgroup)
     just.hgroup <- ggroup(horizontal = TRUE, container = labgroup)
-    glabel(if (foo$is.click) "Position of text \nrelative to click:" else
-           "Justification of \ntext inside box:", container = just.hgroup)
+    glabel(if (foo$is.click) "Position of text \n relative to click:" else
+           "Justification of \n text inside box:", container = just.hgroup)
     ## this grid of checkboxes is conceptually a radio button group
     justw <- list()
     just_handler <- function(h, ...) {
@@ -258,8 +264,10 @@ annotate_handler <- function(widget, playState)
     lay[2,3] <- " Rotation:"
     lay[2,4] <- wid$rot
     visible(lay) <- TRUE
-    wid$set.defaults <- gcheckbox("Set as default style",
+    wid$set.defaults <- gcheckbox("Set as default label style",
                                   container = stylegroup)
+    glabel("For more control, try Custom Style from the Style menu.",
+           container = stylegroup)
 
     originalPlot <- try(recordPlot())
     showingPreview <- FALSE
@@ -367,6 +375,15 @@ annotate_handler <- function(widget, playState)
             dobox <- call("panel.rect", x = mean(myXY$x), y = mean(myXY$y),
                           width = abs(diff(myXY$x)), height = abs(diff(myXY$y)))
             annot <- call("{", dobox, annot)
+        }
+
+        ## need to redraw all annotations if style changed
+        if (svalue(wid$set.defaults) &&
+            (length(playState$annotations) > 0))
+        {
+            playReplot(playState)
+            originalPlot <- try(recordPlot())
+            showingPreview <<- FALSE
         }
 
         if (showingPreview) {

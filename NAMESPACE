@@ -8,36 +8,29 @@ importFrom(graphics, par, plot)
 import(utils)
 
 # the main function
-export(
-	playwith,
-	autoplay
-)
+export(playwith,
+       autoplay)
+S3method(print, playState)
 
 # latticist
-export(
-       latticist,
-       panel.levelplot.points,
+export(latticist,
        reorderByFreq,
        cutEq,
        try.prepanel.loess)
 
 ## latticeStyleGUI
-export(
-       latticeStyleGUI,
+export(latticeStyleGUI,
        panel.usertext,
        latticeStyleDemo,
        custom.theme.2,
        custom.theme.black)
 
 # settings
-export(
-       playwith.options,
-       playwith.getOption
-)
+export(playwith.options,
+       playwith.getOption)
 
 # API
-export(
-       playNewPlot,
+export(playNewPlot,
        playReplot,
        parameterControlTool,
        playDevCur,
@@ -56,10 +49,8 @@ export(
        playRectInput,
        playSelectData,
        whichSpace,
-       deviceCoordsToSpace,
        playFreezeGUI,
        playThawGUI,
-       blockRedraws,
        playPrompt,
        rawXLim,
        rawYLim,
@@ -71,5 +62,9 @@ export(
        dataCoordsToSpaceCoords
        )
 
-S3method(print, playState)
-
+## gridwork
+export(convertFromDevicePixels,
+       convertToDevicePixels,
+       inViewport,
+       grobBBDevicePixels,
+       showGrobsBB)

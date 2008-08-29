@@ -7,34 +7,9 @@
 DPI <- function()
     round(mean(dev.size("px") / dev.size("in")))
 
-oldDPI <- function()
-{
-    ## use cached value if available
-    if (!is.null(.PlaywithEnv$.DPI))
-        return(.PlaywithEnv$.DPI)
-    ## current viewport, restore when finished
-    vp <- current.vpPath()
-    if (length(vp) > 0) {
-        upViewport(0)
-        on.exit(downViewport(vp))
-    }
-    dpi <- convertWidth(unit(1, "inches"),
-                        "native", valueOnly=TRUE)
-    .PlaywithEnv$.DPI <- dpi
-    dpi
-}
-
 convertToDevicePixels <-
-    function(x, y, dpi=DPI())
-#             viewport, unitTo = "native", valueOnly = TRUE)
+    function(x, y)
 {
-#    vp <- current.vpPath()
-    ## restore current viewport when finished
-#    on.exit(if (length(vp) > 0) downViewport(vp))
-    ## go to viewport
-#    upViewport(0)
-#    if (!is.null(viewport))
-#        downViewport(viewport)
     ## x and y can be unit objects or numeric
     if (!is.unit(x)) x <- unit(x, "native")
     if (!is.unit(y)) y <- unit(y, "native")
@@ -42,42 +17,24 @@ convertToDevicePixels <-
                 convertY(y, "inches", valueOnly=TRUE),
                 1)
     location <- xy %*% current.transform() ## inches
-    locx <- round(dpi * location[,1] * location[,3])
-    locy <- round(dpi * location[,2] * location[,3])
+    dpi <- dev.size("px") / dev.size("in")
+    locx <- round(dpi[1] * location[,1] * location[,3])
+    locy <- round(dpi[2] * location[,2] * location[,3])
     ## convert y coordinate to have origin at top-left
     locy <- dev.size("px")[2] - locy
     list(x = locx, y = locy)
-    ## go to root viewport
-    ## TODO: get DPI to avoid going to root viewport
-#    upViewport(0)
-#    list(x = convertX(locationx, unitTo, valueOnly=valueOnly),
-#         y = convertY(locationy, unitTo, valueOnly=valueOnly))
 }
 
 convertFromDevicePixels <-
-    function(x.px, y.px, dpi=DPI(),
-             unitTo = "native", valueOnly = FALSE)
+    function(x.px, y.px, unitTo = "native", valueOnly = FALSE)
 {
-#    vp <- current.vpPath()
-    ## restore current viewport when finished
-#    on.exit({
-#        upViewport(0)
-#        if (length(vp) > 0) downViewport(vp)
-#    })
-    ## go to root viewport
-    ## TODO: get DPI to avoid going to root viewport
-#    upViewport(0)
     ## convert pixels to inches
-    x.in <- dpi * x.px
-    y.in <- dpi * y.px
-#    x.in <- convertX(unit(x.px, "native"), "inches", valueOnly=TRUE)
-#    y.in <- convertY(unit(y.px, "native"), "inches", valueOnly=TRUE)
-    ## TODO: support vector arguments
+    dpi <- dev.size("px") / dev.size("in")
+    x.in <- x.px / dpi[1]
+    y.in <- y.px / dpi[2]
+    ## convert y coordinate from origin at top-left
+    y.in <- dev.size("in")[2] - y.in
     xy <- cbind(x.in, y.in, 1)
-    ## go to viewport
-#    if (!is.null(viewport))
-#        downViewport(viewport)
-#    inv.transform <- solve(current.transform())
     location <- xy %*% solve(current.transform()) ## inches
     locx <- unit(location[,1] * location[,3], "inches")
     locy <- unit(location[,2] * location[,3], "inches")
@@ -85,7 +42,7 @@ convertFromDevicePixels <-
          y = convertY(locy, unitTo, valueOnly=valueOnly))
 }
 
-inViewport <- function(x.px, y.px, viewport, dpi=DPI())
+inViewport <- function(x.px, y.px, viewport)
 {
     ## current viewport, restore when finished
     vp <- current.vpPath()
@@ -98,8 +55,7 @@ inViewport <- function(x.px, y.px, viewport, dpi=DPI())
         downViewport(viewport)
     ## calculate bounding box
     xy <- convertToDevicePixels(x = unit(0:1, "npc"),
-                                y = unit(0:1, "npc"),
-                                dpi = dpi)
+                                y = unit(0:1, "npc"))
     ## viewport might be rotated, so use range of x and y
     x <- xy$x
     y <- xy$y
@@ -108,7 +64,7 @@ inViewport <- function(x.px, y.px, viewport, dpi=DPI())
      (min(y) <= y.px) && (y.px <= max(y)))
 }
 
-grobBBDevicePixels <- function(grob, viewport, dpi=DPI())
+grobBBDevicePixels <- function(grob, viewport)
 {
     ## current viewport, restore when finished
     vp <- current.vpPath()
@@ -121,29 +77,18 @@ grobBBDevicePixels <- function(grob, viewport, dpi=DPI())
         downViewport(viewport)
     ## calculate bounding box
     if (inherits(grob, "points") ||
-        inherits(grob, "lines"))
+        inherits(grob, "lines") ||
+        inherits(grob, "polyline"))
     {
-        ## what about segments, circle etc?
-        ## assuming units are simple, i.e. all same unit
-        #xx <- unit(range(unclass(grob$x)),
-        #           attr(grob$x, "unit")[1])
-        #yy <- unit(range(unclass(grob$y)),
-        #           attr(grob$y, "unit")[1])
-        #xy0 <- convertToDevice(x=xx[1], y=yy[1],
-        #                       viewport=viewport)
-        #xy1 <- convertToDevice(x=xx[2], y=yy[2],
-        #                       viewport=viewport)
-        xy <- convertToDevicePixels(x = grob$x,
-                                    y = grob$y,
-                                    dpi = dpi)
+        ## grobX for these refers to the convex hull,
+        ## which can be bad if they are colinear
+        xy <- convertToDevicePixels(x = grob$x, y = grob$y)
     } else {
         gx <- unit.c(grobX(grob, "west"),
                      grobX(grob, "east"))
         gy <- unit.c(grobY(grob, "south"),
                      grobY(grob, "north"))
-        xy <- convertToDevicePixels(x = gx,
-                                    y = gy,
-                                    dpi = dpi)
+        xy <- convertToDevicePixels(x = gx, y = gy)
     }
     xy$x <- range(xy$x)
     xy$y <- range(xy$y)
@@ -174,14 +119,13 @@ showGrobsBB <-
     ## draw boxes around grobs
     bblist <- list()
     length(bblist) <- nrow(objs)
-    dpi <- DPI()
     for (i in seq_len(nrow(objs))) {
         vpPath <- objs$vpPath[i]
         if (vpPath == "") vpPath <- NULL
         gName <- objs$name[i]
         ## TODO: objs$gPath[i] // strict=TRUE
         grob <- grid.get(gName)
-        bb <- grobBBDevicePixels(grob, vpPath, dpi=dpi)
+        bb <- grobBBDevicePixels(grob, vpPath)
         bb$name <- gName
         bb$vpPath <- vpPath
         ## construct a display name

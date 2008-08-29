@@ -1,4 +1,4 @@
-## playwith: interactive plots in R using GTK+
+# playwith: interactive plots in R using GTK+
 ##
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
@@ -220,39 +220,20 @@ hideWidgetNoRedraw <- function(playState, widget, horiz)
     })
 }
 
-playPrompt <- function(playState, text=NULL)
+playPrompt <- function(playState, text = NULL)
 {
-    with(playState$widgets, {
-        if (is.null(text)) {
-            ## hide the prompt widget
-   #         promptLabel$setMarkup("")
-   #         promptBox["sensitive"] <- FALSE
-   #         if (playState$show.call) {
-   #             callToolbar$show()
-   #             promptBox$hide()
-   #         }
-            playThawGUI(playState)
-            statusbar$pop(0)
-            return(invisible())
-        }
-        ## show the prompt widget
-#        promptBox["sensitive"] <- TRUE
-#        if (playState$show.call) {
-#            promptBox$show()
-#            callToolbar$hide()
-#        }
+    if (is.null(text)) {
+        playThawGUI(playState)
+        playState$widgets$statusbar$pop(0)
+    } else {
         playFreezeGUI(playState)
-        statusbar$push(0, toString(text))
-        ## set the prompt text
-#        promptLabel$setMarkup(paste("<big><b>",
-#                                    toString(text), "</b></big>"))
-    })
+        playState$widgets$statusbar$push(0, toString(text))
+    }
     invisible()
 }
 
 rawXLim <- function(playState, space="plot")
     rawXYLim(playState, space=space)$x
-
 
 rawYLim <- function(playState, space="plot")
     rawXYLim(playState, space=space)$y
@@ -269,9 +250,10 @@ rawXYLim <- function(playState, space="plot")
         }
         space <- paste("packet", space)
     }
-    playDo(playState, space=space, list(
-                      x=convertX(unit(0:1, "npc"), "native", valueOnly=TRUE),
-                      y=convertY(unit(0:1, "npc"), "native", valueOnly=TRUE)))
+    playDo(playState,
+           list(x=convertX(unit(0:1, "npc"), "native", valueOnly=TRUE),
+                y=convertY(unit(0:1, "npc"), "native", valueOnly=TRUE)),
+           space=space)
 }
 
 "rawXLim<-" <- function(playState, value)
@@ -407,7 +389,7 @@ playDo <- function(playState, expr, space="plot", clip.off=FALSE)
             ## base graphics
             space <- "plot"
             if (clip.off) space <- "plot.clip.off"
-            downViewport(playState$baseViewports[[space]])
+            downViewport(playState$tmp$baseVps[[space]])
         }
     }
     ## do the stuff and return the result
@@ -495,7 +477,10 @@ playPointInput <-
     coords <- NULL
     space <- whichSpace(playState, dc$x, dc$y)
     if (space != "page") {
-        coords <- deviceCoordsToSpace(playState, dc$x, dc$y, space=space)
+        coords <-
+            playDo(playState,
+                   convertFromDevicePixels(dc$x, dc$y, valueOnly = TRUE),
+                   space = space)
     }
     list(coords=coords, space=space, dc=dc, ndc=ndc, modifiers=modifiers)
 }
@@ -557,9 +542,10 @@ playClickOrDrag <-
     ## otherwise, try end of drag
     if (space == "page") space <- whichSpace(playState, dc$x[2], dc$y[2])
     if (space != "page") {
-        xy0 <- deviceCoordsToSpace(playState, dc$x[1], dc$y[1], space=space)
-        xy1 <- deviceCoordsToSpace(playState, dc$x[2], dc$y[2], space=space)
-        coords <- list(x=c(xy0$x, xy1$x), y=c(xy0$y, xy1$y))
+        coords <-
+            playDo(playState,
+                   convertFromDevicePixels(dc$x, dc$y, valueOnly = TRUE),
+                   space = space)
     }
     foo$coords <- coords
     foo$space <- space
@@ -684,6 +670,7 @@ handleClickOrDrag <-
     da$window$invalidateRect(invalidate.children=FALSE)
     if (!exists("xyEnd", inherits=FALSE)) return(NULL)
     ## device coordinates
+    ## note origin is at top-left (same as ROOT viewport)
     dc <- list(x = c(xyInit$x, xyEnd$x),
                y = c(xyInit$y, xyEnd$y))
     if (shape == "line") {
@@ -691,7 +678,7 @@ handleClickOrDrag <-
         if (yOnly) dc$x[2] <- dc$x[1]
     }
     ## normalised device coordinates
-    ndc <- list(x = dc$x / da.w, y = (da.h - dc$y) / da.h)
+    ndc <- list(x = dc$x / da.w, y = dc$y / da.h)
     ## was it a click or drag? (click = no slower than 1/4 second)
     is.click <- (end_time - init_time) <= CLICKDUR
     ## alternative criteria for click: moved less than 10 pixels
@@ -980,103 +967,20 @@ playLogBase <- function(playState, x.or.y=c("x", "y"))
     return(NA)
 }
 
-whichSpace <- function(playState, x.device, y.device)
+whichSpace <- function(playState, x.px, y.px)
 {
-    for (space in names(playState$deviceToSpace)) {
-        spaceFun <- playState$deviceToSpace[[space]]
-        xy <- spaceFun(x.device, y.device)
-        if (xy$inside) return(space)
+    ## assumes spaces do not overlap
+    for (space in names(playState$tmp$spaceLimDevice)) {
+        lims <- playState$tmp$spaceLimDevice[[space]]
+        ## test for point inside bounds
+        x <- lims$x
+        y <- lims$y
+        if ((min(x) <= x.px) && (x.px <= max(x)) &&
+            (min(y) <= y.px) && (y.px <= max(y)))
+            return(space)
     }
     ## return "page" if not inside any of the viewports
     return("page")
-}
-
-deviceCoordsToSpace <- function(playState, x.device, y.device, space = "plot")
-{
-    if (space == "page") return(list(x=x.device, y=y.device))
-    if (playState$is.lattice && (space == "plot")) {
-        space <- packet.number()
-        if (length(space) == 0) {
-            packets <- trellis.currentLayout(which="packet")
-            if (sum(packets > 0) > 1) stop("space not well specified")
-            space <- packets[packets > 0][1]
-        }
-        space <- paste("packet", space)
-    }
-    spaceFun <- playState$deviceToSpace[[space]]
-    spaceFun(x.device, y.device)
-}
-
-
-## this is called by playReplot
-## makes a function to transform device native x, y (i.e. pixels)
-## into plot coordinates (current viewport native coords if is.grid=T)
-deviceToUserCoordsFunction <- function(is.grid = TRUE)
-{
-    ## get device size in pixels
-    vp <- current.vpPath()
-    upViewport(0) ## go to root viewport
-    dpx <- abs(c(diff(convertX(unit(0:1, "npc"), "native", valueOnly=TRUE)),
-                 diff(convertY(unit(0:1, "npc"), "native", valueOnly=TRUE))))
-    ## pixels per inch
-    dpi <- convertX(unit(1, "inches"), "native", valueOnly=TRUE)
-    if (length(vp) > 0) downViewport(vp)
-    ## device size in inches
-    din <- dpx / dpi
-    if (is.grid) {
-        ## using current viewport
-        xlim <- convertX(unit(0:1, "npc"), "native", valueOnly=T)
-        ylim <- convertY(unit(0:1, "npc"), "native", valueOnly=T)
-        plot.in <-    convertX(unit(1, "npc"), "inches", valueOnly=T)
-        plot.in[2] <- convertY(unit(1, "npc"), "inches", valueOnly=T)
-        transform <- solve(grid::current.transform())
-        function(x.px, y.px) {
-            n <- max(length(x.px), length(y.px))
-            x.px <- rep(x.px, length=n)
-            y.px <- rep(y.px, length=n)
-            y.px <- dpx[2] - y.px ## y scale origin at bottom
-            ## TODO: handle vectors directly, this loop is a hack
-            x_npc <- y_npc <- numeric(0)
-            for (i in seq_along(x.px)) {
-                pos.ndc <- c(x.px[i], y.px[i]) / dpx
-                pos.din <- c(din * pos.ndc, 1)
-                pos.in <- (pos.din %*% transform)
-                pos.in <- (pos.in / pos.in[3])
-                x_npc[i] <- pos.in[1] / plot.in[1]
-                y_npc[i] <- pos.in[2] / plot.in[2]
-            }
-            x <- xlim[1] + x_npc * diff(xlim)
-            y <- ylim[1] + y_npc * diff(ylim)
-            inside <- ((min(xlim) <= x) & (x <= max(xlim))
-                       & (min(ylim) <= y) & (y <= max(ylim)))
-            ## note: do not unlog here, might want raw coords
-            list(x=x, y=y, inside=inside)
-        }
-    } else {
-        xlim <- par("usr")[1:2]
-        ylim <- par("usr")[3:4]
-        xmar <- (par("mai") + par("omi"))[c(2,4)]
-        ymar <- (par("mai") + par("omi"))[c(1,3)]
-        plot.px <- par("pin") * dpi
-        xmar.px <- xmar * dpi
-        ymar.px <- ymar * dpi
-        xlog <- par("xlog")
-        ylog <- par("ylog")
-        function(x.px, y.px) {
-            n <- max(length(x.px), length(y.px))
-            x.px <- rep(x.px, length=n)
-            y.px <- rep(y.px, length=n)
-            y.px <- dpx[2] - y.px ## y scale origin at bottom
-            x_npc <- (x.px - xmar.px[1]) / plot.px[1]
-            y_npc <- (y.px - ymar.px[1]) / plot.px[2]
-            x <- xlim[1] + x_npc * diff(xlim)
-            y <- ylim[1] + y_npc * diff(ylim)
-            inside <- ((min(xlim) <= x) & (x <= max(xlim))
-                       & (min(ylim) <= y) & (y <= max(ylim)))
-            ## note: do not unlog here, might want raw coords
-            list(x=x, y=y, inside=inside)
-        }
-    }
 }
 
 isBasicDeviceMode <- function(playState)

@@ -1760,17 +1760,6 @@ try.prepanel.loess <- function(...) {
     result
 }
 
-rectbinplot <- function(x, data, ...)
-    UseMethod("rectbinplot")
-
-rectbinplot.formula <-
-    function(x, data, ..., subset = TRUE,
-             breaks = 32, breaks.x = breaks, breaks.y = breaks,
-             col.regions = grey.colors(100, start = 1, end = 0))
-{
-    x
-}
-
 levelplot.table <-
     function(x, data = NULL, ...,
              col.regions = grey.colors(100, start = 1, end = 0))
@@ -1790,24 +1779,6 @@ levelplot.table <-
         form <- paste(form, rest, sep = "|")
     }
     levelplot(as.formula(form), data, ...)
-}
-
-panel.levelplot.points <-
-    function(x, y, z, subscripts = TRUE, at = pretty(z),
-             shrink, labels, label.style, contour, region, ## (all ignored)
-             pch = 21, col.symbol = "#00000044",
-             ...,
-             col.regions = regions$col,
-             fill = NULL) ## (ignored)
-{
-    regions <- trellis.par.get("regions")
-    zcol <- level.colors(z, at, col.regions, colors = TRUE)
-    x <- x[subscripts]
-    y <- y[subscripts]
-    zcol <- zcol[subscripts]
-    ## panel.xyplot does the work (can handle 'type' argument, etc)
-    panel.xyplot(x, y, fill = zcol, pch = pch,
-                 col.symbol = col.symbol, ...)
 }
 
 layer.col <-

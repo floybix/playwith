@@ -28,7 +28,7 @@
       <menuitem action='Toolbars'/>
       <menuitem action='Statusbar'/>
       <separator/>
-      <menuitem action='Source'/>
+      <menuitem action='ViewSource'/>
     </menu>
     <menu action='StyleMenu'>
       <menuitem action='CustomStyle'/>
@@ -38,6 +38,7 @@
     <menu action='LabelsMenu'>
       <menuitem action='SetLabelsTo'/>
       <menuitem action='SetLabelStyle'/>
+      <menuitem action='SetLabelOffset'/>
       <separator/>
       <menuitem action='Identify'/>
       <menuitem action='IdTable'/>
@@ -60,6 +61,8 @@
       <menuitem action='UndoAnnotation'/>
       <menuitem action='Clear'/>
       <separator/>
+      <menuitem action='GrobInspector'/>
+      <separator/>
     </menu>
     <menu action='DataMenu'>
       <menuitem action='SummariseData'/>
@@ -67,6 +70,14 @@
       <menuitem action='SaveData'/>
       <separator/>
       <menuitem action='PurgeObjects'/>
+    </menu>
+    <menu action='OptionsMenu'>
+      <menuitem action='TimeMode'/>
+      <separator/>
+      <menuitem action='SetArrowStyle'/>
+      <menuitem action='PageAnnot'/>
+      <menuitem action='ClipAnnot'/>
+      <menuitem action='ShowTooltips'/>
     </menu>
     <menu action='HelpMenu'>
       <menuitem action='HelpPlot'/>

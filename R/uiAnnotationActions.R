@@ -36,8 +36,7 @@ updateAnnotationActions <- function(playState)
     for (space in names(playState$annotations)) {
         playDo(playState,
                lapply(playState$annotations[[space]], eval),
-               space = space,
-               clip.off = identical(playState$clip.annotations, FALSE))
+               space = space)
     }
     updateAnnotationActionStates(playState)
 }
@@ -127,7 +126,7 @@ edit.annotations_handler <- function(widget, playState)
 
 arrow_handler <- function(widget, playState)
 {
-    pageAnnotation <- identical(playState$annotation.mode, "page")
+    pageAnnotation <- isTRUE(playState$page.annotation)
     foo <- playLineInput(playState, prompt = paste(
                                     "Click and drag to draw an arrow;",
                                     "Right-click or Esc to cancel."))
@@ -141,21 +140,20 @@ arrow_handler <- function(widget, playState)
     myXY$y <- signif(myXY$y, 7)
     annot <- call("panel.arrows", myXY$x[1], myXY$y[1],
                   myXY$x[2], myXY$y[2])
-    arrow <- playState$arrow.arrow
+    arrow <- playState$arrow
+    ## each of these may be NULL
     annot$angle <- arrow$angle
-    if (is.unit(arrow$length)) {
-        annot$length <- as.numeric(arrow$length)
-        annot$units <- attr(arrow$length, "unit")
-    }
+    annot$length <- arrow$length
+    annot$unit <- arrow$unit
     annot$type <- arrow$type
-    annot$code <- arrow$ends
+    annot$ends <- arrow$ends
+    annot$code <- arrow$code
 
     ## TODO: delete this?
     originalPlot <- if (isBasicDeviceMode(playState))
         try(recordPlot())
     ## draw it
-    playDo(playState, eval(annot), space=space,
-           clip.off=identical(playState$clip.annotations, FALSE))
+    playDo(playState, eval(annot), space=space)
     ## store it
     playState$annotations[[space]] <-
         c(playState$annotations[[space]], annot)
@@ -167,7 +165,7 @@ arrow_handler <- function(widget, playState)
 
 annotate_handler <- function(widget, playState)
 {
-    pageAnnotation <- identical(playState$annotation.mode, "page")
+    pageAnnotation <- isTRUE(playState$page.annotation)
     foo <- playRectInput(playState, prompt = paste(
                                     "Click or drag to place text annotation;",
                                     "Right-click or Esc to cancel."))
@@ -226,8 +224,8 @@ annotate_handler <- function(widget, playState)
     offsetgroup <- ggroup(horizontal = TRUE, container = labgroup)
     glabel(if (foo$is.click) "Offset from point (chars):"
     else "Offset from box edge", container = offsetgroup)
-    wid$offset <- gedit("0.5", width = 4, coerce.with = as.numeric,
-                        container = offsetgroup)
+    wid$offset <- gedit(toString(playState$label.offset), width = 4,
+                        coerce.with = as.numeric, container = offsetgroup)
     if (!foo$is.click) {
         ## it was a drag, defining a rectangle
         ## option to draw box border
@@ -266,7 +264,7 @@ annotate_handler <- function(widget, playState)
     visible(lay) <- TRUE
     wid$set.defaults <- gcheckbox("Set as default label style",
                                   container = stylegroup)
-    glabel("For more control, try Custom Style from the Style menu.",
+    glabel("For more control, try Customise Style from the Style menu.",
            container = stylegroup)
 
     originalPlot <- try(recordPlot())
@@ -401,14 +399,12 @@ annotate_handler <- function(widget, playState)
             ## echo annotation code to console
             message(paste(deparse(annot), collapse="\n"))
             ## draw it
-            playDo(playState, eval(annot), space=space,
-                   clip.off=identical(playState$clip.annotations, FALSE))
+            playDo(playState, eval(annot), space = space)
             showingPreview <<- TRUE
             return()
         }
         ## draw it
-        playDo(playState, eval(annot), space=space,
-               clip.off=identical(playState$clip.annotations, FALSE))
+        playDo(playState, eval(annot), space=space)
         ## store it
         playState$annotations[[space]] <-
             c(playState$annotations[[space]], annot)

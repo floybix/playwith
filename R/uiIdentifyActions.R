@@ -9,6 +9,7 @@ identifyActionGroup <- function(playState)
         list( ## : name, stock icon, label, accelerator, tooltip, callback
              list("SetLabelsTo", "gtk-index", "Set _labels to...", "<Ctrl>L", NULL, set.labels_handler),
              list("SetLabelStyle", NULL, "Set label st_yle...", NULL, NULL, set.label.style_handler),
+             list("SetLabelOffset", NULL, "Set label _offset...", NULL, NULL, set.label.offset_handler),
              list("Identify", "gtk-info", "_Identify...", NULL, "Identify all points in a selected region", identify_handler),
              list("IdTable", "gtk-info", "Select from _table...", NULL, "Select points from a table", id.table_handler),
              list("FindLabels", "gtk-find", "_Find...", "<Ctrl>F", "Find points with labels matching...", id.find_handler),
@@ -172,13 +173,12 @@ drawLabels <- function(playState, which, space="plot", pos=1)
     offset <- as.numeric(playState$label.offset)
     annots <- expression()
     for (i in seq_along(labels)) {
-        annots[[i]] <- call("panel.text", x[i], y[i],
+        annots[[i]] <- call("panel.usertext", x[i], y[i],
                             labels[i], pos = pos[i])
         if (offset != 0.5)
             annots[[i]]$offset <- offset
     }
-    playDo(playState, eval(annots), space=space,
-           clip.off=identical(playState$clip.annotations, FALSE))
+    playDo(playState, eval(annots), space = space)
 }
 
 set.labels_handler <- function(widget, playState)
@@ -224,6 +224,11 @@ set.labels_handler <- function(widget, playState)
                      }
                  })
     ## TODO: refresh?
+}
+
+set.label.offset_handler <- function(widget, playState)
+{
+    ## TODO
 }
 
 ## TODO: get rid of this -- set label style now means changing lattice settings

@@ -282,7 +282,7 @@ playwith <-
     playState$show.calltoolbar <- playwith.getOption("show.calltoolbar")
     playState$show.menubar <- playwith.getOption("show.menubar")
     playState$show.statusbar <- playwith.getOption("show.statusbar")
-    playState$annotation.mode <- playwith.getOption("annotation.mode")
+    playState$page.annotation <- playwith.getOption("page.annotation")
     playState$clip.annotations <- playwith.getOption("clip.annotations")
     playState$label.style <- playwith.getOption("label.style")
     playState$label.offset <- playwith.getOption("label.offset")
@@ -294,6 +294,7 @@ playwith <-
         if (arg == "") next
         playState[[arg]] <- dots[[arg]]
     }
+    ## check for explicit time.mode argument
     time.mode <- dots$time.mode
     missing_time.mode <- is.null(time.mode)
     if (is.null(time.mode)) time.mode <- FALSE

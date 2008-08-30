@@ -157,7 +157,8 @@ expand_handler <- function(widget, playState)
     ## check new expanded setting
     if (widget["active"]) {
         playPrompt(playState,
-                   "Click on a panel to expand. (Right-click to cancel)")
+                   paste("Click on a panel to expand;",
+                         "Right-click or Esc to cancel."))
         on.exit(playPrompt(playState, NULL))
         newFocus <- trellis.focus()
         if (is.null(newFocus) || all(newFocus == 0)) {

@@ -346,7 +346,8 @@ is.somesortoftime <- function(x) {
 }
 
 ## note space="page" means the root viewport
-playDo <- function(playState, expr, space="plot", clip.off=FALSE)
+playDo <- function(playState, expr, space = "plot",
+                   clip.off = !isTRUE(playState$clip.annotations))
 {
     playDevSet(playState)
     cur.vp <- current.vpPath()

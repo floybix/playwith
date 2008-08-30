@@ -13,6 +13,7 @@ constructUIManager <- function(playState)
              list("LabelsMenu", NULL, "_Labels"),
              list("ToolsMenu", NULL, "_Tools"),
              list("DataMenu", NULL, "_Data"),
+             list("OptionsMenu", NULL, "_Options"),
              list("HelpMenu", NULL, "_Help")
              )
     menuGroup <- gtkActionGroupNew("Menus")
@@ -24,6 +25,7 @@ constructUIManager <- function(playState)
     manager$insertActionGroup(plotActionGroup(playState), 0)
     manager$insertActionGroup(identifyActionGroup(playState), 0)
     manager$insertActionGroup(annotationActionGroup(playState), 0)
+    manager$insertActionGroup(optionsActionGroup(playState), 0)
     manager$insertActionGroup(globalActionGroup(playState), 0)
     ## user-defined actions:
     uact <- eval(playwith.getOption("custom.tools"))
@@ -46,13 +48,14 @@ constructUIManager <- function(playState)
             manager$addUiFromFile(uifile)
     }
     ## add style items
+    ## TODO: separate this somehow
     # manager$addUi(manager$newMergeId(), path, name, action = NULL, type, top)
     # type = GtkUIManagerItemType["auto"]
     # gtkActionGroup("foo")
     # manager$insertActionGroup(...)
     styleMenu <- manager$getWidget("/MenuBar/StyleMenu")$getSubmenu()
     styleMenu$append(gtkSeparatorMenuItem())
-    set.style_handler<- function(widget, theme) {
+    set.style_handler <- function(widget, theme) {
         trellis.par.set(eval(theme))
         playReplot(playState)
     }
@@ -88,6 +91,7 @@ initActions <- function(playState)
     playDevSet(playState)
     initClickActions(playState)
     initIdentifyActions(playState)
+    initOptionsActions(playState)
     ## custom init actions
     customAct <- c(playwith.getOption("init.actions"),
                    playState$init.actions)
@@ -108,6 +112,7 @@ updateActions <- function(playState)
     updatePlotActions(playState)
     updateIdentifyActions(playState)
     updateAnnotationActions(playState)
+    updateOptionsActions(playState)
     ## custom update actions
     customAct <- c(playwith.getOption("update.actions"),
                    playState$update.actions)

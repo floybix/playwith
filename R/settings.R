@@ -13,12 +13,10 @@
          eval.args = NA,
          on.close = NULL,
          ## implicit arguments to playwith():
-         annotation.mode = "plot",
+         page.annotation = FALSE,
          clip.annotations = FALSE,
-         label.style = NULL,
          label.offset = 0.5,
-         arrow.style = NULL,
-         arrow.arrow = quote(arrow(length=unit(0.15, "inches"))),
+         arrow = list(length = 0.15, unit = "inches"),
          ## themes:
          themes = alist(
          "Default" = standard.theme("pdf"),

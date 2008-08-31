@@ -345,18 +345,21 @@ is.somesortoftime <- function(x) {
   inherits(x, "yearqtr")
 }
 
-## note space="page" means the root viewport
 playDo <- function(playState, expr, space = "plot",
                    clip.off = !isTRUE(playState$clip.annotations))
 {
     playDevSet(playState)
+    ## store current viewport and restore it when finished
     cur.vp <- current.vpPath()
     upViewport(0) ## go to root viewport
     on.exit({
         upViewport(0)
         if (!is.null(cur.vp)) downViewport(cur.vp)
     })
-    if (space != "page") {
+    if (space == "page") {
+        ## normalised device coordinates
+        downViewport("pageAnnotationVp")
+    } else {
         ## user / plot coordinates
         if (!is.null(playState$viewport)) {
             ## grid graphics plot
@@ -381,10 +384,9 @@ playDo <- function(playState, expr, space = "plot",
             myRow <- row(packets)[whichOne]
             myVp <- trellis.vpname("panel", myCol, myRow, clip.off=clip.off)
             downViewport(myVp)
-            ## TODO: should focus panel or just go to viewport?
-            ## (if focus, will destroy any previous focus)
-            ##trellis.focus("panel", myCol, myRow, highlight=FALSE)
-            ##on.exit(trellis.unfocus())
+            ## NOTE: a panel is not in focus here (as in trellis.focus)
+            ## because that would destroy any previous focus state
+            ## -- if focus is required, do that before calling playDo.
         }
         else {
             ## base graphics
@@ -394,8 +396,6 @@ playDo <- function(playState, expr, space = "plot",
         }
     }
     ## do the stuff and return the result
-    ##if (is.list(stuff)) lapply(stuff, eval, parent.frame(), playState$env)
-    ##else eval(stuff, parent.frame(), playState$env)
     eval(substitute(expr), parent.frame(), playState$env)
 }
 

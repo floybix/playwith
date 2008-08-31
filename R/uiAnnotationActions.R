@@ -135,7 +135,7 @@ arrow_handler <- function(widget, playState)
     if (foo$is.click) return()
     space <- foo$space
     if (pageAnnotation) space <- "page"
-    myXY <- if (space == "page") foo$dc else foo$coords
+    myXY <- if (space == "page") foo$ndc else foo$coords
     myXY$x <- signif(myXY$x, 7)
     myXY$y <- signif(myXY$y, 7)
     annot <- call("panel.arrows", myXY$x[1], myXY$y[1],
@@ -173,7 +173,7 @@ annotate_handler <- function(widget, playState)
     if (is.null(foo$coords)) pageAnnotation <- TRUE
     space <- foo$space
     if (pageAnnotation) space <- "page"
-    absXY <- foo$dc
+    absXY <- foo$ndc
     myXY <- if (space == "page") foo$dc else foo$coords
     myXY$x <- signif(myXY$x, 7)
     myXY$y <- signif(myXY$y, 7)

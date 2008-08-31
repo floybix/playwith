@@ -885,6 +885,7 @@ makeLatticist <- function(dat)
                         } else {
                             callArg(playState, 0) <- quote(levelplot)
                             callArg(playState, "panel") <- quote(panel.levelplot.points)
+                            callArg(playState, "prepanel") <- quote(prepanel.default.xyplot)
                         }
                         ## un-discretize groups
                         if (do.gdisc) groups <- groups[[2]]

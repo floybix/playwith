@@ -598,14 +598,16 @@ generateSpaces <- function(playState)
         playState$tmp$baseVps$plot.clip.off <- current.vpPath()
         upViewport(0)
     }
+    upViewport(0)
+    ## create a top-level viewport with normalised coordinates
+    test <- try(downViewport("pageAnnotationVp"), silent = TRUE)
+    if (inherits(test, "try-error"))
+        pushViewport(viewport(name="pageAnnotationVp"))
+    upViewport(0)
     ## store coordinate transformations for each space
-    playState$tmp$spaceLimNative <- list()
     playState$tmp$spaceLimDevice <- list()
     for (space in playState$spaces) {
-        ## bounds in native coordinates
-#        playState$tmp$spaceLimNative[[space]] <-
-#            rawXYLim(playState, space = space)
-        ## bounds in device coordinates
+        ## bounds in device coordinates (pixels)
         playState$tmp$spaceLimDevice[[space]] <-
             playDo(playState,
                    convertToDevicePixels(x = unit(0:1, "npc"),

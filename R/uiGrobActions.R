@@ -3,30 +3,36 @@
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
-### "DOM INSPECTOR" FOR GRID
-
-toolConstructors$inspector <- function(playState)
+grobActionGroup <- function(playState)
 {
-    ## this tool does not work with base graphics plots
-    if (length(grid.ls(print=FALSE)$name) == 0)
-        return(NA)
+    entries <-
+        list( ## : name, stock icon, label, accelerator, tooltip, callback
+             list("GrobInspector", "gtk-properties", "Grob inspector", NULL, NULL, grob.inspector_handler)
+             )
 
-    quickTool(playState,
-              label = "Grobs",
-              icon = "gtk-properties",
-              tooltip = "See properties of grobs (components of the scene)",
-              f = inspector_handler)
+    ## construct action group with playState passed to callbacks
+    aGroup <- gtkActionGroupNew("GrobActions")
+    aGroup$addActions(entries, playState)
+    aGroup
 }
 
-inspector_handler <- function(widget, playState)
+updateGrobActions <- function(playState)
 {
+    aGroup <- playState$actionGroups[["GrobActions"]]
+    hasGrobs <- (length(grid.ls(print = FALSE)$name) > 0)
+    aGroup$getAction("GrobInspector")$setSensitive(hasGrobs)
+}
 
+grob.inspector_handler <- function(widget, playState)
+{
     ## show and return bounding boxes for all grobs
     bblist <- showGrobsBB()
     if (length(bblist) == 0) stop("No grobs found.")
 
     foo <- playPointInput(playState,
-                          "Click on an object to see details. Shift-click to destroy.")
+                          paste("Click on an object to see details,",
+                                "Shift-click to destroy;",
+                                "Right-click or Esc to cancel."))
     grid.refresh()
     if (is.null(foo)) return()
     isShift <- (foo$modifiers & GdkModifierType["shift-mask"])

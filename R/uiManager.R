@@ -25,6 +25,7 @@ constructUIManager <- function(playState)
     manager$insertActionGroup(plotActionGroup(playState), 0)
     manager$insertActionGroup(identifyActionGroup(playState), 0)
     manager$insertActionGroup(annotationActionGroup(playState), 0)
+    manager$insertActionGroup(grobActionGroup(playState), 0)
     manager$insertActionGroup(optionsActionGroup(playState), 0)
     manager$insertActionGroup(globalActionGroup(playState), 0)
     ## user-defined actions:
@@ -112,6 +113,7 @@ updateActions <- function(playState)
     updatePlotActions(playState)
     updateIdentifyActions(playState)
     updateAnnotationActions(playState)
+    updateGrobActions(playState)
     updateOptionsActions(playState)
     ## custom update actions
     customAct <- c(playwith.getOption("update.actions"),

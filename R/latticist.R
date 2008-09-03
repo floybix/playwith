@@ -7,7 +7,7 @@
 latticist <-
     function(dat,
              reorder.levels = TRUE,
-             plot.call = quote(marginals(dat, reorder=FALSE)),
+             plot.call = quote(marginal.plot(dat, reorder=FALSE)),
              ...,
              labels = rownames(dat),
              time.mode = FALSE)
@@ -622,7 +622,7 @@ makeLatticist <- function(dat)
             ## choose plot type and formula
             if (is.null(xVal) && is.null(yVal)) {
                 ## NO VARIABLES CHOSEN
-                playState$call <- quote(marginals(dat, reorder=FALSE))
+                playState$call <- quote(marginal.plot(dat, reorder=FALSE))
                 updateMainCall(playState)
                 callArg(playState, "subset") <-
                     if (!isTRUE(subset)) subset else NULL

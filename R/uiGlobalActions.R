@@ -37,9 +37,7 @@ globalActionGroup <- function(playState)
     toggleEntries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback, active?
              list("Keep", "gtk-media-stop", "_Do not replace", "<Ctrl>D", "Do not replace with the next plot", keep_handler, FALSE),
-             list("StayOnTop", "gtk-leave-fullscreen", "St_ay on top", NULL, "Show this window above all others", stay.on.top_handler, FALSE),
-             list("Toolbars", NULL, "Toolbars", NULL, NULL, show.toolbars_handler, TRUE),
-             list("Statusbar", NULL, "Status _bar", NULL, NULL, show.statusbar_handler, TRUE)
+             list("StayOnTop", "gtk-leave-fullscreen", "St_ay on top", NULL, "Show this window above all others", stay.on.top_handler, FALSE)
              )
 
     ## construct action group with playState passed to callbacks
@@ -61,14 +59,10 @@ updateGlobalActions <- function(playState)
     aGroup$getAction("Keep")$setActive(isTRUE(playState$keep))
     ## StayOnTop
     aGroup$getAction("StayOnTop")$setActive(isTRUE(playState$stay.on.top))
-    ## Statusbar
-    aGroup$getAction("Statusbar")$setActive(isTRUE(playState$show.statusbar))
-    ## Toolbars
-    aGroup$getAction("Toolbars")$setActive(isTRUE(playState$show.toolbars))
 }
 
 clone_handler <- function(widget, playState)
-    stop("not yet implemented")
+    gmessage.error("not yet implemented")
 
 save_handler <- function(widget, playState)
 {
@@ -293,9 +287,9 @@ set.size_handler <- function(widget, playState) {
 }
 
 incr.font_handler <- function(widget, playState)
-    stop("not yet implemented")
+    gmessage.error("not yet implemented")
 decr.font_handler <- function(widget, playState)
-    stop("not yet implemented")
+    gmessage.error("not yet implemented")
 
 custom.style_handler <- function(widget, playState) {
     playDevSet(playState)
@@ -303,7 +297,7 @@ custom.style_handler <- function(widget, playState) {
 }
 
 apply.style.to.base_handler <- function(widget, playState)
-    stop("not yet implemented")
+    gmessage.error("not yet implemented")
 
 back_handler <- function(widget, playState) {
     with(playState$widgets,
@@ -384,10 +378,3 @@ stay.on.top_handler <- function(widget, playState) {
     playState$win$setKeepAbove(widget["active"])
 }
 
-show.statusbar_handler <- function(widget, playState) {
-    playState$widgets$statusbarBox["visible"] <- widget["active"]
-}
-
-show.toolbars_handler <- function(widget, playState) {
-    playState$widgets$leftToolbar["visible"] <- widget["active"]
-}

@@ -25,9 +25,6 @@
       <menuitem action='IncrFont'/>
       <menuitem action='DecrFont'/>
       <separator/>
-      <menuitem action='Toolbars'/>
-      <menuitem action='Statusbar'/>
-      <separator/>
       <menuitem action='ViewSource'/>
     </menu>
     <menu action='StyleMenu'>
@@ -75,8 +72,11 @@
       <menuitem action='TimeMode'/>
       <separator/>
       <menuitem action='SetArrowStyle'/>
-      <menuitem action='PageAnnot'/>
       <menuitem action='ClipAnnot'/>
+      <menuitem action='PageAnnot'/>
+      <separator/>
+      <menuitem action='ShowStatusbar'/>
+      <menuitem action='ShowToolbars'/>
       <menuitem action='ShowTooltips'/>
     </menu>
     <menu action='HelpMenu'>

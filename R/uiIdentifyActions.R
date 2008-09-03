@@ -189,27 +189,28 @@ set.labels_handler <- function(widget, playState)
     labcode <- NULL
     labdesc <- NULL
     if (!is.null(dat)) {
-        datOpts <- c(deparseOneLine(call("rownames", datArg)),
-                     colnames(dat))
-        labcode <- datOpts
-        labdesc <- datOpts
+        labcode <- colnames(dat)
+        labdesc <- colnames(dat)
     }
+    rnCode <- deparseOneLine(call("rownames", datArg))
     labcode <- c(labcode,
-                 "NULL",
                  "xyData(playDevCur())$x",
                  "xyData(playDevCur())$y",
-                 'with(xyData(playDevCur()), paste(y, x, sep="@"))')
+                 'with(xyData(playDevCur()), paste(y, x, sep="@"))',
+                 "NULL",
+                 rnCode)
     labdesc <- c(labdesc,
-                 "data subscripts",
                  "data x values",
                  "data y values",
-                 "data (y@x) values")
-    labradio <- gradio(labdesc, selected = 0, container = box,
+                 "data y@x values",
+                 "data subscripts",
+                 rnCode)
+    labradio <- gradio(labdesc, selected = length(labcode), container = box,
                        handler = function(h, ...) {
                            idx <- max(1, svalue(labradio, index=TRUE))
                            svalue(labedit) <- labcode[idx]
                        })
-    labedit <- gedit(labcode[1], container = box)
+    labedit <- gedit(rnCode, container = box)
     ## show dialog
     gbasicdialog("Set labels to...", widget = box,
                  handler = function(h, ...) {
@@ -223,7 +224,6 @@ set.labels_handler <- function(widget, playState)
                          playState$labels <- tmp
                      }
                  })
-    ## TODO: refresh?
 }
 
 set.label.offset_handler <- function(widget, playState)
@@ -269,7 +269,8 @@ set.label.style_handler <- function(widget, playState)
 identify_handler <- function(widget, playState)
 {
     foo <- playSelectData(playState,
-                          "Click or drag to identify points. Right-click to cancel.")
+                          paste("Click or drag to identify points.",
+                                "Right-click or Esc to cancel."))
     if (is.null(foo)) return()
     if (length(foo$which) == 0) return()
     if (!is.null(foo$subscripts))
@@ -352,11 +353,13 @@ identifyCore <- function(playState, foo, deidentify = FALSE)
 
 
 id.table_handler <- function(widget, playState) {
+    gmessage.error("not yet implemented")
 }
 
 id.find_handler <- function(widget, playState) {
+    gmessage.error("not yet implemented")
 }
 
 save.ids_handler <- function(widget, playState) {
-
+    gmessage.error("not yet implemented")
 }

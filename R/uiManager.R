@@ -74,7 +74,7 @@ constructUIManager <- function(playState)
     styleMenu$append(gtkSeparatorMenuItem())
     ## style options
     styleOptions <- playwith.getOption("styleOptions")
-    foo <- gtkMenuItem("Style options:")
+    foo <- gtkMenuItem("Style shortcuts:")
     foo["sensitive"] <- FALSE
     styleMenu$append(foo)
     for (nm in names(styleOptions)) {

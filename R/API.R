@@ -166,10 +166,10 @@ updateMainCall <- function(playState) {
     }
 }
 
-playFreezeGUI <- function(playState)
+playFreezeGUI <- function(playState = playDevCur())
     playSetFreezeGUI(playState, TRUE)
 
-playThawGUI <- function(playState)
+playThawGUI <- function(playState = playDevCur())
     playSetFreezeGUI(playState, FALSE)
 
 playSetFreezeGUI <- function(playState, frozen)
@@ -232,10 +232,10 @@ playPrompt <- function(playState, text = NULL)
     invisible()
 }
 
-rawXLim <- function(playState, space="plot")
+rawXLim <- function(playState = playDevCur(), space="plot")
     rawXYLim(playState, space=space)$x
 
-rawYLim <- function(playState, space="plot")
+rawYLim <- function(playState = playDevCur(), space="plot")
     rawXYLim(playState, space=space)$y
 
 rawXYLim <- function(playState, space="plot")
@@ -256,13 +256,13 @@ rawXYLim <- function(playState, space="plot")
            space=space)
 }
 
-"rawXLim<-" <- function(playState, value)
+"rawXLim<-" <- function(playState = playDevCur(), value)
 {
     setRawXYLim(playState, value, "x")
     playState
 }
 
-"rawYLim<-" <- function(playState, value)
+"rawYLim<-" <- function(playState = playDevCur(), value)
 {
     setRawXYLim(playState, value, "y")
     playState
@@ -400,7 +400,8 @@ playDo <- function(playState, expr, space = "plot",
 }
 
 playSelectData <-
-    function(playState, prompt = paste(
+    function(playState = playDevCur(),
+             prompt = paste(
              "Click or drag to select data points;",
              "Right-click or Esc to cancel."))
 {
@@ -454,7 +455,8 @@ playSelectData <-
 }
 
 playPointInput <-
-    function(playState, prompt = paste(
+    function(playState = playDevCur(),
+             prompt = paste(
              "Click on the plot;",
              "Right-click or Esc to cancel."))
 {
@@ -487,7 +489,8 @@ playPointInput <-
 }
 
 playLineInput <-
-    function(playState, prompt = paste(
+    function(playState = playDevCur(),
+             prompt = paste(
              "Click and drag to define a line",
              "(hold Shift to constrain to x or y scales);",
              "Right-click or Esc to cancel."))
@@ -506,7 +509,8 @@ playLineInput <-
 }
 
 playRectInput <-
-    function(playState, prompt = paste(
+    function(playState = playDevCur(),
+             prompt = paste(
              "Click and drag to define a rectangular region",
              "(hold Shift to constrain to x or y scales);",
              "Right-click or Esc to cancel."))
@@ -725,7 +729,7 @@ getDataArg <- function(playState, eval = TRUE)
     tmp.data
 }
 
-xyCoords <- function(playState, space="plot")
+xyCoords <- function(playState = playDevCur(), space="plot")
 {
     foo <- xyData(playState, space=space)
     foo$x <- as.numeric(foo$x)
@@ -733,7 +737,7 @@ xyCoords <- function(playState, space="plot")
     foo
 }
 
-xyData <- function(playState, space="plot")
+xyData <- function(playState = playDevCur(), space="plot")
 {
     if (!is.null(playState$data.points)) {
         return(xy.coords_with_class(playState, playState$data.points))

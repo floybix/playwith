@@ -7,7 +7,7 @@ plotActionGroup <- function(playState)
 {
     entries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback
-             list("PlotSettings", "gtk-preferences", "Plot _settings", NULL, "Change the plot type and settings", settings_handler),
+             list("PlotSettings", "gtk-preferences", "Plot _settings", NULL, "Change the plot type and settings", plot.settings_handler),
              list("Zoomfit", "gtk-zoom-fit", "_Fit data", "<Ctrl>space", "Revert to default plot region", zoomfit_handler),
              list("ZeroY", "gtk-goto-bottom", "Full y scale", "<Ctrl>Return", "Show the full y (response) scale starting from zero", zero.y_handler),
              list("ZeroX", "gtk-goto-first", "Full x scale", "<Ctrl>BackSpace", "Show the full x (domain) scale starting from zero", zero.x_handler)
@@ -36,7 +36,7 @@ updatePlotActions <- function(playState)
     isLatt3D <- isLatt && !is.null(playState$trellis$panel.args.common$scales.3d)
     ## PlotSettings
     ## create PlotSettings dialog once only
-    initPlotSettingsDialog(playState)
+#    initPlotSettingsDialog(playState)
     aGroup$getAction("PlotSettings")$setVisible(hasArgs)
     ## Zoomfit
     nonFit <- hasArgs && (!is.null(callArg(playState, "xlim")) ||

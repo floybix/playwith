@@ -12,10 +12,12 @@ optionsActionGroup <- function(playState)
 
     toggleEntries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback, active?
-             list("TimeMode", "gtk-media-forward-ltr", "_Time mode", NULL, "Time mode: scroll along the x axis", time.mode_handler, FALSE),
+             list("TimeMode", "gtk-media-forward-ltr", "_Time mode", "<Ctrl>T", "Time mode: scroll along the x axis", time.mode_handler, FALSE),
              list("ClipAnnot", NULL, "_Clip annotations", NULL, "", clip.annotations_handler, FALSE),
-             list("PageAnnot", NULL, "_Annot. on page (abs.)", NULL, "Place annotations with respect to the page, not plot coordinates", page.annotation_handler, FALSE),
-             list("ShowTooltips", NULL, "Show t_ooltips", NULL, "", show.tooltips_handler, FALSE)
+             list("PageAnnot", NULL, "_Annot. on page (fixed pos.)", NULL, "Place annotations with respect to the page, not plot coordinates", page.annotation_handler, FALSE),
+             list("ShowStatusbar", NULL, "Status _bar", NULL, NULL, show.statusbar_handler, TRUE),
+             list("ShowToolbars", NULL, "Toolbars", NULL, NULL, show.toolbars_handler, TRUE),
+             list("ShowTooltips", NULL, "T_ooltips", NULL, "", show.tooltips_handler, FALSE)
              )
 
     ## construct action group with playState passed to callbacks
@@ -48,13 +50,18 @@ updateOptionsActions <- function(playState)
 {
     aGroup <- playState$actionGroups[["OptionsActions"]]
     hasArgs <- playState$accepts.arguments
+    ## Time Mode
     hasTimeVec <- !is.null(playState$time.vector)
     aGroup$getAction("TimeMode")$setSensitive(hasArgs || hasTimeVec)
     aGroup$getAction("TimeMode")$setActive(isTRUE(playState$time.mode))
+    time.mode_postplot_action(playState = playState)
+    ## Annotations options
     aGroup$getAction("ClipAnnot")$setActive(isTRUE(playState$clip.annotations))
     aGroup$getAction("PageAnnot")$setActive(isTRUE(playState$page.annotation))
+    ## Statusbar, toolbars, tooltips
+    aGroup$getAction("ShowStatusbar")$setActive(isTRUE(playState$show.statusbar))
+    aGroup$getAction("ShowToolbars")$setActive(isTRUE(playState$show.toolbars))
     aGroup$getAction("ShowTooltips")$setActive(isTRUE(playState$show.tooltips))
-    time.mode_postplot_action(playState = playState)
 }
 
 time.mode_handler <- function(widget, playState)
@@ -208,7 +215,15 @@ page.annotation_handler <- function(widget, playState)
 set.arrow.style_handler <- function(widget, playState)
 {
     ## TODO
-    stop("not yet implemented")
+    gmessage.error("not yet implemented")
+}
+
+show.statusbar_handler <- function(widget, playState) {
+    playState$widgets$statusbarBox["visible"] <- widget["active"]
+}
+
+show.toolbars_handler <- function(widget, playState) {
+    playState$widgets$leftToolbar["visible"] <- widget["active"]
 }
 
 show.tooltips_handler <- function(widget, playState)

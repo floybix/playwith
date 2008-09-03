@@ -20,13 +20,13 @@ updateGrobActions <- function(playState)
 {
     aGroup <- playState$actionGroups[["GrobActions"]]
     hasGrobs <- (length(grid.ls(print = FALSE)$name) > 0)
-    aGroup$getAction("GrobInspector")$setSensitive(hasGrobs)
+    aGroup$getAction("GrobInspector")$setVisible(hasGrobs)
 }
 
 grob.inspector_handler <- function(widget, playState)
 {
     ## show and return bounding boxes for all grobs
-    bblist <- showGrobsBB()
+    bblist <- showGrobsBB(draw = FALSE)
     if (length(bblist) == 0) stop("No grobs found.")
 
     foo <- playPointInput(playState,

@@ -391,7 +391,7 @@ playwith <-
     invisible(playState)
 }
 
-playNewPlot <- function(playState)
+playNewPlot <- function(playState = playDevCur())
 {
     playDevSet(playState)
     ## clear the current plot if any, to avoid lengthy redraws
@@ -456,7 +456,7 @@ playNewPlot <- function(playState)
     playPostPlot(result, playState)
 }
 
-playReplot <- function(playState)
+playReplot <- function(playState = playDevCur())
 {
     if (isTRUE(playState$tmp$skip.redraws)) return()
     playState$plot.ready <- FALSE

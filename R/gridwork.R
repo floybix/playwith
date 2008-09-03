@@ -97,8 +97,10 @@ grobBBDevicePixels <- function(grob, viewport)
 
 showGrobsBB <-
     function(draw = TRUE,
-             gp.box = gpar(fill="yellow",
-                           lwd=2, alpha=0.05),
+             gp.box = gpar(col = "yellow",
+                           lwd = 5, alpha = 0.2),
+                      #gpar(fill="yellow",
+                      #     lwd=2, alpha=0.05),
              gp.text = gpar(cex=0.75, alpha=0.5))
 {
     ## current viewport, restore when finished

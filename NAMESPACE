@@ -20,6 +20,7 @@ export(latticist,
 
 ## latticeStyleGUI
 export(latticeStyleGUI,
+       latticeStyleToBasePar,
        panel.usertext,
        latticeStyleDemo,
        custom.theme.2,

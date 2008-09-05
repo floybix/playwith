@@ -16,7 +16,6 @@ globalActionGroup <- function(playState)
              list("IncrFont", NULL, "_Increase font size", "<Ctrl>plus", NULL, incr.font_handler),
              list("DecrFont", NULL, "De_crease font size", "<Ctrl>minus", NULL, decr.font_handler),
              list("CustomStyle", "gtk-select-color", "Customise _Style...", "<Ctrl>B", NULL, custom.style_handler),
-             list("ApplyStyleToBase", NULL, "Apply to base graphics", NULL, "Apply the Lattice style to a base graphics plot", apply.style.to.base_handler),
              list("EditCall", "gtk-edit", "_Edit call...", "<Ctrl>E", "Edit the plot call", edit.call_handler),
              list("Back", "gtk-go-back", "Back", "<Alt>Left", "Go back to previous plot call", back_handler),
              list("Forward", "gtk-go-forward", "Forward", "<Alt>Right", "Go to next plot call", forward_handler),
@@ -75,7 +74,7 @@ save_handler <- function(widget, playState)
         playState$title else playState$callName
     myDefault <- paste(myDefault, myExt, sep=".")
     ## construct save file dialog
-    okExt <- c("pdf","png","jpg","jpeg","ps","eps","svg","wmf","emf","fig")
+    okExt <- c("pdf","png","jpg","jpeg","tif","tiff","ps","eps","svg","wmf","emf","fig")
     filter <- list("All files" = list(patterns = c("*")),
                    "PDF" = list(patterns = c("*.pdf")),
                    "PNG (bitmap)" = list(patterns = c("*.png")),
@@ -83,6 +82,7 @@ save_handler <- function(widget, playState)
                    "SVG" = list(patterns = c("*.svg")),
                    "WMF (metafile)" = list(patterns = c("*.wmf", "*.emf")),
                    "JPEG" = list(patterns = c("*.jpg", "*.jpeg")),
+                   "TIFF" = list(patterns = c("*.tif", "*.tiff")),
                    "xfig" = list(patterns = c("*.fig")))
     ## TODO: pdfWriter with bitmap()
     filename <- gfile("Export plot to image file", type = "save",
@@ -99,47 +99,28 @@ save_handler <- function(widget, playState)
     ## so need to keep the same size with dev.copy()...
     w.in <- dev.size("in")[1]
     h.in <- dev.size("in")[2]
-    w.px <- dev.size("px")[1]
-    h.px <- dev.size("px")[2]
-    h.px <- da$getAllocation()$height
-    ## TODO: pointsize = playState$pointsize
-    if (ext %in% "pdf") {
-        dev.copy(pdf, file=filename, width=w.in, height=h.in)
-        dev.off()
-    }
-    else if (ext %in% "ps") {
-        dev.copy(postscript, file=filename, width=w.in, height=h.in)
-        dev.off()
-    }
-    else if (ext %in% "eps") {
-        dev.copy(postscript, file=filename, width=w.in, height=h.in,
-                 horizontal=FALSE, onefile=FALSE, paper="special")
-        dev.off()
-    }
-    else if (ext %in% "png") {
-        dev.copy(Cairo_png, file=filename, width=w.in, height=h.in)
-        dev.off()
-    }
-    else if (ext %in% c("jpeg","jpg")) {
-        dev.copy(jpeg, file=filename, width=w.px, height=h.px, units="px")
-        dev.off()
-    }
-    else if (ext %in% "svg") {
-        dev.copy(Cairo_svg, file=filename, width=w.in, height=h.in)
-        dev.off()
-    }
-    else if (ext %in% c("wmf", "emf")) {
-        dev.copy(win.metafile, file=filename, width=w.in, height=h.in)
-        dev.off()
-    }
-    else if (ext %in% "fig") {
-        dev.copy(xfig, file=filename, width=w.in, height=h.in)
-        dev.off()
-    }
-    else {
-        gmessage.error("Unrecognised filename extension")
-        return()
-    }
+    ## use same pointsize as embedded device
+    ps <- playState$.args$pointsize
+    if (ext == "eps") setEPS()
+    devName <-
+        switch(ext,
+               pdf = "pdf",
+               ps =, eps = "postscript",
+               png = "Cairo_png",
+               jpeg =, jpg = "jpeg",
+               tiff =, tif = "tiff",
+               svg = "Cairo_svg",
+               wmf =, emf = "win.metafile",
+               fig = "xfig",
+           {gmessage.error("Unrecognised filename extension")
+            stop("Unrecognised filename extension")})
+    devFun <- get(devName, mode = "function")
+    devCall <- call("dev.copy", devFun, file = filename,
+                    width = w.in, height = h.in, pointsize = ps)
+    if (!is.null(formals(devFun)$units))
+        devCall$units <- "in"
+    eval(devCall)
+    dev.off()
 }
 
 copy_handler <- function(widget, playState)
@@ -150,6 +131,8 @@ copy_handler <- function(widget, playState)
     playDevSet(playState)
     w.in <- dev.size("in")[1]
     h.in <- dev.size("in")[2]
+    ## use same pointsize as embedded device
+    ps <- playState$.args$pointsize
     if (exists("win.metafile")) { ## i.e. in MS Windows
         copy.exts <- c("wmf", "png")
         copy.labels <- c("Windows Metafile (wmf)", "Bitmap (png)")
@@ -159,7 +142,8 @@ copy_handler <- function(widget, playState)
         if (sel.label == "") return()
         copy.ext <- copy.exts[copy.labels == sel.label]
         if (copy.ext == "wmf") {
-            dev.copy(win.metafile, width=w.in, height=h.in)
+            dev.copy(win.metafile, width=w.in, height=h.in,
+                     pointsize = ps)
             dev.off()
             playState$win$present()
             return()
@@ -167,7 +151,8 @@ copy_handler <- function(widget, playState)
     }
     ## save plot to temporary file, to copy as png
     filename <- paste(tempfile(), ".png", sep="")
-    dev.copy(Cairo_png, file=filename, width=w.in, height=h.in)
+    dev.copy(Cairo_png, file=filename, width=w.in, height=h.in,
+             pointsize = ps)
     dev.off()
     im <- gdkPixbufNewFromFile(filename)$retval
     gtkClipboardGet("CLIPBOARD")$setImage(im)
@@ -178,6 +163,7 @@ print_handler <- function(widget, playState)
 {
     playDevSet(playState)
     isWindows <- (.Platform$OS.type == "windows")
+    ## note dev.print copies the current width / height / ps
     if (isWindows) dev.print(win.print)
     else dev.print()
 }
@@ -293,11 +279,10 @@ decr.font_handler <- function(widget, playState)
 
 custom.style_handler <- function(widget, playState) {
     playDevSet(playState)
-    latticeStyleGUI()
+    isBase <- (!playState$is.lattice && is.null(playState$viewport))
+    latticeStyleGUI(pointsize = playState$.args$pointsize,
+                    base.graphics = isBase)
 }
-
-apply.style.to.base_handler <- function(widget, playState)
-    gmessage.error("not yet implemented")
 
 back_handler <- function(widget, playState) {
     with(playState$widgets,

@@ -174,7 +174,7 @@ annotate_handler <- function(widget, playState)
     space <- foo$space
     if (pageAnnotation) space <- "page"
     absXY <- foo$ndc
-    myXY <- if (space == "page") foo$dc else foo$coords
+    myXY <- if (space == "page") foo$ndc else foo$coords
     myXY$x <- signif(myXY$x, 7)
     myXY$y <- signif(myXY$y, 7)
     if (foo$is.click) {

@@ -18,9 +18,24 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+panel.usertext <-
+    function(x, y = NULL, labels = seq_along(x), col = user.text$col,
+    alpha = user.text$alpha, cex = user.text$cex, srt = 0, lineheight = user.text$lineheight,
+    font = user.text$font, fontfamily = user.text$fontfamily, fontface = user.text$fontface,
+    adj = c(0.5, 0.5), pos = NULL, offset = 0.5, ...)
+{
+    user.text <- trellis.par.get("user.text")
+    add.text <- trellis.par.get("add.text")
+    if (is.null(user.text)) user.text <- add.text
+    panel.text(x, y, labels, col = col, alpha = alpha, cex = cex, srt = srt,
+               lineheight = lineheight, font = font, fontfamily = fontfamily,
+               fontface = fontface, adj = adj, pos = pos, offset = offset, ...)
+}
+
 latticeStyleGUI <-
     function(width = 300, height = 300, pointsize = 12,
-             target.device = dev.cur())
+             target.device = dev.cur(),
+             base.graphics = FALSE)
 {
     #if (!require("gWidgets", quiet = TRUE))
     #    stop("This function requires the gWidgets package")
@@ -119,12 +134,14 @@ latticeStyleGUI <-
     }
 
     updateTargetDeviceSettings <- function() {
-        if (length(devType) > 1) {
+        if ((length(devType) > 1) || (base.graphics)) {
             ## target device is different to demo;
             ## need to switch to it and update settings
             if (target.device %in% dev.list()) {
                 dev.set(target.device)
                 trellis.par.set(trellis.par.theme)
+                if (base.graphics)
+                    latticeStyleToBasePar()
             } else {
                 ## looks like the target device has closed.
                 warning(paste("It looks like the target device has closed.",
@@ -341,13 +358,16 @@ latticeStyleGUI <-
     devTypeStr <- paste(devType, collapse = " and ")
     ## initial display
     grid::grid.newpage()
-    grid::grid.text(paste("Loading...",
+    grid::grid.text(paste(c("Loading...",
                           "",
                           "This device will show a preview",
                           "of your settings. The settings",
                           paste("will apply to", devTypeStr, "devices."),
                           "(You can set them for others too).",
                           "",
+                          if (base.graphics)
+                            c("This is base graphics mode (par()).",
+                              ""),
                           "Your full style settings are kept",
                           "in the object `trellis.par.theme`,",
                           "and your modifications only in",
@@ -355,7 +375,7 @@ latticeStyleGUI <-
                           "",
                           "Changes take effect immediately,",
                           "but you need to press <Enter> in",
-                          "text fields.", sep="\n"),
+                          "text fields."), collapse="\n"),
                     x = 0.05, y = 0.95, just = c("left", "top"),
                     gp = gpar())
 
@@ -859,18 +879,34 @@ latticeStyleGUI <-
     return(invisible())
 }
 
-panel.usertext <-
-    function(x, y = NULL, labels = seq_along(x), col = user.text$col,
-    alpha = user.text$alpha, cex = user.text$cex, srt = 0, lineheight = user.text$lineheight,
-    font = user.text$font, fontfamily = user.text$fontfamily, fontface = user.text$fontface,
-    adj = c(0.5, 0.5), pos = NULL, offset = 0.5, ...)
-{
-    user.text <- trellis.par.get("user.text")
-    add.text <- trellis.par.get("add.text")
-    if (is.null(user.text)) user.text <- add.text
-    panel.text(x, y, labels, col = col, alpha = alpha, cex = cex, srt = srt,
-               lineheight = lineheight, font = font, fontfamily = fontfamily,
-               fontface = fontface, adj = adj, pos = pos, offset = offset, ...)
+latticeStyleToBasePar <- function() {
+    opar <- par(no.readonly = TRUE)
+    trellispar <- trellis.par.get()
+    user.text <- trellispar$user.text
+    if (is.null(user.text))
+        user.text <- trellispar$add.text
+    with(trellispar, {
+        par(bg = background$col,
+            fg = axis.line$col)
+        par(col = plot.symbol$col,
+            lty = plot.line$lty,
+            lwd = plot.line$lwd,
+            cex = plot.symbol$cex,
+            ps = fontsize$text,
+            col.axis = axis.line$col,
+            cex.axis = axis.text$cex,
+            col.main = par.main.text$col,
+            cex.main = par.main.text$cex,
+            col.sub = par.sub.text$col,
+            cex.sub = par.sub.text$cex,
+            col.lab = par.xlab.text$col,
+            cex.lab = par.xlab.text$cex,
+            lheight = user.text$lineheight)
+        if (!is.null(grid.pars$fontfamily))
+            par(family = grid.pars$fontfamily)
+        palette(superpose.symbol$col)
+    })
+    invisible(opar)
 }
 
 latticeStyleDemo <-

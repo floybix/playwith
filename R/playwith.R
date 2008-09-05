@@ -330,11 +330,11 @@ playwith <-
     playState$.args <-
         list(missing_time.mode = missing_time.mode,
              labels = labels,
-             title = title)
-    ## TODO: store ids etc in an environment for linking
+             title = title,
+             pointsize = pointsize)
     playState$ids <- list()
-    playState$brushed <- list()
     playState$annotations <- list()
+    playState$linked <- new.env(parent = baseenv())
     playState$uiManager <- uiManager
     playState$actionGroups <- actionGroups
     playState$widgets <-
@@ -600,9 +600,11 @@ generateSpaces <- function(playState)
     }
     upViewport(0)
     ## create a top-level viewport with normalised coordinates
+    ## yscale origin is at top, to be consistent with device coordinates
     test <- try(downViewport("pageAnnotationVp"), silent = TRUE)
     if (inherits(test, "try-error"))
-        pushViewport(viewport(name="pageAnnotationVp"))
+        pushViewport(viewport(name="pageAnnotationVp",
+                              yscale = c(1, 0)))
     upViewport(0)
     ## store coordinate transformations for each space
     playState$tmp$spaceLimDevice <- list()

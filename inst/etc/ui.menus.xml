@@ -30,7 +30,6 @@
     <menu action='StyleMenu'>
       <menuitem action='CustomStyle'/>
       <separator/>
-      <menuitem action='ApplyStyleToBase'/>
     </menu>
     <menu action='LabelsMenu'>
       <menuitem action='SetLabelsTo'/>

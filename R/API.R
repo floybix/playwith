@@ -20,7 +20,6 @@ playDevSet <- function(playState)
     StateEnv$.current <- playState
     playState$old.dev <- dev.cur()
     dev.set(playState$dev)
-    playState$win$present()
 }
 
 playDevOff <- function(playState = playDevCur())
@@ -461,6 +460,7 @@ playPointInput <-
              "Right-click or Esc to cancel."))
 {
     playDevSet(playState)
+    playState$win$present()
     playPrompt(playState, prompt)
     on.exit(playPrompt(playState, NULL))
     cur.vp <- current.vpPath()
@@ -496,6 +496,7 @@ playLineInput <-
              "Right-click or Esc to cancel."))
 {
     playDevSet(playState)
+    playState$win$present()
     playPrompt(playState, prompt)
     on.exit(playPrompt(playState, NULL))
     vp <- current.vpPath()
@@ -516,6 +517,7 @@ playRectInput <-
              "Right-click or Esc to cancel."))
 {
     playDevSet(playState)
+    playState$win$present()
     playPrompt(playState, prompt)
     on.exit(playPrompt(playState, NULL))
     vp <- current.vpPath()

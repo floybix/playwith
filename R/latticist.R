@@ -1034,7 +1034,7 @@ makeLatticist <- function(dat)
             if (!is.null(xVal) || !is.null(yVal)) {
 
                 ## aspect and scales
-                if (identical(callArg(playState, 0), quote(cloud))) {
+                if (identical(callArg(playState, 0, eval=FALSE), quote(cloud))) {
                     ## for 3D plots, aspect widget applies to "panel.aspect".
                     ## set panel.aspect to "fill" by default if only one panel
                     if (is.null(aspect) && is.null(cond))

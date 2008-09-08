@@ -33,13 +33,11 @@ updateClickActions <- function(playState)
     msg <- with(actions,
                 paste(c(if (ident) c("Click to identify points"),
                         if (nav2D) c("Drag to zoom (hold Shift to constrain)",
-                                     "Alt-click to zoom out",
-                                     "Middle-click to reset"),
+                                     "Alt-click to zoom out"),
                         if (nav3D) c("Drag to rotate (hold Shift to constrain)",
-                                     "Alt-drag to zoom", "Alt-click to zoom out",
-                                     "Middle-click to reset")
-                        ), collapse = ", "))
-    ## TODO: "Right-click for more" (context menu)
+                                     "Alt-drag to zoom", "Alt-click to zoom out"),
+                        "Right-click for more"),
+                      collapse = ", "))
     playState$widgets$statusbar$pop(1)
     playState$widgets$statusbar$push(1, msg)
 }
@@ -113,19 +111,19 @@ device.click_handler <- function(widget, event, playState)
         coordsCore(playState, NULL)
     }
     if (event$button == 2) {
-        ## middle mouse button
+        ## middle mouse button click: zoom to fit
         if (actions$nav2D || actions$nav3D)
             zoomfit_handler(NULL, playState)
     }
     if ((event$button == 3) || isCtrlClick) {
         ## right mouse button or control-click
-        ## TODO: context menu
-        #space <- whichSpace(playState, x, y)
-        #if (space != "page") {
-        #    coords <- deviceCoordsToSpace(playState, x, y, space=space)
-        #    foo <- list(coords=coords, space=space)
-        #    zoomoutCore(playState, foo)
-        #}
+        foo <- playClickOrDrag(playState, x0=x, y0=y,
+                               shape="rect")
+        if (is.null(foo)) {
+            return(FALSE)
+        }
+        ## pop up context menu
+        contextCore(playState, foo, event = event)
     }
     return(FALSE)
 }
@@ -244,4 +242,69 @@ rotate3DCore <- function(playState, foo)
     ## ## no, bad for long axis labels
     #callArg(playState, "scpos") <- list(x = 1, y = 8, z = 4)
     playReplot(playState)
+}
+
+contextCore <- function(playState, foo, event)
+{
+    ## pop up context menu
+    cMenu <- gtkMenu()
+    space <- foo$space
+    showGeneralStuff <- TRUE
+    if (space != "page") {
+        foo$is.click <- TRUE
+        foo <- playSelectData(playState, foo = foo)
+        id <- foo$subscripts
+        if (length(id) > 0) {
+            ## clicked on a data point, don't show general stuff
+            showGeneralStuff <- FALSE
+            x <- foo$x
+            y <- foo$y
+            ## TODO: actions for these?
+            item <- gtkMenuItem(paste("x:", x))
+            item["sensitive"] <- FALSE
+            cMenu$append(item)
+            item <- gtkMenuItem(paste("y:", y))
+            item["sensitive"] <- FALSE
+            cMenu$append(item)
+            dat <- getDataArg(playState)
+            if (!is.null(dat)) {
+                rn <- if (.row_names_info(dat) <= 0)
+                    NULL else row.names(dat)
+                if (!is.null(rn)) {
+                    item <- gtkMenuItem(rn[id])
+                    item["sensitive"] <- FALSE
+                    cMenu$append(item)
+                }
+                cn <- colnames(dat)
+                for (i in seq_along(cn)) {
+                    item <- gtkMenuItem(paste(cn[i], dat[id, i]))
+                    item["sensitive"] <- FALSE
+                    cMenu$append(item)
+                }
+            }
+        }
+    }
+    if (showGeneralStuff) {
+        aGroup <- playState$actionGroups[["PlotActions"]]
+        item <- aGroup$getAction("PlotSettings")$createMenuItem()
+        cMenu$append(item)
+        aGroup <- playState$actionGroups[["GlobalActions"]]
+        for (actionName in c("CustomStyle", "SetSize")) {
+            item <- aGroup$getAction(actionName)$createMenuItem()
+            cMenu$append(item)
+        }
+        cMenu$append(gtkSeparatorMenuItem())
+        for (actionName in c("Back", "Forward", "Redraw")) {
+            item <- aGroup$getAction(actionName)$createMenuItem()
+            cMenu$append(item)
+        }
+        cMenu$append(gtkSeparatorMenuItem())
+        for (actionName in c("ViewSource")) {
+            item <- aGroup$getAction(actionName)$createMenuItem()
+            cMenu$append(item)
+        }
+    }
+    ## show the menu
+    cMenu$popup(button = event$button, activate.time = event$time)
+    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
 }

@@ -32,9 +32,17 @@ playDevOff <- function(playState = playDevCur())
     cleanupStateEnv()
 }
 
-playGetIDs <- function(playState = playDevCur(), labels = FALSE)
+playGetIDs <- function(playState = playDevCur(),
+                       type = c("ids", "linked"),
+                       labels = FALSE)
 {
-    ids <- do.call(rbind, playState$ids)$which
+    type <- match.arg(type, several.ok = TRUE)
+    ids.linked <- unlist(playState$linked$ids)
+    ids.ids <- do.call(rbind, playState$ids)$subscripts
+    ids <- NULL
+    if ("ids" %in% type) ids <- ids.ids
+    if ("linked" %in% type) ids <- c(ids, ids.linked)
+    ids <- unique(sort(ids))
     if (labels) playState$labels[ids] else ids
 }
 
@@ -345,24 +353,21 @@ is.somesortoftime <- function(x) {
 }
 
 playDo <- function(playState, expr, space = "plot",
-                   clip.off = !isTRUE(playState$clip.annotations))
+                   clip.off = !isTRUE(playState$clip.annotations),
+                   return.code = FALSE)
 {
     playDevSet(playState)
-    ## store current viewport and restore it when finished
-    cur.vp <- current.vpPath()
-    upViewport(0) ## go to root viewport
-    on.exit({
-        upViewport(0)
-        if (!is.null(cur.vp)) downViewport(cur.vp)
-    })
+    vpName <- NULL
     if (space == "page") {
         ## normalised device coordinates
-        downViewport("pageAnnotationVp")
+        vpName <- "pageAnnotationVp"
     } else {
         ## user / plot coordinates
         if (!is.null(playState$viewport)) {
             ## grid graphics plot
-            downViewport(playState$viewport[[space]])
+            vpName <- playState$viewport[[space]]
+            if (inherits(vpName, "viewport") || inherits(vpName, "vpPath"))
+                vpName <- vpName$name
         }
         else if (playState$is.lattice) {
             ## lattice plot
@@ -381,8 +386,7 @@ playDo <- function(playState, expr, space = "plot",
             if (length(whichOne) == 0) return()
             myCol <- col(packets)[whichOne]
             myRow <- row(packets)[whichOne]
-            myVp <- trellis.vpname("panel", myCol, myRow, clip.off=clip.off)
-            downViewport(myVp)
+            vpName <- trellis.vpname("panel", myCol, myRow, clip.off=clip.off)
             ## NOTE: a panel is not in focus here (as in trellis.focus)
             ## because that would destroy any previous focus state
             ## -- if focus is required, do that before calling playDo.
@@ -391,24 +395,36 @@ playDo <- function(playState, expr, space = "plot",
             ## base graphics
             space <- "plot"
             if (clip.off) space <- "plot.clip.off"
-            downViewport(playState$tmp$baseVps[[space]])
+            vpName <- playState$tmp$baseVps[[space]]$name
         }
     }
+    if (return.code) {
+        return(c(as.expression(call("seekViewport", vpName)),
+                 expr))
+    }
+    ## store current viewport and restore it when finished
+    cur.vp <- current.vpPath()
+    on.exit({
+        upViewport(0)
+        if (!is.null(cur.vp)) downViewport(cur.vp)
+    })
     ## do the stuff and return the result
-    eval(substitute(expr), parent.frame(), playState$env)
+    seekViewport(vpName)
+    eval(expr, parent.frame(), playState$env)
 }
 
 playSelectData <-
     function(playState = playDevCur(),
              prompt = paste(
              "Click or drag to select data points;",
-             "Right-click or Esc to cancel."))
+             "Right-click or Esc to cancel."),
+             foo = playRectInput(playState, prompt=prompt))
 {
-    foo <- playRectInput(playState, prompt=prompt)
+    force(foo)
     if (is.null(foo)) return(NULL)
     if (is.null(foo$coords)) return(NULL)
     coords <- foo$coords
-    data <- xyCoords(playState, space=foo$space)
+    data <- xyCoords(playState, space = foo$space)
     ## convert to log scale if necessary
     data <- dataCoordsToSpaceCoords(playState, data)
 
@@ -447,9 +463,11 @@ playSelectData <-
             ok <- ok & (min(coords$y) <= data$y) & (data$y <= max(coords$y))
         which <- which(ok)
     }
-    c(list(which=which, x=data$x[which], y=data$y[which],
-           subscripts=data$subscripts[which],
-           pos=pos, is.click=foo$is.click),
+    subscripts <- data$subscripts[which]
+    if (is.null(subscripts)) subscripts <- which
+    c(list(subscripts = subscripts, which = which,
+           x = data$x[which], y = data$y[which],
+           pos = pos, is.click = foo$is.click),
       foo)
 }
 

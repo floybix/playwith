@@ -15,7 +15,7 @@ globalActionGroup <- function(playState)
              list("SetSize", NULL, "Set device _size...", "<Ctrl>0", NULL, set.size_handler),
              list("IncrFont", NULL, "_Increase font size", "<Ctrl>plus", NULL, incr.font_handler),
              list("DecrFont", NULL, "De_crease font size", "<Ctrl>minus", NULL, decr.font_handler),
-             list("CustomStyle", "gtk-select-color", "Customise _Style...", "<Ctrl>B", NULL, custom.style_handler),
+             list("CustomStyle", "gtk-select-color", "Customise _Style...", "<Ctrl>slash", NULL, custom.style_handler),
              list("EditCall", "gtk-edit", "_Edit call...", "<Ctrl>E", "Edit the plot call", edit.call_handler),
              list("Back", "gtk-go-back", "Back", "<Alt>Left", "Go back to previous plot call", back_handler),
              list("Forward", "gtk-go-forward", "Forward", "<Alt>Right", "Go to next plot call", forward_handler),
@@ -36,7 +36,7 @@ globalActionGroup <- function(playState)
     toggleEntries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback, active?
              list("Keep", "gtk-media-stop", "_Do not replace", "<Ctrl>D", "Do not replace with the next plot", keep_handler, FALSE),
-             list("StayOnTop", "gtk-leave-fullscreen", "St_ay on top", NULL, "Show this window above all others", stay.on.top_handler, FALSE)
+             list("StayOnTop", "gtk-leave-fullscreen", "St_ay on top", "<Ctrl>asciicircum", "Show this window above all others", stay.on.top_handler, FALSE)
              )
 
     ## construct action group with playState passed to callbacks
@@ -305,7 +305,63 @@ save.code_handler <- function(widget, playState)
     NA
 
 view.source_handler <- function(widget, playState)
-    NA
+{
+    ## TODO: dump data?
+    ## TODO: style settings?
+    code <- list()
+    comm <- list()
+    code$plot <- playState$call
+    if (playState$is.lattice) {
+        code$plot <- call("print", playState$call)
+        if (playState$pages > 1) {
+            code$plot <- call("plotPageN", playState$call,
+                            playState$page)
+        }
+    }
+    code$plot <- as.expression(code$plot)
+    ## set up viewports
+    comm$vps <- "set up viewports"
+    code$vps <- expression(
+        pushViewport(viewport(name = "pageAnnotationVp",
+                              yscale = c(1, 0))),
+        upViewport(0))
+    if (playState$is.base) {
+        code$vps <- c(code$vps, expression(
+        {
+            vps <- baseViewports()
+            vps$plot$name <- "plot"
+            vps$plot$clip <- TRUE
+            vps$plot.clip.off <-
+                viewport(xscale=par("usr")[1:2],
+                         yscale=par("usr")[3:4],
+                         clip="off", name = "plot.clip.off")
+            pushViewport(do.call("vpStack", vps))
+            upViewport(0)
+        }))
+    }
+    ## annotations etc
+    comm$linked <- "draw brushed (highlighted) points"
+    code$linked <- drawLinkedLocal(playState, return.code = TRUE)
+    comm$labels <- "add labels to data points"
+    code$labels <- drawLabels(playState, return.code = TRUE)
+    comm$annots <- "draw custom annotations"
+    code$annots <- drawAnnotations(playState, return.code = TRUE)
+    ## convert to text with interspersed comments
+    theSource <- NULL
+    opts <- playwith.getOption("deparse.options")
+    for (x in names(code)) {
+        if (length(code[[x]]) > 0) {
+            if (!is.null(comm[[x]]))
+                theSource <- c(theSource,
+                               paste("##", comm[[x]]))
+            theSource <- c(theSource,
+                           unlist(lapply(code[[x]], deparse, width = 42,
+                                         control = opts)))
+        }
+    }
+    theSource <- paste(theSource, sep = "\n", collapse = "\n")
+    guiTextView(theSource, title = "Plot source code")
+}
 
 help_handler <- function(widget, playState)
 {

@@ -366,7 +366,7 @@ latticeStyleGUI <-
                           "(You can set them for others too).",
                           "",
                           if (base.graphics)
-                            c("This is base graphics mode (par()).",
+                            c("This is base graphics mode (par).",
                               ""),
                           "Your full style settings are kept",
                           "in the object `trellis.par.theme`,",
@@ -885,10 +885,21 @@ latticeStyleToBasePar <- function() {
     user.text <- trellispar$user.text
     if (is.null(user.text))
         user.text <- trellispar$add.text
+    ## par() has no alpha setting; need to apply it to col
+    applyAlpha <- function(col, alpha) {
+        crgb <- col2rgb(col, alpha = TRUE)
+        crgb[4] <- crgb[4] * alpha
+        rgb(crgb[1], crbg[2], crgb[3], crgb[4], max = 255)
+    }
+    col <- plot.symbol$col
+    alpha <- plot.symbol$alpha
+    if (alpha < 1)
+        col <- applyAlpha(col, alpha)
     with(trellispar, {
         par(bg = background$col,
             fg = axis.line$col)
-        par(col = plot.symbol$col,
+        par(col = col,
+            pch = plot.symbol$pch,
             lty = plot.line$lty,
             lwd = plot.line$lwd,
             cex = plot.symbol$cex,

@@ -17,8 +17,8 @@
     <separator/>
     <toolitem action='Annotation'/>
     <toolitem action='Arrow'/>
+    <toolitem action='Brush'/>
     <toolitem action='UndoAnnotation'/>
-    <toolitem action='Clear'/>
     <separator/>
   </toolbar>
   <toolbar name='TopToolbar'></toolbar>

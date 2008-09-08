@@ -1,11 +1,33 @@
 
 
+guiTextView <-
+    function(text, title,
+             wrap.mode=c("none", "char", "word", "word_char"),
+             size=c(640, 320))
+{
+    wrap.mode <- match.arg(wrap.mode)
+    win <- gtkWindow(show = FALSE)
+    win["title"] <- title
+    win$setDefaultSize(size[1], size[2])
+    editTV <- gtkTextView()
+    setTextviewMonospace(editTV)
+    editTV$setWrapMode(GtkWrapMode[wrap.mode])
+    setTextview(editTV, text)
+    scroller <- gtkScrolledWindow()
+    scroller$add(editTV)
+    scroller$setPolicy(GtkPolicyType["automatic"], GtkPolicyType["automatic"])
+    win$add(scroller)
+    win$show()
+}
+
+
 guiTextInput <-
     function(text="",
              title="Text Input",
              prompt="",
-             oneLiner=F,
-             accepts.tab=T,
+             readOnly=FALSE,
+             oneLiner=FALSE,
+             accepts.tab=TRUE,
              wrap.mode=c("none", "char", "word", "word_char"),
              size=c(640, 320),
              width.chars=-1,

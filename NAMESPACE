@@ -9,7 +9,8 @@ import(utils)
 
 # the main function
 export(playwith,
-       autoplay)
+       autoplay,
+       plotPageN)
 S3method(print, playState)
 
 # latticist

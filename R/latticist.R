@@ -12,8 +12,46 @@ latticist <-
              labels = rownames(dat),
              time.mode = FALSE)
 {
-    title <- paste("Latticist:",
-                   toString(deparse(substitute(dat)), width=30))
+    if (missing(dat)) {
+        if (missing(plot.call))
+            stop("Give one of 'dat' or 'plot.call'.")
+        ## plot.call was given; try to extract data
+        dat <- NULL
+        datArg <- "unknown"
+        ## assuming the relevant lattice function is the outer call
+        ## check for named 'data' argument
+        if (!is.null(plot.call$data)) {
+            datArg <- plot.call$data
+            dat <- eval.parent(datArg)
+        } else {
+            if (length(plot.call) <= 1) {
+                ## no arguments or NULL call
+                stop("Can not extract data from plot.call.")
+            } else {
+                ## one or more arguments
+                datArg <- plot.call[[2]]
+                dat <- eval.parent(datArg)
+                if (inherits(dat, "formula")) {
+                    ## try second argument if exists and un-named
+                    if ((length(plot.call) > 2) &&
+                        (is.null(names(plot.call)) ||
+                         identical(names(plot.call)[3], "")))
+                    {
+                        datArg <- plot.call[[3]]
+                        dat <- eval.parent(datArg)
+                    } else {
+                        stop("Can not extract data from plot.call.")
+                    }
+                }
+            }
+        }
+        title <- paste("Latticist:",
+                       toString(deparse(datArg), width=30))
+    } else {
+        ## dat was given
+        title <- paste("Latticist:",
+                       toString(deparse(substitute(dat)), width=30))
+    }
 
     if (!is.data.frame(dat))
         dat <- as.data.frame(dat)
@@ -38,13 +76,13 @@ latticist <-
         for (nm in names(dat)[iscat]) {
             val <- dat[[nm]]
             if (is.character(val))
-              dat[[nm]] <- factor(val)
+                dat[[nm]] <- factor(val)
             if (!is.ordered(val) &&
                 !is.shingle(val) &&
                 nlevels(val) > 1)
-              {
+            {
                 dat[[nm]] <- reorderByFreq(val)
-              }
+            }
         }
     }
 

@@ -46,6 +46,7 @@
       <menuitem action='PlotSettings'/>
       <menuitem action='EditCall'/>
       <menuitem action='EditAnnotations'/>
+      <menuitem action='UndoAnnotation'/>
       <separator/>
       <menuitem action='Expand'/>
       <menuitem action='Zoomfit'/>
@@ -54,7 +55,7 @@
       <separator/>
       <menuitem action='Annotation'/>
       <menuitem action='Arrow'/>
-      <menuitem action='UndoAnnotation'/>
+      <menuitem action='Brush'/>
       <menuitem action='Clear'/>
       <separator/>
       <menuitem action='GrobInspector'/>

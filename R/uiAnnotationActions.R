@@ -12,7 +12,8 @@ annotationActionGroup <- function(playState)
              list("Legend", "gtk-sort-ascending", "Legend", NULL, "Place a legend", legend_handler),
              list("UndoAnnotation", "gtk-undo", "Undo ann.", "<Ctrl>Z", "Remove last annotation", undo.annotation_handler),
              list("Clear", "gtk-clear", "Clear", "<Shift>Delete", "Remove labels and annotations", clear_handler),
-             list("EditAnnotations", "gtk-edit", "Edit ann.", "<Ctrl><Shift>E", "Edit annotations (including arrows) code", edit.annotations_handler)
+             list("EditAnnotations", "gtk-edit", "Edit ann.", "<Ctrl><Shift>E", "Edit annotations (including arrows) code", edit.annotations_handler),
+             list("Brush", "gtk-media-record", "Brush", "<Ctrl>B", "Brush (highlight) data points", brush_handler)
              )
 
     ## construct action group with playState passed to callbacks
@@ -21,41 +22,97 @@ annotationActionGroup <- function(playState)
     aGroup
 }
 
-
-### STORE PIXBUF FOR FAST REDRAWS:
-###
-###    da.w <- da$getAllocation()$width
-###    da.h <- da$getAllocation()$height
-###    buf <- gdkPixbufGetFromDrawable(src=da$window, src.x=0, src.y=0,
-###                                    dest.x=0, dest.y=0, width=da.w, height=da.h)
-
-
 updateAnnotationActions <- function(playState)
 {
-    ## draw annotations
-    for (space in names(playState$annotations)) {
-        playDo(playState,
-               lapply(playState$annotations[[space]], eval),
-               space = space)
-    }
+    drawAnnotations(playState)
+    drawLinkedLocal(playState)
     updateAnnotationActionStates(playState)
+}
+
+drawAnnotations <- function(playState, return.code = FALSE)
+{
+    theCode <- expression()
+    for (i in seq_along(playState$annotations)) {
+        space <- names(playState$annotations)[i]
+        expr <- playDo(playState,
+                       playState$annotations[[i]],
+                       space = space,
+                       return.code = return.code)
+        if (return.code)
+            theCode <- c(theCode, expr)
+    }
+    theCode
 }
 
 updateAnnotationActionStates <- function(playState)
 {
     aGroup <- playState$actionGroups[["AnnotationActions"]]
+    ## UndoAnnotation
+    showUndo <- (length(playState$undoStack) > 0)
+    if (isBasicDeviceMode(playState))
+        showUndo <- !is.null(playState$tmp$recorded.plot)
+    aGroup$getAction("UndoAnnotation")$setSensitive(showUndo)
     ## Clear
     ## in basic device mode do not know the call; it cannot be redrawn (TODO?)
     showClear <- !isBasicDeviceMode(playState)
-    ## TODO: allow new tools to specify more items to clear
     showClear <- showClear && ((length(playState$ids) > 0) ||
                                (length(playState$annotations) > 0) ||
-                               (length(playState$brushed) > 0))
+                               (length(playState$linked$ids) > 0))
     aGroup$getAction("Clear")$setVisible(showClear)
     ## EditAnnotations
     showEdit <- !isBasicDeviceMode(playState)
     showEdit <- showEdit && (length(playState$annotations) > 0)
     aGroup$getAction("EditAnnotations")$setVisible(showEdit)
+    ## Brush
+    showBrush <- !isBasicDeviceMode(playState)
+    aGroup$getAction("Brush")$setVisible(showBrush)
+}
+
+drawLinkedLocal <- function(playState, return.code = FALSE)
+{
+    ## draw linked brushed points
+    theCode <- expression()
+    subscripts <- unique(sort(unlist(playState$linked$ids)))
+    if (length(subscripts) == 0) return(theCode)
+    playDevSet(playState)
+    for (space in playState$spaces) {
+        data <- xyCoords(playState, space = space)
+        if (length(data$x) == 0) next
+        if (length(data$y) == 0) next
+        ## convert to log scale if necessary
+        data <- dataCoordsToSpaceCoords(playState, data)
+        if (!is.null(data$subscripts)) {
+            ## 'data' is a subset given by data$subscripts,
+            ## so need to find which ones match the label subscripts
+            which <- match(subscripts, data$subscripts, 0)
+            x <- data$x[which]
+            y <- data$y[which]
+        } else {
+            ## 'data' (x and y) is the whole dataset
+            x <- data$x[subscripts]
+            y <- data$y[subscripts]
+        }
+        if (length(x) == 0) next
+        annot <- call("panel.points", x, y)
+        annot$pch <- 21
+        annot$col <- "black"
+        annot$fill <- "yellow"
+        expr <- playDo(playState, annot, space = space,
+                       return.code = return.code)
+        if (return.code)
+            theCode <- c(theCode, expr)
+    }
+    theCode
+}
+
+updateLinkedSubscribers <- function(playState, redraw = FALSE)
+{
+    for (otherPlayState in playState$linked$subscribers) {
+        if (!identical(otherPlayState$ID, playState$ID)) {
+            if (redraw) playReplot(otherPlayState)
+            else drawLinkedLocal(otherPlayState)
+        }
+    }
 }
 
 clear_handler <- function(widget, playState)
@@ -64,7 +121,7 @@ clear_handler <- function(widget, playState)
     types <- c(
                if (length(playState$ids) > 0) "ids",
                if (length(playState$annotations) > 0) "annotations",
-               if (length(playState$brushed) > 0) "brushed"
+               if (length(playState$linked$ids) > 0) "linked"
                )
     if (length(types) == 0) { widget$hide(); return() }
     clear.types <- types
@@ -77,21 +134,55 @@ clear_handler <- function(widget, playState)
         playState$win$present()
         if (!isTRUE(result)) return()
     }
-    for (x in clear.types)
-        playState[[x]] <- list()
-    ## update other tool states
-    updateAnnotationActionStates(playState)
+    for (x in clear.types) {
+        if (x == "ids") {
+            playState$ids <- list()
+        } else if (x == "annotations") {
+            playState$annotations <- list()
+        } else if (x == "linked") {
+            playState$linked$ids <- list()
+        }
+    }
+    ## clear destroys the undo stack
+    playState$undoStack <- list()
+    ## redraw
     playReplot(playState)
+    ## update linked plots
+    if ("linked" %in% clear.types)
+        updateLinkedSubscribers(playState, redraw = TRUE)
 }
 
 undo.annotation_handler <- function(widget, playState)
 {
-    ## TODO
-    stop("not yet implemented")
+    if (isBasicDeviceMode(playState)) {
+        ## basic device mode: only one stored display
+        redoPlot <- recordPlot()
+        try(replayPlot(playState$tmp$recorded.plot))
+        generateSpaces(playState)
+        playState$tmp$recorded.plot <- redoPlot
+    } else {
+        ## normal mode
+        i <- length(playState$undoStack)
+        if (i == 0) return()
+        type <- playState$undoStack[[i]]
+        length(playState$undoStack) <- (i - 1)
+        if (type == "ids") {
+            length(playState$ids) <- length(playState$ids) - 1
+        } else if (type == "annotations") {
+            length(playState$annotations) <- length(playState$annotations) - 1
+        } else if (type == "linked") {
+            length(playState$linked$ids) <- length(playState$linked$ids) - 1
+        }
+        ## redraw
+        playReplot(playState)
+        if (type == "linked")
+            updateLinkedSubscribers(playState, redraw = TRUE)
+    }
 }
 
 edit.annotations_handler <- function(widget, playState)
 {
+    ## TODO: allow select annotation space within dialog
     annotSpaces <- names(playState$annotations)
     if (length(annotSpaces) == 0) return()
     if (length(annotSpaces) == 1) {
@@ -148,17 +239,19 @@ arrow_handler <- function(widget, playState)
     annot$type <- arrow$type
     annot$ends <- arrow$ends
     annot$code <- arrow$code
-
-    ## TODO: delete this?
-    originalPlot <- if (isBasicDeviceMode(playState))
-        try(recordPlot())
-    ## draw it
-    playDo(playState, eval(annot), space=space)
     ## store it
-    playState$annotations[[space]] <-
-        c(playState$annotations[[space]], annot)
-    if (isBasicDeviceMode(playState))
-        playState$.recorded.plot <- originalPlot
+    if (isBasicDeviceMode(playState)) {
+        ## just store previous display so can 'undo'
+        playState$tmp$recorded.plot <- try(recordPlot())
+    } else {
+        ## normal mode
+        i <- length(playState$annotations) + 1
+        playState$annotations[[i]] <- annot
+        names(playState$annotations)[i] <- space
+        playState$undoStack <- c(playState$undoStack, "annotations")
+    }
+    ## draw it
+    playDo(playState, annot, space=space)
     ## update other tool states
     updateAnnotationActionStates(playState)
 }
@@ -267,6 +360,7 @@ annotate_handler <- function(widget, playState)
     glabel("For more control, try Customise Style from the Style menu.",
            container = stylegroup)
 
+    ## store plot display for fast redrawing
     originalPlot <- try(recordPlot())
     showingPreview <- FALSE
 
@@ -377,7 +471,8 @@ annotate_handler <- function(widget, playState)
 
         ## need to redraw all annotations if style changed
         if (svalue(wid$set.defaults) &&
-            (length(playState$annotations) > 0))
+            (length(playState$annotations) > 0) &&
+            !isBasicDeviceMode(playState))
         {
             playReplot(playState)
             originalPlot <- try(recordPlot())
@@ -387,7 +482,7 @@ annotate_handler <- function(widget, playState)
         if (showingPreview) {
             ## remove preview (i.e. redraw original plot)
             result <- try(replayPlot(originalPlot))
-            ## may fail if engine.display.list / grid.display.list off
+            ## may fail if engine.display.list is off
             if (inherits(result, "try-error")) {
                 playReplot(playState)
             } else {
@@ -399,17 +494,23 @@ annotate_handler <- function(widget, playState)
             ## echo annotation code to console
             message(paste(deparse(annot), collapse="\n"))
             ## draw it
-            playDo(playState, eval(annot), space = space)
+            playDo(playState, annot, space = space)
             showingPreview <<- TRUE
             return()
         }
-        ## draw it
-        playDo(playState, eval(annot), space=space)
         ## store it
-        playState$annotations[[space]] <-
-            c(playState$annotations[[space]], annot)
-        if (isBasicDeviceMode(playState))
-            playState$.recorded.plot <- originalPlot
+        if (isBasicDeviceMode(playState)) {
+            ## just store previous display so can 'undo'
+            playState$tmp$recorded.plot <- originalPlot
+        } else {
+            ## normal mode
+            i <- length(playState$annotations) + 1
+            playState$annotations[[i]] <- annot
+            names(playState$annotations)[i] <- space
+            playState$undoStack <- c(playState$undoStack, "annotations")
+        }
+        ## draw it
+        playDo(playState, annot, space=space)
         ## update other tool states
         updateAnnotationActionStates(playState)
 
@@ -439,6 +540,22 @@ annotate_handler <- function(widget, playState)
     #defaultWidget(okbutt) <- TRUE
 }
 
+brush_handler <- function(widget, playState)
+{
+    foo <- playSelectData(playState,
+                          prompt = paste(
+                          "Click or drag to brush data points;",
+                          "Right-click or Esc to cancel."))
+    if (is.null(foo)) return()
+    if (length(foo$which) == 0) return()
+    ids <- foo$subscripts
+    i <- length(playState$linked$ids) + 1
+    playState$linked$ids[[i]] <- ids
+    playState$undoStack <- c(playState$undoStack, "linked")
+    updateAnnotationActionStates(playState)
+    drawLinkedLocal(playState)
+    updateLinkedSubscribers(playState)
+}
 
 legend_handler <- function(widget, playState)
 {

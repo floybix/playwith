@@ -191,12 +191,6 @@ page.annotation_handler <- function(widget, playState)
     playState$page.annotation <- widget["active"]
 }
 
-set.arrow.style_handler <- function(widget, playState)
-{
-    ## TODO
-    gmessage.error("not yet implemented")
-}
-
 show.statusbar_handler <- function(widget, playState) {
     playState$widgets$statusbarBox["visible"] <- widget["active"]
 }

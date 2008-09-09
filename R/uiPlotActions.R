@@ -11,28 +11,28 @@ plotActionGroup <- function(playState)
              list("Zoomfit", "gtk-zoom-fit", "_Fit data", "<Ctrl>space", "Revert to default plot region", zoomfit_handler),
              list("ZeroY", "gtk-goto-bottom", "Full y scale", "<Ctrl>Return", "Show the full y (response) scale starting from zero", zero.y_handler),
              list("ZeroX", "gtk-goto-first", "Full x scale", "<Ctrl>BackSpace", "Show the full x (domain) scale starting from zero", zero.x_handler),
-             ## identify
+             ## identify (uiIdentifyActions.R)
              list("SetLabelsTo", "gtk-index", "Set _labels to...", "<Ctrl>L", NULL, set.labels_handler),
              list("IdTable", "gtk-info", "Select from _table...", NULL, "Select points from a table", id.table_handler),
              list("FindLabels", "gtk-find", "_Find...", "<Ctrl>F", "Find points with labels matching...", id.find_handler),
              list("SaveIDs", NULL, "_Save IDs...", NULL, "_Save current IDs to an object", save.ids_handler),
              list("SetLabelStyle", NULL, "Set label st_yle...", NULL, NULL, set.label.style_handler),
              list("SetLabelOffset", NULL, "Set label _offset...", NULL, NULL, set.label.offset_handler),
-             ## annotations
+             ## annotations (uiAnnotationActions.R)
              list("Legend", "gtk-sort-ascending", "Legend", NULL, "Place a legend", legend_handler),
              list("EditAnnotations", "gtk-edit", "Edit ann.", "<Ctrl><Shift>E", "Edit annotations (including arrows) code", edit.annotations_handler),
              list("UndoAnnotation", "gtk-undo", "Undo ann.", "<Ctrl>Z", "Remove last annotation", undo.annotation_handler),
              list("Clear", "gtk-clear", "Clear", "<Shift>Delete", "Remove labels and annotations", clear_handler),
              list("SetArrowStyle", NULL, "Set arrow style...", NULL, NULL, set.arrow.style_handler),
              list("SetBrushStyle", NULL, "Set brush style...", NULL, NULL, set.brush.style_handler),
-             ## grobs
+             ## grobs (uiGrobActions.R)
              list("GrobInspector", "gtk-properties", "Grob inspector", NULL, NULL, grob.inspector_handler)
              )
 
     toggleEntries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback, active
              list("Expand", "gtk-fullscreen", "_Panel", NULL, "Choose a panel to expand to fill the figure (for further interaction)", expand_handler, FALSE),
-             ## options
+             ## options (uiOptionsActions.R)
              list("TimeMode", "gtk-media-forward-ltr", "_Time mode", "<Ctrl>T", "Time mode: scroll along the x axis", time.mode_handler, FALSE)
              )
 

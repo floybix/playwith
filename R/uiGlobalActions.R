@@ -37,7 +37,7 @@ globalActionGroup <- function(playState)
         list( ## : name, stock icon, label, accelerator, tooltip, callback, active?
              list("Keep", "gtk-media-stop", "_Do not replace", "<Ctrl>D", "Do not replace with the next plot", keep_handler, FALSE),
              list("StayOnTop", "gtk-leave-fullscreen", "St_ay on top", "<Ctrl>grave", "Show this window above all others", stay.on.top_handler, FALSE),
-             ## options
+             ## options (uiOptionsActions.R)
              list("ClipAnnot", NULL, "_Clip annotations", NULL, "", clip.annotations_handler, FALSE),
              list("PageAnnot", NULL, "_Annot. on page (fixed pos.)", NULL, "Place annotations with respect to the page, not plot coordinates", page.annotation_handler, FALSE),
              list("ShowStatusbar", NULL, "Status _bar", NULL, NULL, show.statusbar_handler, TRUE),
@@ -67,7 +67,27 @@ updateGlobalActions <- function(playState)
 }
 
 clone_handler <- function(widget, playState)
-    gmessage.error("not yet implemented")
+{
+    playDevSet(playState)
+    ## start off with an empty shell
+    sizein <- dev.size("in")
+    newOne <- playwith({}, new = TRUE,
+                       title = paste("Clone of", playState$win["title"]),
+                       width = sizein[1], height = sizein[2],
+                       pointsize = playState$pointsize)
+    ## copy everything except widgets / pointers / ID / tmp
+    for (name in ls(playState)) {
+        if (name %in% c("win", "dev", "tmp", "ID",
+                        "uiManager", "actionGroups", "widgets"))
+            next
+        ## copy to the clone
+        assign(name, get(name, playState), newOne)
+    }
+    ## link it
+    i <- length(playState$linked$subscribers) + 1
+    playState$linked$subscribers[[i]] <- newOne
+    playNewPlot(newOne)
+}
 
 save_handler <- function(widget, playState)
 {
@@ -106,7 +126,7 @@ save_handler <- function(widget, playState)
     w.in <- dev.size("in")[1]
     h.in <- dev.size("in")[2]
     ## use same pointsize as embedded device
-    ps <- playState$.args$pointsize
+    ps <- playState$pointsize
     if (ext == "eps") setEPS()
     devName <-
         switch(ext,
@@ -138,7 +158,7 @@ copy_handler <- function(widget, playState)
     w.in <- dev.size("in")[1]
     h.in <- dev.size("in")[2]
     ## use same pointsize as embedded device
-    ps <- playState$.args$pointsize
+    ps <- playState$pointsize
     if (exists("win.metafile")) { ## i.e. in MS Windows
         copy.exts <- c("wmf", "png")
         copy.labels <- c("Windows Metafile (wmf)", "Bitmap (png)")
@@ -186,12 +206,6 @@ edit.call_handler <- function(widget, playState)
     repeat {
         newTxt <- guiTextInput(callTxt, title="Edit plot call",
                                prompt="", accepts.tab=F)
-        ## possible with gWidgets, but way too slow.
-        #txtBox <- gtext(callTxt, font.attr=c(family="monospace"), wrap=FALSE, width=600)
-        #gbasicdialog(title="Edit plot call", widget=txtBox,
-        #             action=environment(), handler=function(h, ...)
-        #             assign("newTxt", svalue(h[[1]]), env=h$action)
-        #             )
         if (is.null(newTxt)) break
         callTxt <- newTxt
         tmp <- tryCatch(parse(text=callTxt), error=function(e)e)
@@ -278,15 +292,21 @@ set.size_handler <- function(widget, playState) {
     da$setSizeRequest(-1, -1)
 }
 
-incr.font_handler <- function(widget, playState)
-    gmessage.error("not yet implemented")
+incr.font_handler <- function(widget, playState) {
+    ps <- playState$pointsize
+    ps <- ps + 1
+    ## TODO
+    #asCairoDevice(playState$widgets$drawingArea, pointsize = ps)
+    #playState$pointsize <- ps
+}
+
 decr.font_handler <- function(widget, playState)
-    gmessage.error("not yet implemented")
+    gmessage.error("not yet implemented") ## TODO
 
 custom.style_handler <- function(widget, playState) {
     playDevSet(playState)
     isBase <- (!playState$is.lattice && is.null(playState$viewport))
-    latticeStyleGUI(pointsize = playState$.args$pointsize,
+    latticeStyleGUI(pointsize = playState$pointsize,
                     base.graphics = isBase)
 }
 
@@ -306,70 +326,22 @@ redraw_handler <- function(widget, playState)
 reload_handler <- function(widget, playState)
     playNewPlot(playState)
 
-
 save.code_handler <- function(widget, playState)
-    NA
+{
+    myDefault <- "plot.R"
+    filter <- list("All files" = list(patterns = c("*")),
+                   "Text files" = list(patterns = c("*.txt")),
+                   "R files" = list(patterns = c("*.R")))
+    filename <- gfile("Export plot source code", type = "save",
+                      filter = filter, initialfilename = myDefault)
+    if (is.na(filename)) return()
+    theSource <- playSourceCode(playState)
+    cat(theSource, file = filename)
+}
 
 view.source_handler <- function(widget, playState)
 {
-    ## TODO: dump data?
-    ## TODO: style settings?
-    code <- list()
-    comm <- list()
-    code$plot <- playState$call
-    if (playState$is.lattice) {
-        code$plot <- call("print", playState$call)
-        if (playState$pages > 1) {
-            code$plot <- call("plotPageN", playState$call,
-                            playState$page)
-        }
-    }
-    code$plot <- as.expression(code$plot)
-    ## set up viewports
-    comm$vps <- "set up viewports"
-    code$vps <- expression(
-        pushViewport(viewport(name = "pageAnnotationVp",
-                              yscale = c(1, 0))),
-        upViewport(0))
-    if (playState$is.base) {
-        code$vps <- c(code$vps, expression(
-        {
-            vps <- baseViewports()
-            vps$plot$name <- "plot"
-            vps$plot$clip <- TRUE
-            vps$plot.clip.off <-
-                viewport(xscale=par("usr")[1:2],
-                         yscale=par("usr")[3:4],
-                         clip="off", name = "plot.clip.off")
-            pushViewport(do.call("vpStack", vps))
-        }))
-    }
-    ## annotations etc
-    comm$linked <- "draw brushed (highlighted) points"
-    code$linked <- drawLinkedLocal(playState, return.code = TRUE)
-    comm$labels <- "add labels to data points"
-    code$labels <- drawLabels(playState, return.code = TRUE)
-    comm$annots <- "draw custom annotations"
-    code$annots <- drawAnnotations(playState, return.code = TRUE)
-    hasExtras <- with(code, (length(linked) || length(labels) ||
-                             length(annots)))
-    ## convert to text with interspersed comments
-    theSource <- NULL
-    opts <- playwith.getOption("deparse.options")
-    for (x in names(code)) {
-        if (length(code[[x]]) > 0) {
-            if (!is.null(comm[[x]]))
-                theSource <- c(theSource,
-                               paste("##", comm[[x]]))
-            theSource <- c(theSource,
-                           unlist(lapply(code[[x]], deparse, width = 42,
-                                         control = opts)))
-        }
-    }
-    ## clean up
-    if (hasExtras || playState$is.base)
-        theSource <- c(theSource, "upViewport(0)")
-    theSource <- paste(theSource, sep = "\n", collapse = "\n")
+    theSource <- playSourceCode(playState)
     guiTextView(theSource, title = "Plot source code")
 }
 

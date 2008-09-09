@@ -3,7 +3,7 @@
 guiTextView <-
     function(text, title,
              wrap.mode=c("none", "char", "word", "word_char"),
-             size=c(640, 320))
+             size=c(640, 400))
 {
     wrap.mode <- match.arg(wrap.mode)
     win <- gtkWindow(show = FALSE)
@@ -19,6 +19,13 @@ guiTextView <-
     win$add(scroller)
     win$show()
 }
+
+        ## possible with gWidgets, but way too slow.
+        #txtBox <- gtext(callTxt, font.attr=c(family="monospace"), wrap=FALSE, width=600)
+        #gbasicdialog(title="Edit plot call", widget=txtBox,
+        #             action=environment(), handler=function(h, ...)
+        #             assign("newTxt", svalue(h[[1]]), env=h$action)
+        #             )
 
 
 guiTextInput <-

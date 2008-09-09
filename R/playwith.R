@@ -208,6 +208,7 @@ playwith <-
     myVBox$packEnd(bottomToolbar, expand=FALSE)
 
     ## create the plot area
+    ## TODO: a function to do this, called again to incr/decr ps
     myDA <- gtkDrawingArea()
     myDA$addEvents(GdkEventMask["enter-notify-mask"]
                    + GdkEventMask["button-press-mask"]
@@ -328,11 +329,11 @@ playwith <-
     playState$init.actions <- init.actions
     playState$on.close <- on.close
     playState$main.function <- main.function
+    playState$pointsize <- pointsize
     playState$.args <-
         list(missing_time.mode = missing_time.mode,
              labels = labels,
-             title = title,
-             pointsize = pointsize)
+             title = title)
     ## extras drawn on top of the plot
     playState$ids <- list()
     playState$annotations <- list()
@@ -449,10 +450,15 @@ playNewPlot <- function(playState = playDevCur())
     playState$is.base <- (!playState$is.lattice &&
                           !playState$is.ggplot &&
                           is.null(playState$viewport))
+    ## lattice calls can fall back to update()
+    if (playState$is.lattice &&
+        !playState$accepts.arguments) {
+        playState$call <- call("update", playState$call)
+        updateMainCall(playState)
+    }
     ## lattice needs subscripts argument to correctly identify points.
     ## warn, and just show the within-panel indices unless subscripts=T
     if (playState$is.lattice &&
-        playState$accepts.arguments &&
         prod(dim(playState$trellis)) > 1)
     {
         if (is.null(playState$trellis$panel.args[[1]]$subscripts)) {
@@ -596,22 +602,11 @@ generateSpaces <- function(playState)
         vps$plot$name <- "plot"
         vps$plot$clip <- TRUE
         vps$plot.clip.off <-
-            viewport(xscale=par("usr")[1:2],#convertX(unit(0:1, "npc"), "native"),
-                     yscale=par("usr")[3:4],#convertY(unit(0:1, "npc"), "native"),
+            viewport(xscale=par("usr")[1:2],
+                     yscale=par("usr")[3:4],
                      clip="off", name = "plot.clip.off")
         playState$tmp$baseVps <- vps
         pushViewport(do.call("vpStack", vps))
-        upViewport(0)
-#        pushViewport(vps$inner)
-#        playState$tmp$baseVps$inner <- current.vpPath()
-#        pushViewport(vps$figure)
-#        playState$tmp$baseVps$figure <- current.vpPath()
-        ## set clipping
-#        pushViewport(vps$plot)
-#        playState$tmp$baseVps$plot <- current.vpPath()
-#        pushViewport(
-#        playState$tmp$baseVps$plot.clip.off <- current.vpPath()
-#        upViewport(0)
     }
     upViewport(0)
     ## create a top-level viewport with normalised coordinates
@@ -739,7 +734,7 @@ deparseOneLine <-
     tmp
 }
 
-xy.coords.call <-
+plotCoords.default <-
     function(the.call, envir=parent.frame(), log=NULL, recycle=TRUE)
 {
     stopifnot(is.call(the.call))
@@ -748,11 +743,11 @@ xy.coords.call <-
     tmp.x <- eval(the.call$x, envir)
     tmp.y <- if ('y' %in% names(the.call)) eval(the.call$y, envir)
     if (inherits(tmp.x, "zoo") && is.null(tmp.y))
-        return(xy.coords(stats::time(tmp.x), as.vector(tmp.x), log=log, recycle=recycle))
-    xy.coords(tmp.x, tmp.y, log=log, recycle=recycle)
+        return(xy.coords(stats::time(tmp.x), as.vector(tmp.x),
+                         log = log, recycle = recycle))
+    xy.coords(tmp.x, tmp.y, log = log, recycle = recycle)
 }
 
-## export this?
 copyLocalArgs <-
     function(the.call,
              envir = parent.frame(),
@@ -866,20 +861,10 @@ recursive.as.list.call <- function(x) {
 
 plotPageN <- function(x, n, ...)
 {
-    x$layout[3] <- 1
-    plot(x, packet.panel = packet.panel.default(n), ...)
-}
-
-## by Deepayan Sarkar <Deepayan.Sarkar@R-project.org>
-
-packet.panel.page <- function(n)
-{
-    ## returns a function that when used as the 'packet.panel'
-    ## argument in print.trellis plots page number 'n' only
-    function(layout, page, ...) {
-        stopifnot(layout[3] == 1)
-        packet.panel.default(layout = layout,
-                             page = page + n - 1,
-                             ...)
-    }
+    if (!is.null(x$layout))
+        x$layout[3] <- 1
+    ## based on code by Deepayan Sarkar
+    packet.panel.pageN <- function(..., page)
+        packet.panel.default(..., page = page + n - 1)
+    plot(x, packet.panel = packet.panel.pageN, ...)
 }

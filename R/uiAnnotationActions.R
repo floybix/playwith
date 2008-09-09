@@ -20,7 +20,7 @@ updateAnnotationActionStates <- function(playState)
         showUndo <- !is.null(playState$tmp$recorded.plot)
     aGroup$getAction("UndoAnnotation")$setSensitive(showUndo)
     ## Clear
-    ## in basic device mode do not know the call; it cannot be redrawn (TODO?)
+    ## in basic device mode do not know the call; it cannot be redrawn
     showClear <- !isBasicDeviceMode(playState)
     showClear <- showClear && ((length(playState$ids) > 0) ||
                                (length(playState$annotations) > 0) ||
@@ -80,6 +80,7 @@ drawLinkedLocal <- function(playState, return.code = FALSE)
         }
         if (length(x) == 0) next
         annot <- call("panel.points", x, y)
+        ## TODO: use settings
         annot$pch <- 21
         annot$col <- "black"
         annot$fill <- "yellow"
@@ -93,12 +94,23 @@ drawLinkedLocal <- function(playState, return.code = FALSE)
 
 updateLinkedSubscribers <- function(playState, redraw = FALSE)
 {
-    for (otherPlayState in playState$linked$subscribers) {
+    whichDead <- NULL
+    for (i in seq_along(playState$linked$subscribers)) {
+        otherPlayState <- playState$linked$subscribers[[i]]
         if (!identical(otherPlayState$ID, playState$ID)) {
+            ## first check that this subscriber is still alive
+            if (!inherits(otherPlayState$win, "GtkWindow")) {
+                whichDead <- c(whichDead, i)
+                next
+            }
+            ## trigger draw / redraw
             if (redraw) playReplot(otherPlayState)
             else drawLinkedLocal(otherPlayState)
         }
     }
+    if (length(whichDead))
+        playState$linked$subscribers <-
+            playState$linked$subscribers[-whichDead]
 }
 
 clear_handler <- function(widget, playState)
@@ -107,7 +119,7 @@ clear_handler <- function(widget, playState)
     types <- c(
                if (length(playState$ids) > 0) "ids",
                if (length(playState$annotations) > 0) "annotations",
-               if (length(playState$linked$ids) > 0) "linked"
+               if (length(playState$linked$ids) > 0) "brushed"
                )
     if (length(types) == 0) { widget$hide(); return() }
     clear.types <- types
@@ -125,7 +137,7 @@ clear_handler <- function(widget, playState)
             playState$ids <- list()
         } else if (x == "annotations") {
             playState$annotations <- list()
-        } else if (x == "linked") {
+        } else if (x == "brushed") {
             playState$linked$ids <- list()
         }
     }
@@ -134,7 +146,7 @@ clear_handler <- function(widget, playState)
     ## redraw
     playReplot(playState)
     ## update linked plots
-    if ("linked" %in% clear.types)
+    if ("brushed" %in% clear.types)
         updateLinkedSubscribers(playState, redraw = TRUE)
 }
 
@@ -538,3 +550,16 @@ legend_handler <- function(widget, playState)
 {
     ## TODO
 }
+
+set.arrow.style_handler <- function(widget, playState)
+{
+    ## TODO
+    gmessage.error("not yet implemented")
+}
+
+set.brush.style_handler <- function(widget, playState)
+{
+    ## TODO
+    gmessage.error("not yet implemented")
+}
+

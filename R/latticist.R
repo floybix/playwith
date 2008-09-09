@@ -7,22 +7,25 @@
 latticist <-
     function(dat,
              reorder.levels = TRUE,
-             plot.call = quote(marginal.plot(dat, reorder=FALSE)),
+             plot.call = quote(marginal.plot(dat, reorder = FALSE)),
              ...,
              labels = rownames(dat),
              time.mode = FALSE)
 {
+    isDefaultPlotCall <- missing(plot.call)
+    datArg <- quote(unknown)
     if (missing(dat)) {
         if (missing(plot.call))
             stop("Give one of 'dat' or 'plot.call'.")
         ## plot.call was given; try to extract data
+        ## also need to replace it in the call with `dat`
         dat <- NULL
-        datArg <- "unknown"
         ## assuming the relevant lattice function is the outer call
         ## check for named 'data' argument
         if (!is.null(plot.call$data)) {
             datArg <- plot.call$data
             dat <- eval.parent(datArg)
+            plot.call$data <- quote(dat)
         } else {
             if (length(plot.call) <= 1) {
                 ## no arguments or NULL call
@@ -31,7 +34,10 @@ latticist <-
                 ## one or more arguments
                 datArg <- plot.call[[2]]
                 dat <- eval.parent(datArg)
-                if (inherits(dat, "formula")) {
+                if (!inherits(dat, "formula")) {
+                    ## go with first argument
+                    plot.call[[2]] <- quote(dat)
+                } else {
                     ## try second argument if exists and un-named
                     if ((length(plot.call) > 2) &&
                         (is.null(names(plot.call)) ||
@@ -39,19 +45,18 @@ latticist <-
                     {
                         datArg <- plot.call[[3]]
                         dat <- eval.parent(datArg)
+                        plot.call[[3]] <- quote(dat)
                     } else {
                         stop("Can not extract data from plot.call.")
                     }
                 }
             }
         }
-        title <- paste("Latticist:",
-                       toString(deparse(datArg), width=30))
     } else {
         ## dat was given
-        title <- paste("Latticist:",
-                       toString(deparse(substitute(dat)), width=30))
+        datArg <- substitute(dat)
     }
+    title <- paste("Latticist:", toString(deparse(datArg), width=30))
 
     if (!is.data.frame(dat))
         dat <- as.data.frame(dat)
@@ -86,7 +91,7 @@ latticist <-
         }
     }
 
-    if (missing(plot.call)) {
+    if (isDefaultPlotCall) {
         pageFn <- function(n) NA
         body(pageFn) <- as.expression(call("{",
             call("panel.text", 0.5, 0, paste("Latticist ",
@@ -1741,19 +1746,7 @@ makeLatticist <- function(dat)
         gSignalConnect(subsetW$getChild(), "activate",
                        doRecompose, data=playState)
         setBox$packStart(subsetW, expand=FALSE)
-        ## HOTSET
-        ## TODO
-        hotsetBox <- gtkHBox()
-        hotsetBox$packStart(gtkLabel(" Hot-set: "), expand=FALSE)
-        hotsetSelW <- niceButton("interactive...")
-        hotsetSelW["visible"] <- FALSE #!is.null(xvar) || !is.null(yvar)
-        hotsetBox$packStart(hotsetSelW)
-        setBox$packStart(hotsetBox, expand=FALSE, padding=1)
-        hotsetW <- gtkComboBoxEntryNewText()
-        hotsetW$show()
-        hotsetW["sensitive"] <- FALSE
-        hotsetW["width-request"] <- -1
-        setBox$packStart(hotsetW, expand=FALSE)
+
         box$packStart(setBox, expand=FALSE, padding=1)
 
         ## add it directly to the window (not a toolbar!)

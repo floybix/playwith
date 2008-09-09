@@ -173,6 +173,74 @@ updateMainCall <- function(playState) {
     }
 }
 
+playSourceCode <- function(playState = playDevCur())
+{
+    theHeader <-
+        paste("library(grid)",
+              "library(lattice)",
+              "## + might need others; e.g. library(playwith)",
+              "## we are assuming that the data are attached",
+              "## and any customised style settings are in place",
+              sep = "\n")
+    code <- list()
+    comm <- list()
+    code$plot <- playState$call
+    if (playState$is.lattice) {
+        code$plot <- call("print", playState$call)
+        if (playState$pages > 1) {
+            code$plot <- call("plotPageN", playState$call,
+                            playState$page)
+        }
+    }
+    code$plot <- as.expression(code$plot)
+    ## set up viewports
+    comm$vps <- "set up viewports"
+    code$vps <- expression(
+        pushViewport(viewport(name = "pageAnnotationVp",
+                              yscale = c(1, 0))),
+        upViewport(0))
+    if (playState$is.base) {
+        code$vps <- c(code$vps, expression(
+        {
+            vps <- baseViewports()
+            vps$plot$name <- "plot"
+            vps$plot$clip <- TRUE
+            vps$plot.clip.off <-
+                viewport(xscale=par("usr")[1:2],
+                         yscale=par("usr")[3:4],
+                         clip="off", name = "plot.clip.off")
+            pushViewport(do.call("vpStack", vps))
+        }))
+    }
+    ## annotations etc
+    comm$linked <- "draw brushed (highlighted) points"
+    code$linked <- drawLinkedLocal(playState, return.code = TRUE)
+    comm$labels <- "add labels to data points"
+    code$labels <- drawLabels(playState, return.code = TRUE)
+    comm$annots <- "draw custom annotations"
+    code$annots <- drawAnnotations(playState, return.code = TRUE)
+    hasExtras <- with(code, (length(linked) || length(labels) ||
+                             length(annots)))
+    ## convert to text with interspersed comments
+    theSource <- theHeader
+    opts <- playwith.getOption("deparse.options")
+    for (x in names(code)) {
+        if (length(code[[x]]) > 0) {
+            if (!is.null(comm[[x]]))
+                theSource <- c(theSource,
+                               paste("##", comm[[x]]))
+            theSource <- c(theSource,
+                           unlist(lapply(code[[x]], deparse, width = 42,
+                                         control = opts)))
+        }
+    }
+    ## clean up
+    if (hasExtras || playState$is.base)
+        theSource <- c(theSource, "upViewport(0)")
+    theSource <- paste(theSource, sep = "\n", collapse = "\n")
+    theSource
+}
+
 playFreezeGUI <- function(playState = playDevCur())
     playSetFreezeGUI(playState, TRUE)
 
@@ -184,9 +252,10 @@ playSetFreezeGUI <- function(playState, frozen)
     playState$tmp$now.interacting <- frozen
     with(playState$widgets, {
         ## TODO: freeze GlobalActions etc?
-        topToolbar["sensitive"] <- !frozen
-        leftToolbar["sensitive"] <- !frozen
-        rightToolbar["sensitive"] <- !frozen
+        playState$actionGroups[["PlotActions"]]$setSensitive(!frozen)
+        #topToolbar["sensitive"] <- !frozen
+        #leftToolbar["sensitive"] <- !frozen
+        #rightToolbar["sensitive"] <- !frozen
         ## leave bottom toolbar alone as this is where parameter
         ## control tools go (otherwise long slider drags interrupted).
         ## these tools check plot.ready before redrawing (threads...).

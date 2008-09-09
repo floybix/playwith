@@ -5,15 +5,12 @@
 
 ### DATA
 
-toolConstructors$data <- function(playState)
-{
-    quickTool(playState,
-              label = "Data...",
-              icon = "gtk-cdrom",
-              tooltip = "View and edit attached data objects",
-              f = data_handler,
-              show = length(playState$env) > 0)
-}
+#    quickTool(playState,
+#              label = "Data...",
+#              icon = "gtk-cdrom",
+#              tooltip = "View and edit attached data objects",
+#              f = data_handler,
+#              show = length(playState$env) > 0)
 
 data_handler <- function(widget, playState)
 {

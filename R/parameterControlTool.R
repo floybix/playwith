@@ -3,9 +3,6 @@
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
-## TODO: DELETE
-toolConstructors <- list()
-
 parameterControlTool <-
     function(playState, name, value,
              label = name,

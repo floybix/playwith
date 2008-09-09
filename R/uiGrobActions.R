@@ -3,22 +3,10 @@
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
-grobActionGroup <- function(playState)
-{
-    entries <-
-        list( ## : name, stock icon, label, accelerator, tooltip, callback
-             list("GrobInspector", "gtk-properties", "Grob inspector", NULL, NULL, grob.inspector_handler)
-             )
-
-    ## construct action group with playState passed to callbacks
-    aGroup <- gtkActionGroupNew("GrobActions")
-    aGroup$addActions(entries, playState)
-    aGroup
-}
 
 updateGrobActions <- function(playState)
 {
-    aGroup <- playState$actionGroups[["GrobActions"]]
+    aGroup <- playState$actionGroups[["PlotActions"]]
     hasGrobs <- (length(grid.ls(print = FALSE)$name) > 0)
     aGroup$getAction("GrobInspector")$setVisible(hasGrobs)
 }

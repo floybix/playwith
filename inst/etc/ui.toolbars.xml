@@ -8,17 +8,18 @@
   </toolbar>
   <toolbar name='LeftToolbar'>
     <toolitem action='StayOnTop'/>
-    <toolitem action='PlotSettings'/>
+    <separator/>
+    <toolitem action='Zoom'/>
+    <toolitem action='Identify'/>
+    <toolitem action='Brush'/>
+    <toolitem action='Annotation'/>
+    <toolitem action='Arrow'/>
     <separator/>
     <toolitem action='Expand'/>
     <toolitem action='Zoomfit'/>
     <toolitem action='ZeroY'/>
     <toolitem action='ZeroX'/>
-    <separator/>
-    <toolitem action='Annotation'/>
-    <toolitem action='Arrow'/>
-    <toolitem action='Brush'/>
-    <toolitem action='UndoAnnotation'/>
+    <toolitem action='PlotSettings'/>
     <separator/>
   </toolbar>
   <toolbar name='TopToolbar'></toolbar>

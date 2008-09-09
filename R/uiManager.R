@@ -23,10 +23,6 @@ constructUIManager <- function(playState)
     window <- playState$win
     window$setData("ui-manager", manager)
     manager$insertActionGroup(plotActionGroup(playState), 0)
-    manager$insertActionGroup(identifyActionGroup(playState), 0)
-    manager$insertActionGroup(annotationActionGroup(playState), 0)
-    manager$insertActionGroup(grobActionGroup(playState), 0)
-    manager$insertActionGroup(optionsActionGroup(playState), 0)
     manager$insertActionGroup(globalActionGroup(playState), 0)
     ## user-defined actions:
     uact <- eval(playwith.getOption("custom.tools"))

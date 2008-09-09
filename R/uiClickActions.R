@@ -13,9 +13,18 @@ initClickActions <- function(playState)
     }
 }
 
+clickmode.change_handler <- function(action, current, playState)
+{
+    if (!current["active"]) return()
+    playState$tmp$click.mode <- gtkActionGetName(current)
+    updateClickActions(playState)
+}
+
 updateClickActions <- function(playState)
 {
-    ## work out which actions are relevant to the plot
+    if (is.null(playState$tmp$click.mode))
+        playState$tmp$click.mode <- "Zoom"
+    ## work out which actions are possible on current plot
     hasArgs <- playState$accepts.arguments
     isLatt <- playState$is.lattice
     isSplom <- (playState$callName %in% c("splom"))
@@ -28,16 +37,27 @@ updateClickActions <- function(playState)
     actions$nav2D <- (hasArgs && !isLatt3D && !isSplom)
     actions$nav3D <- (isLatt3D)
     actions$ident <- (canIdent)
-    playState$tmp$click.actions <- actions
+    playState$tmp$ok.actions <- actions
     ## set default statusbar message
-    msg <- with(actions,
-                paste(c(if (ident) c("Click to identify points"),
-                        if (nav2D) c("Drag to zoom (hold Shift to constrain)",
-                                     "Alt-click to zoom out"),
-                        if (nav3D) c("Drag to rotate (hold Shift to constrain)",
-                                     "Alt-drag to zoom", "Alt-click to zoom out"),
-                        "Right-click for more"),
-                      collapse = ", "))
+    modeOK <- playState$tmp$click.mode
+    if ((modeOK == "Zoom") && actions$nav3D)
+        modeOK <- "Nav3D"
+    msg <- switch(modeOK,
+                  Zoom = "Drag to zoom (hold Shift to constrain)",,
+                  Nav3D = "Drag to rotate (hold Shift to constrain)",
+                  Identify = "Click or drag to identify points",
+                  Brush = paste("Click or drag to brush points",
+                  "(hold Shift to constrain)"),
+                  Annotation = "Click or drag to place text",
+                  Arrow = paste("Drag to draw an arrow",
+                  "(hold Shift to constrain)"))
+    ## Zoom actions are always accessible, if possible:
+    if (actions$nav2D || actions$nav3D) {
+        if (modeOK != "Zoom")
+            msg <- paste(msg, "Alt-drag to zoom", sep = ", ")
+        msg <- paste(msg, "Alt-click to zoom out", sep = ", ")
+    }
+    msg <- paste(msg, "Right-click for more", sep = ", ")
     playState$widgets$statusbar$pop(1)
     playState$widgets$statusbar$push(1, msg)
 }
@@ -51,7 +71,9 @@ device.click_handler <- function(widget, event, playState)
     x <- event$x
     y <- event$y
     ## work out which actions are relevant to the plot
-    actions <- playState$tmp$click.actions
+    click.mode <- playState$tmp$click.mode
+    pageOK <- (click.mode %in% c("Annotation", "Arrow"))
+    actions <- playState$tmp$ok.actions
     isCtrlClick <- (as.flag(event$state) & GdkModifierType["control-mask"])
     isAltClick <- ((as.flag(event$state) & GdkModifierType["mod1-mask"]) ||
                    (as.flag(event$state) & GdkModifierType["mod2-mask"]))
@@ -61,8 +83,12 @@ device.click_handler <- function(widget, event, playState)
     if ((event$button == 1) && !isCtrlClick) {
         ## standard (left) mouse button
         dragShape <- "rect"
-        if (actions$nav3D && !isAltClick)
-            dragShape <- "line"
+        if (!isAltClick) {
+            if ((click.mode == "Zoom") && actions$nav3D)
+                dragShape <- "line"
+            if (click.mode == "Arrow")
+                dragShape <- "line"
+        }
         ## handle click or drag
         foo <- playClickOrDrag(playState, x0=x, y0=y,
                                shape=dragShape)
@@ -71,40 +97,60 @@ device.click_handler <- function(widget, event, playState)
             coordsCore(playState, NULL)
             return(FALSE)
         }
-        if (is.null(foo$coords)) {
+        if (is.null(foo$coords) && !pageOK) {
             ## click/drag outside of a defined space
             coordsCore(playState, NULL)
             return(FALSE)
         }
         if (foo$is.click) {
-            ## click, not drag
             coordsCore(playState, foo)
-            if (actions$nav2D) {
-                if (isAltClick)
-                    zoomoutCore(playState, foo)
-            }
-            if (actions$nav3D) {
-                if (isAltClick)
-                    zoomout3DCore(playState, foo)
-            }
-            if (actions$ident) {
-                if (isShiftClick)
-                    identifyCore(playState, foo, deidentify=TRUE)
-                if (isPlainClick)
-                    identifyCore(playState, foo)
-            }
-        }
-        else {
-            ## drag
+        } else {
             coordsCore(playState, NULL)
+        }
+        ## standard alt-click actions
+        if (isAltClick) {
             if (actions$nav2D) {
-                zoomCore(playState, foo)
+                ## 2D Zoom
+                if (foo$is.click) {
+                    zoomoutCore(playState, foo)
+                } else {
+                    ## drag
+                    zoomCore(playState, foo)
+                }
             }
             if (actions$nav3D) {
-                if (!isAltClick)
-                    rotate3DCore(playState, foo)
-                if (isAltClick)
+                ## 3D Zoom
+                if (foo$is.click) {
+                    zoomout3DCore(playState, foo)
+                } else {
+                    ## drag
                     zoom3DCore(playState, foo)
+                }
+            }
+        } else {
+            ## plain click: normal actions
+            if (click.mode == "Zoom") {
+                if (actions$nav3D) {
+                    ## Nav3D
+                    if (!foo$is.click)
+                        rotate3DCore(playState, foo)
+                } else {
+                    ## Zoom (2D)
+                    if (!foo$is.click)
+                        zoomCore(playState, foo)
+                }
+            }
+            if (click.mode == "Identify") {
+                identifyCore(playState, foo, remove = isShiftClick)
+            }
+            if (click.mode == "Brush") {
+                brushCore(playState, foo, remove = isShiftClick)
+            }
+            if (click.mode == "Annotation") {
+                annotateCore(playState, foo)
+            }
+            if (click.mode == "Arrow") {
+                arrowCore(playState, foo)
             }
         }
     } else {
@@ -119,9 +165,8 @@ device.click_handler <- function(widget, event, playState)
         ## right mouse button or control-click
         foo <- playClickOrDrag(playState, x0=x, y0=y,
                                shape="rect")
-        if (is.null(foo)) {
+        if (is.null(foo))
             return(FALSE)
-        }
         ## pop up context menu
         contextCore(playState, foo, event = event)
     }
@@ -248,6 +293,9 @@ contextCore <- function(playState, foo, event)
 {
     ## pop up context menu
     cMenu <- gtkMenu()
+    cMenu$popup(button = event$button, activate.time = event$time)
+    cMenu["visible"] <- FALSE
+    ## fill in menu items
     space <- foo$space
     showGeneralStuff <- TRUE
     if (space != "page") {
@@ -304,7 +352,6 @@ contextCore <- function(playState, foo, event)
             cMenu$append(item)
         }
     }
-    ## show the menu
-    cMenu$popup(button = event$button, activate.time = event$time)
+    cMenu["visible"] <- TRUE
     while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
 }

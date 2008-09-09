@@ -3,24 +3,6 @@
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
-identifyActionGroup <- function(playState)
-{
-    entries <-
-        list( ## : name, stock icon, label, accelerator, tooltip, callback
-             list("SetLabelsTo", "gtk-index", "Set _labels to...", "<Ctrl>L", NULL, set.labels_handler),
-             list("SetLabelStyle", NULL, "Set label st_yle...", NULL, NULL, set.label.style_handler),
-             list("SetLabelOffset", NULL, "Set label _offset...", NULL, NULL, set.label.offset_handler),
-             list("Identify", "gtk-info", "_Identify...", NULL, "Identify all points in a selected region", identify_handler),
-             list("IdTable", "gtk-info", "Select from _table...", NULL, "Select points from a table", id.table_handler),
-             list("FindLabels", "gtk-find", "_Find...", "<Ctrl>F", "Find points with labels matching...", id.find_handler),
-             list("SaveIDs", NULL, "_Save IDs...", NULL, "_Save current IDs to an object", save.ids_handler)
-             )
-
-    ## construct action group with playState passed to callbacks
-    aGroup <- gtkActionGroupNew("IdentifyActions")
-    aGroup$addActions(entries, playState)
-    aGroup
-}
 
 initIdentifyActions <- function(playState)
 {
@@ -138,12 +120,12 @@ makeLabels <- function(x, orSeq=FALSE)
 
 updateIdentifyActions <- function(playState)
 {
-    aGroup <- playState$actionGroups[["IdentifyActions"]]
+    aGroup <- playState$actionGroups[["PlotActions"]]
     ## Identify etc
     canIdent <- playState$tmp$identify.ok
-    aGroup$getAction("Identify")$setVisible(canIdent)
-    aGroup$getAction("IdTable")$setVisible(canIdent)
-    aGroup$getAction("SaveIDs")$setVisible(canIdent)
+    aGroup$getAction("Identify")$setSensitive(canIdent)
+    aGroup$getAction("IdTable")$setSensitive(canIdent)
+    aGroup$getAction("SaveIDs")$setSensitive(canIdent)
     ## draw persistent labels
     if (canIdent)
         drawLabels(playState)
@@ -288,35 +270,9 @@ set.label.style_handler <- function(widget, playState)
     playState$win$present()
 }
 
-identify_handler <- function(widget, playState)
+identifyCore <- function(playState, foo, remove = FALSE)
 {
-    foo <- playSelectData(playState,
-                          paste("Click or drag to identify points.",
-                                "Right-click or Esc to cancel."))
-    if (is.null(foo)) return()
-    if (length(foo$which) == 0) return()
-    with(foo, {
-        if (!is.click) pos <- 1
-        ## store newly identified points in playState
-        ids.new <- data.frame(subscripts = subscripts, pos = pos)
-        #ids.old <- playState$ids[[space]] ## may be NULL
-        #if (is.null(ids.old)) ids.old <- ids.new
-        #else ids.new <- rbind(ids.old, ids.new)
-        #playState$ids[[space]] <- ids.new
-        i <- length(playState$ids) + 1
-        playState$ids[[i]] <- ids.new
-        names(playState$ids)[i] <- space
-        playState$undoStack <- c(playState$undoStack, "ids")
-        ## draw them
-        drawLabelsInSpace(playState, subscripts = subscripts,
-                   space = space, pos = pos)
-    })
-    ## update other tool states
-    updateAnnotationActionStates(playState)
-}
-
-identifyCore <- function(playState, foo, deidentify = FALSE)
-{
+    ## TODO: if (remove)
     if (!isTRUE(playState$tmp$identify.ok)) return()
     if (is.null(playState$labels)) return()
     if (is.null(foo$coords)) return()
@@ -327,55 +283,79 @@ identifyCore <- function(playState, foo, deidentify = FALSE)
     if (length(data$x) == 0) return(FALSE)
     if (length(data$y) == 0) return(FALSE)
     coords <- foo$coords
-    x <- coords$x[1]
-    y <- coords$y[1]
-    ppxy <- playDo(playState,
-                   list(lx=convertX(unit(x, "native"), "points", TRUE),
-                        ly=convertY(unit(y, "native"), "points", TRUE),
-                        px=convertX(unit(data$x, "native"), "points", TRUE),
-                        py=convertY(unit(data$y, "native"), "points", TRUE)),
-                   space=foo$space)
-    pdists <- with(ppxy, sqrt((px - lx)^2 + (py - ly)^2))
-    ## all data points within 11 points
-    which <- which(pdists < 11)
-    if (length(which) == 0) return()
-    ## order by distance from click
-    which <- which[order(pdists[which])]
-    idMenu <- gtkMenu()
-    for (w in which) {
-        datx <- data$x[[w]]
-        daty <- data$y[[w]]
-        pos <- with(ppxy, lattice:::getTextPosition(x = lx - px[w],
-                                                    y = ly - py[w]))
-        ss <- data$subscripts[[w]]
-        if (is.null(ss)) ss <- w
-        label <- toString(playState$labels[[ss]])
-        label <- paste(label, " (x: ", format(signif(datx, 4)),
-                       ", y: ", format(signif(daty, 4)), ")", sep="")
-        item <- gtkMenuItem(label)
-        idMenu$append(item)
-        gSignalConnect(item, "activate",
-                       function(widget, user.data) {
-                           ss <- user.data$ss
-                           pos <- user.data$pos
-                           ## store newly identified points in playState
-                           ids.new <- data.frame(subscripts = ss, pos = pos)
-                           i <- length(playState$ids) + 1
-                           playState$ids[[i]] <- ids.new
-                           names(playState$ids)[i] <- space
-                           playState$undoStack <- c(playState$undoStack, "ids")
-                           ## draw them
-                           drawLabelsInSpace(playState, subscripts = ss,
-                                      space = space, pos = pos)
-                           ## update other tool states
-                           updateAnnotationActionStates(playState)
-                       }, data = list(ss = ss, pos = pos))
+    if (foo$is.click) {
+        x <- coords$x[1]
+        y <- coords$y[1]
+        ppxy <- playDo(playState,
+                       list(lx=convertX(unit(x, "native"), "points", TRUE),
+                            ly=convertY(unit(y, "native"), "points", TRUE),
+                            px=convertX(unit(data$x, "native"), "points", TRUE),
+                            py=convertY(unit(data$y, "native"), "points", TRUE)),
+                       space=foo$space)
+        pdists <- with(ppxy, sqrt((px - lx)^2 + (py - ly)^2))
+        ## all data points within 11 points
+        which <- which(pdists < 11)
+        if (length(which) == 0) return()
+        idMenu <- gtkMenu()
+        idMenu$popup(button=0, activate.time=gtkGetCurrentEventTime())
+        ## order by distance from click
+        which <- which[order(pdists[which])]
+        for (w in which) {
+            datx <- data$x[[w]]
+            daty <- data$y[[w]]
+            pos <- with(ppxy, lattice:::getTextPosition(x = lx - px[w],
+                                                        y = ly - py[w]))
+            ss <- data$subscripts[[w]]
+            if (is.null(ss)) ss <- w
+            label <- toString(playState$labels[[ss]])
+            label <- paste(label, " (x: ", format(signif(datx, 4)),
+                           ", y: ", format(signif(daty, 4)), ")", sep="")
+            item <- gtkMenuItem(label)
+            idMenu$append(item)
+            gSignalConnect(item, "activate",
+                           function(widget, user.data) {
+                               ss <- user.data$ss
+                               pos <- user.data$pos
+                               ## store newly identified points in playState
+                               ids.new <- data.frame(subscripts = ss, pos = pos)
+                               i <- length(playState$ids) + 1
+                               playState$ids[[i]] <- ids.new
+                               names(playState$ids)[i] <- space
+                               playState$undoStack <- c(playState$undoStack, "ids")
+                               ## draw them
+                               drawLabelsInSpace(playState, subscripts = ss,
+                                                 space = space, pos = pos)
+                               ## update other tool states
+                               updateAnnotationActionStates(playState)
+                           }, data = list(ss = ss, pos = pos))
+        }
+        ## show the menu
+        while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
+    } else {
+        ## drag
+        foo <- playSelectData(playState, foo = foo)
+        if (is.null(foo)) return()
+        if (length(foo$which) == 0) return()
+        with(foo, {
+            if (!is.click) pos <- 1
+            ## store newly identified points in playState
+            ids.new <- data.frame(subscripts = subscripts, pos = pos)
+                                        #ids.old <- playState$ids[[space]] ## may be NULL
+                                        #if (is.null(ids.old)) ids.old <- ids.new
+                                        #else ids.new <- rbind(ids.old, ids.new)
+                                        #playState$ids[[space]] <- ids.new
+            i <- length(playState$ids) + 1
+            playState$ids[[i]] <- ids.new
+            names(playState$ids)[i] <- space
+            playState$undoStack <- c(playState$undoStack, "ids")
+            ## draw them
+            drawLabelsInSpace(playState, subscripts = subscripts,
+                              space = space, pos = pos)
+        })
+        ## update other tool states
+        updateAnnotationActionStates(playState)
     }
-    ## show the menu
-    idMenu$popup(button=0, activate.time=gtkGetCurrentEventTime())
-    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
 }
-
 
 id.table_handler <- function(widget, playState) {
     ## TODO

@@ -7,26 +7,54 @@ plotActionGroup <- function(playState)
 {
     entries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback
-             list("PlotSettings", "gtk-preferences", "Plot _settings", "<Ctrl>I", "Change the plot type and settings", plot.settings_handler),
+             list("PlotSettings", "gtk-preferences", "Plot _settings", "<Ctrl>O", "Change the plot type and settings", plot.settings_handler),
              list("Zoomfit", "gtk-zoom-fit", "_Fit data", "<Ctrl>space", "Revert to default plot region", zoomfit_handler),
              list("ZeroY", "gtk-goto-bottom", "Full y scale", "<Ctrl>Return", "Show the full y (response) scale starting from zero", zero.y_handler),
-             list("ZeroX", "gtk-goto-first", "Full x scale", "<Ctrl>BackSpace", "Show the full x (domain) scale starting from zero", zero.x_handler)
+             list("ZeroX", "gtk-goto-first", "Full x scale", "<Ctrl>BackSpace", "Show the full x (domain) scale starting from zero", zero.x_handler),
+             ## identify
+             list("SetLabelsTo", "gtk-index", "Set _labels to...", "<Ctrl>L", NULL, set.labels_handler),
+             list("IdTable", "gtk-info", "Select from _table...", NULL, "Select points from a table", id.table_handler),
+             list("FindLabels", "gtk-find", "_Find...", "<Ctrl>F", "Find points with labels matching...", id.find_handler),
+             list("SaveIDs", NULL, "_Save IDs...", NULL, "_Save current IDs to an object", save.ids_handler),
+             list("SetLabelStyle", NULL, "Set label st_yle...", NULL, NULL, set.label.style_handler),
+             list("SetLabelOffset", NULL, "Set label _offset...", NULL, NULL, set.label.offset_handler),
+             ## annotations
+             list("Legend", "gtk-sort-ascending", "Legend", NULL, "Place a legend", legend_handler),
+             list("EditAnnotations", "gtk-edit", "Edit ann.", "<Ctrl><Shift>E", "Edit annotations (including arrows) code", edit.annotations_handler),
+             list("UndoAnnotation", "gtk-undo", "Undo ann.", "<Ctrl>Z", "Remove last annotation", undo.annotation_handler),
+             list("Clear", "gtk-clear", "Clear", "<Shift>Delete", "Remove labels and annotations", clear_handler),
+             list("SetArrowStyle", NULL, "Set arrow style...", NULL, NULL, set.arrow.style_handler),
+             list("SetBrushStyle", NULL, "Set brush style...", NULL, NULL, set.brush.style_handler),
+             ## grobs
+             list("GrobInspector", "gtk-properties", "Grob inspector", NULL, NULL, grob.inspector_handler)
              )
 
     toggleEntries <-
-        list( ## : name, stock icon, label, accelerator, tooltip, callback, active?
-             list("Expand", "gtk-fullscreen", "_Panel", NULL, "Choose a panel to expand to fill the figure (for further interaction)", expand_handler, FALSE)
+        list( ## : name, stock icon, label, accelerator, tooltip, callback, active
+             list("Expand", "gtk-fullscreen", "_Panel", NULL, "Choose a panel to expand to fill the figure (for further interaction)", expand_handler, FALSE),
+             ## options
+             list("TimeMode", "gtk-media-forward-ltr", "_Time mode", "<Ctrl>T", "Time mode: scroll along the x axis", time.mode_handler, FALSE)
+             )
+
+    ## see uiClickActions.R
+    clickModeEntries <-
+        list( ## : name, stock icon, label, accelerator, tooltip, value
+             list("Zoom", "gtk-zoom-in", "_Navigate", "<Ctrl>M", "Zoom in and out or rotate (3D)", 0),
+             list("Identify", "gtk-info", "_Identify", "<Ctrl>I", "Identify data points (add labels)", 1),
+             list("Brush", "gtk-media-record", "_Brush", "<Ctrl>B", "Brush (highlight) data points", 2),
+             list("Annotation", "gtk-italic", "_Annotate", "<Ctrl>A", "Add text to the plot", 3),
+             list("Arrow", "gtk-connect", "Arro_w", "<Ctrl><Shift>A", "Add arrows to the plot", 4)
              )
 
     ## construct action group with playState passed to callbacks
     aGroup <- gtkActionGroupNew("PlotActions")
     aGroup$addActions(entries, playState)
     aGroup$addToggleActions(toggleEntries, playState)
+    aGroup$addRadioActions(clickModeEntries, 0,
+                           on.change = clickmode.change_handler,
+                           playState)
     aGroup
 }
-
-## TODO: create PlotSettings dialog once only?
-initPlotSettingsDialog <- function(playState) {}
 
 updatePlotActions <- function(playState)
 {
@@ -36,7 +64,9 @@ updatePlotActions <- function(playState)
     isSplom <- (playState$callName %in% c("splom"))
     isLatt3D <- isLatt && !is.null(playState$trellis$panel.args.common$scales.3d)
     ## PlotSettings
-    aGroup$getAction("PlotSettings")$setVisible(hasArgs)
+    aGroup$getAction("PlotSettings")$setSensitive(hasArgs)
+    ## Zoom
+    aGroup$getAction("Zoom")$setSensitive(hasArgs && !isSplom)
     ## Zoomfit
     nonFit <- hasArgs && (!is.null(callArg(playState, "xlim")) ||
                           !is.null(callArg(playState, "ylim")))

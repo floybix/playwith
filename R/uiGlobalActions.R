@@ -21,7 +21,7 @@ globalActionGroup <- function(playState)
              list("Forward", "gtk-go-forward", "Forward", "<Alt>Right", "Go to next plot call", forward_handler),
              list("Redraw", "gtk-refresh", "Re_draw", "<Ctrl>R", NULL, redraw_handler),
              list("Reload", "gtk-refresh", "_Reload and redraw", "<Ctrl><Shift>R", NULL, reload_handler),
-             list("SaveCode", "gtk-save", "Save c_ode", "<Ctrl><Shift>S", "Save R code for this plot (and optionally data)", save.code_handler),
+             list("SaveCode", "gtk-save", "Save c_ode", "<Ctrl><Shift>S", "Save R code for this plot", save.code_handler),
              list("ViewSource", NULL, "Plot s_ource", "<Ctrl>U", NULL, view.source_handler),
              list("HelpPlot", "gtk-help", "_Help for this plot", "F1", "Open help page for this plot", help_handler),
              list("HelpPlaywith", NULL, "help(playwith)", NULL, NULL, help.playwith_handler),
@@ -36,7 +36,13 @@ globalActionGroup <- function(playState)
     toggleEntries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback, active?
              list("Keep", "gtk-media-stop", "_Do not replace", "<Ctrl>D", "Do not replace with the next plot", keep_handler, FALSE),
-             list("StayOnTop", "gtk-leave-fullscreen", "St_ay on top", "<Ctrl>asciicircum", "Show this window above all others", stay.on.top_handler, FALSE)
+             list("StayOnTop", "gtk-leave-fullscreen", "St_ay on top", "<Ctrl>grave", "Show this window above all others", stay.on.top_handler, FALSE),
+             ## options
+             list("ClipAnnot", NULL, "_Clip annotations", NULL, "", clip.annotations_handler, FALSE),
+             list("PageAnnot", NULL, "_Annot. on page (fixed pos.)", NULL, "Place annotations with respect to the page, not plot coordinates", page.annotation_handler, FALSE),
+             list("ShowStatusbar", NULL, "Status _bar", NULL, NULL, show.statusbar_handler, TRUE),
+             list("ShowToolbars", NULL, "Toolbars", NULL, NULL, show.toolbars_handler, TRUE),
+             list("ShowTooltips", NULL, "T_ooltips", NULL, "", show.tooltips_handler, FALSE)
              )
 
     ## construct action group with playState passed to callbacks
@@ -336,7 +342,6 @@ view.source_handler <- function(widget, playState)
                          yscale=par("usr")[3:4],
                          clip="off", name = "plot.clip.off")
             pushViewport(do.call("vpStack", vps))
-            upViewport(0)
         }))
     }
     ## annotations etc
@@ -346,6 +351,8 @@ view.source_handler <- function(widget, playState)
     code$labels <- drawLabels(playState, return.code = TRUE)
     comm$annots <- "draw custom annotations"
     code$annots <- drawAnnotations(playState, return.code = TRUE)
+    hasExtras <- with(code, (length(linked) || length(labels) ||
+                             length(annots)))
     ## convert to text with interspersed comments
     theSource <- NULL
     opts <- playwith.getOption("deparse.options")
@@ -359,6 +366,9 @@ view.source_handler <- function(widget, playState)
                                          control = opts)))
         }
     }
+    ## clean up
+    if (hasExtras || playState$is.base)
+        theSource <- c(theSource, "upViewport(0)")
     theSource <- paste(theSource, sep = "\n", collapse = "\n")
     guiTextView(theSource, title = "Plot source code")
 }

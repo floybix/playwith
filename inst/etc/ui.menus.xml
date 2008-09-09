@@ -29,14 +29,15 @@
     </menu>
     <menu action='StyleMenu'>
       <menuitem action='CustomStyle'/>
+      <menuitem action='SetLabelStyle'/>
+      <menuitem action='SetArrowStyle'/>
+      <menuitem action='SetBrushStyle'/>
       <separator/>
     </menu>
     <menu action='LabelsMenu'>
       <menuitem action='SetLabelsTo'/>
-      <menuitem action='SetLabelStyle'/>
       <menuitem action='SetLabelOffset'/>
       <separator/>
-      <menuitem action='Identify'/>
       <menuitem action='IdTable'/>
       <menuitem action='FindLabels'/>
       <separator/>
@@ -47,16 +48,18 @@
       <menuitem action='EditCall'/>
       <menuitem action='EditAnnotations'/>
       <menuitem action='UndoAnnotation'/>
+      <menuitem action='Clear'/>
+      <separator/>
+      <menuitem action='Zoom'/>
+      <menuitem action='Identify'/>
+      <menuitem action='Brush'/>
+      <menuitem action='Annotation'/>
+      <menuitem action='Arrow'/>
       <separator/>
       <menuitem action='Expand'/>
       <menuitem action='Zoomfit'/>
       <menuitem action='ZeroY'/>
       <menuitem action='ZeroX'/>
-      <separator/>
-      <menuitem action='Annotation'/>
-      <menuitem action='Arrow'/>
-      <menuitem action='Brush'/>
-      <menuitem action='Clear'/>
       <separator/>
       <menuitem action='GrobInspector'/>
       <separator/>
@@ -71,7 +74,6 @@
     <menu action='OptionsMenu'>
       <menuitem action='TimeMode'/>
       <separator/>
-      <menuitem action='SetArrowStyle'/>
       <menuitem action='ClipAnnot'/>
       <menuitem action='PageAnnot'/>
       <separator/>

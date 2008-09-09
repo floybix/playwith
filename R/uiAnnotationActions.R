@@ -3,24 +3,6 @@
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
-annotationActionGroup <- function(playState)
-{
-    entries <-
-        list( ## : name, stock icon, label, accelerator, tooltip, callback
-             list("Annotation", "gtk-italic", "Annotate", "<Ctrl>A", "Add custom labels to the plot", annotate_handler),
-             list("Arrow", "gtk-connect", "Arrow", "<Ctrl><Shift>A", "Add an arrow to the plot", arrow_handler),
-             list("Legend", "gtk-sort-ascending", "Legend", NULL, "Place a legend", legend_handler),
-             list("UndoAnnotation", "gtk-undo", "Undo ann.", "<Ctrl>Z", "Remove last annotation", undo.annotation_handler),
-             list("Clear", "gtk-clear", "Clear", "<Shift>Delete", "Remove labels and annotations", clear_handler),
-             list("EditAnnotations", "gtk-edit", "Edit ann.", "<Ctrl><Shift>E", "Edit annotations (including arrows) code", edit.annotations_handler),
-             list("Brush", "gtk-media-record", "Brush", "<Ctrl>B", "Brush (highlight) data points", brush_handler)
-             )
-
-    ## construct action group with playState passed to callbacks
-    aGroup <- gtkActionGroupNew("AnnotationActions")
-    aGroup$addActions(entries, playState)
-    aGroup
-}
 
 updateAnnotationActions <- function(playState)
 {
@@ -29,24 +11,9 @@ updateAnnotationActions <- function(playState)
     updateAnnotationActionStates(playState)
 }
 
-drawAnnotations <- function(playState, return.code = FALSE)
-{
-    theCode <- expression()
-    for (i in seq_along(playState$annotations)) {
-        space <- names(playState$annotations)[i]
-        expr <- playDo(playState,
-                       playState$annotations[[i]],
-                       space = space,
-                       return.code = return.code)
-        if (return.code)
-            theCode <- c(theCode, expr)
-    }
-    theCode
-}
-
 updateAnnotationActionStates <- function(playState)
 {
-    aGroup <- playState$actionGroups[["AnnotationActions"]]
+    aGroup <- playState$actionGroups[["PlotActions"]]
     ## UndoAnnotation
     showUndo <- (length(playState$undoStack) > 0)
     if (isBasicDeviceMode(playState))
@@ -58,22 +25,41 @@ updateAnnotationActionStates <- function(playState)
     showClear <- showClear && ((length(playState$ids) > 0) ||
                                (length(playState$annotations) > 0) ||
                                (length(playState$linked$ids) > 0))
-    aGroup$getAction("Clear")$setVisible(showClear)
+    aGroup$getAction("Clear")$setSensitive(showClear)
     ## EditAnnotations
     showEdit <- !isBasicDeviceMode(playState)
     showEdit <- showEdit && (length(playState$annotations) > 0)
-    aGroup$getAction("EditAnnotations")$setVisible(showEdit)
+    aGroup$getAction("EditAnnotations")$setSensitive(showEdit)
     ## Brush
     showBrush <- !isBasicDeviceMode(playState)
-    aGroup$getAction("Brush")$setVisible(showBrush)
+    aGroup$getAction("Brush")$setSensitive(showBrush)
+}
+
+drawAnnotations <- function(playState, return.code = FALSE)
+{
+    theCode <- expression()
+    ## group by space
+    spaces <- names(playState$annotations)
+    for (space in unique(spaces)) {
+        items <- playState$annotations[spaces == space]
+        annots <- do.call("c", items)
+        expr <- playDo(playState,
+                       annots,
+                       space = space,
+                       return.code = return.code)
+        if (return.code)
+            theCode <- c(theCode, expr)
+    }
+    theCode
 }
 
 drawLinkedLocal <- function(playState, return.code = FALSE)
 {
     ## draw linked brushed points
     theCode <- expression()
-    subscripts <- unique(sort(unlist(playState$linked$ids)))
+    subscripts <- unlist(playState$linked$ids)
     if (length(subscripts) == 0) return(theCode)
+    subscripts <- unique(sort(subscripts))
     playDevSet(playState)
     for (space in playState$spaces) {
         data <- xyCoords(playState, space = space)
@@ -214,13 +200,9 @@ edit.annotations_handler <- function(widget, playState)
     playState$win$present()
 }
 
-
-arrow_handler <- function(widget, playState)
+arrowCore <- function(playState, foo)
 {
     pageAnnotation <- isTRUE(playState$page.annotation)
-    foo <- playLineInput(playState, prompt = paste(
-                                    "Click and drag to draw an arrow;",
-                                    "Right-click or Esc to cancel."))
     if (is.null(foo)) return()
     if (is.null(foo$coords)) pageAnnotation <- TRUE
     if (foo$is.click) return()
@@ -246,7 +228,7 @@ arrow_handler <- function(widget, playState)
     } else {
         ## normal mode
         i <- length(playState$annotations) + 1
-        playState$annotations[[i]] <- annot
+        playState$annotations[[i]] <- as.expression(annot)
         names(playState$annotations)[i] <- space
         playState$undoStack <- c(playState$undoStack, "annotations")
     }
@@ -256,12 +238,9 @@ arrow_handler <- function(widget, playState)
     updateAnnotationActionStates(playState)
 }
 
-annotate_handler <- function(widget, playState)
+annotateCore <- function(playState, foo)
 {
     pageAnnotation <- isTRUE(playState$page.annotation)
-    foo <- playRectInput(playState, prompt = paste(
-                                    "Click or drag to place text annotation;",
-                                    "Right-click or Esc to cancel."))
     if (is.null(foo)) return()
     if (is.null(foo$coords)) pageAnnotation <- TRUE
     space <- foo$space
@@ -505,7 +484,7 @@ annotate_handler <- function(widget, playState)
         } else {
             ## normal mode
             i <- length(playState$annotations) + 1
-            playState$annotations[[i]] <- annot
+            playState$annotations[[i]] <- as.expression(annot)
             names(playState$annotations)[i] <- space
             playState$undoStack <- c(playState$undoStack, "annotations")
         }
@@ -540,15 +519,13 @@ annotate_handler <- function(widget, playState)
     #defaultWidget(okbutt) <- TRUE
 }
 
-brush_handler <- function(widget, playState)
+brushCore <- function(playState, foo, remove = FALSE)
 {
-    foo <- playSelectData(playState,
-                          prompt = paste(
-                          "Click or drag to brush data points;",
-                          "Right-click or Esc to cancel."))
+    foo <- playSelectData(playState, foo = foo)
     if (is.null(foo)) return()
     if (length(foo$which) == 0) return()
     ids <- foo$subscripts
+    ## TODO: if (remove)
     i <- length(playState$linked$ids) + 1
     playState$linked$ids[[i]] <- ids
     playState$undoStack <- c(playState$undoStack, "linked")

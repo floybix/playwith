@@ -10,7 +10,7 @@ import(utils)
 # the main function
 export(playwith,
        autoplay,
-       plotPageN)
+       plotOnePage)
 S3method(print, playState)
 
 # latticist
@@ -45,24 +45,35 @@ export(playNewPlot,
        mainCall,
        "mainCall<-",
        updateMainCall,
+       playSourceCode,
        playDo,
-       playPointInput,
-       playLineInput,
-       playRectInput,
-       playSelectData,
-       whichSpace,
        playFreezeGUI,
        playThawGUI,
        playPrompt,
        rawXLim,
        rawYLim,
        "rawXLim<-",
-       "rawYLim<-",
+       "rawYLim<-")
+
+## xyData
+export(getDataArg,
        xyCoords,
        xyData,
+       plotCoords,
        spaceCoordsToDataCoords,
-       dataCoordsToSpaceCoords
-       )
+       dataCoordsToSpaceCoords)
+S3method(plotCoords, default)
+S3method(plotCoords, qqnorm)
+S3method(plotCoords, qqplot)
+S3method(plotCoords, qqmath)
+S3method(plotCoords, cloud)
+
+## clickOrDrag
+export(playSelectData,
+       playPointInput,
+       playLineInput,
+       playRectInput,
+       whichSpace)
 
 ## gridwork
 export(convertFromDevicePixels,

@@ -293,8 +293,18 @@ set.size_handler <- function(widget, playState) {
 }
 
 incr.font_handler <- function(widget, playState) {
-    ps <- playState$pointsize
-    ps <- ps + 1
+    ps <- playState$pointsize <- playState$pointsize + 1
+    myDA <- makeDrawingArea(playState)
+    ## flag to avoid auto-close
+    playState$devoff <- TRUE
+    ## replace drawing area
+    playState$widgets$drawingArea$destroy()
+    playState$widgets$hbox$packStart(myDA)
+    playState$widgets$drawingArea <- myDA
+    asCairoDevice(myDA, pointsize = ps)
+    playState$dev <- dev.cur()
+    playState$devoff <- FALSE
+    playReplot(playState)
     ## TODO
     #asCairoDevice(playState$widgets$drawingArea, pointsize = ps)
     #playState$pointsize <- ps

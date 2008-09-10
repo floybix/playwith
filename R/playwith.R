@@ -206,23 +206,12 @@ playwith <-
     myHBox$packEnd(rightToolbar, expand=FALSE)
     myVBox$packEnd(statusbarBox, expand=FALSE)
     myVBox$packEnd(bottomToolbar, expand=FALSE)
-
     ## create the plot area
-    ## TODO: a function to do this, called again to incr/decr ps
-    myDA <- gtkDrawingArea()
-    myDA$addEvents(GdkEventMask["enter-notify-mask"]
-                   + GdkEventMask["button-press-mask"]
-                   + GdkEventMask["button-release-mask"]
-                   + GdkEventMask["exposure-mask"])
+    myDA <- makeDrawingArea(playState)
     myHBox$packStart(myDA)
     ## note, this constraint is removed below
     myDA$setSizeRequest(width * 96, height * 96)
-    asCairoDevice(myDA, pointsize=pointsize)
-    ## need to regenerate coord spaces after resize
-    gSignalConnect(myDA, "configure-event", configure_handler,
-                   data=playState)
-    gSignalConnect(myDA, "enter-notify-event", auto.reconfig_handler,
-                   data=playState)
+    asCairoDevice(myDA, pointsize = pointsize)
     gSignalConnect(myHBox, "remove", devoff_handler,
                    data=playState, after=TRUE)
     ## create the page scrollbar
@@ -398,6 +387,21 @@ playwith <-
     invisible(playState)
 }
 
+makeDrawingArea <- function(playState)
+{
+    myDA <- gtkDrawingArea()
+    myDA$addEvents(GdkEventMask["enter-notify-mask"]
+                   + GdkEventMask["button-press-mask"]
+                   + GdkEventMask["button-release-mask"]
+                   + GdkEventMask["exposure-mask"])
+    ## need to regenerate coord spaces after resize
+    gSignalConnect(myDA, "configure-event", configure_handler,
+                   data=playState)
+    gSignalConnect(myDA, "enter-notify-event", auto.reconfig_handler,
+                   data=playState)
+    myDA
+}
+
 playNewPlot <- function(playState = playDevCur())
 {
     playDevSet(playState)
@@ -520,7 +524,7 @@ playPostPlot <- function(result, playState)
         if (playState$page > nPages) playState$page <- 1
         playState$pages <- nPages
         ## plot trellis object (specified page only)
-        plotPageN(result, playState$page)
+        plotOnePage(result, page = playState$page)
         #plot(result, packet.panel=packet.panel.page(playState$page))
         playState$trellis <- result
     }
@@ -859,8 +863,9 @@ recursive.as.list.call <- function(x) {
            recursive.as.list.call(z) else z)
 }
 
-plotPageN <- function(x, n, ...)
+plotOnePage <- function(x, page, ...)
 {
+    n <- page
     if (!is.null(x$layout))
         x$layout[3] <- 1
     ## based on code by Deepayan Sarkar

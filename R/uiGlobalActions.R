@@ -7,7 +7,8 @@ globalActionGroup <- function(playState)
 {
     entries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback
-             list("Clone", "gtk-new", "Clo_ne window", "<Ctrl>N", "Duplicate this window", clone_handler),
+             list("Clone", "gtk-new", "_New linked plot", "<Ctrl>N", "Make a linked clone of this window (with sync'd brushing)", clone_handler),
+             list("Unlink", "gtk-disconnect", "_Unlink", NULL, "Remove links to other plots (sync'd brushing)", unlink_handler),
              list("Save", "gtk-save", "_Save", "<Ctrl>S", "Export current plot to an image file", save_handler),
              list("Copy", "gtk-copy", "_Copy", "<Ctrl><Shift>C", "Copy current plot as an image", copy_handler),
              list("Print", "gtk-print", "_Print", "<Ctrl>P", "Print current plot", print_handler),
@@ -15,7 +16,7 @@ globalActionGroup <- function(playState)
              list("SetSize", NULL, "Set device _size...", "<Ctrl>0", NULL, set.size_handler),
              list("IncrFont", NULL, "_Increase font size", "<Ctrl>plus", NULL, incr.font_handler),
              list("DecrFont", NULL, "De_crease font size", "<Ctrl>minus", NULL, decr.font_handler),
-             list("CustomStyle", "gtk-select-color", "Customise _Style...", "<Ctrl>slash", NULL, custom.style_handler),
+             list("StyleSettings", "gtk-select-color", "_Style settings", "<Ctrl>slash", NULL, style.settings_handler),
              list("EditCall", "gtk-edit", "_Edit call...", "<Ctrl>E", "Edit the plot call", edit.call_handler),
              list("Back", "gtk-go-back", "Back", "<Alt>Left", "Go back to previous plot call", back_handler),
              list("Forward", "gtk-go-forward", "Forward", "<Alt>Right", "Go to next plot call", forward_handler),
@@ -35,7 +36,7 @@ globalActionGroup <- function(playState)
 
     toggleEntries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback, active?
-             list("Keep", "gtk-media-stop", "_Do not replace", "<Ctrl>D", "Do not replace with the next plot", keep_handler, FALSE),
+             list("Keep", "gtk-media-stop", "_Keep open", "<Ctrl>D", "Keep this plot (do not replace with the next plot)", keep_handler, FALSE),
              list("StayOnTop", "gtk-leave-fullscreen", "St_ay on top", "<Ctrl>grave", "Show this window above all others", stay.on.top_handler, FALSE),
              ## options (uiOptionsActions.R)
              list("ClipAnnot", NULL, "_Clip annotations", NULL, "", clip.annotations_handler, FALSE),
@@ -55,6 +56,9 @@ globalActionGroup <- function(playState)
 updateGlobalActions <- function(playState)
 {
     aGroup <- playState$actionGroups[["GlobalActions"]]
+    ## Unlink
+    hasLinks <- (length(playState$linked$subscribers) > 1)
+    aGroup$getAction("Unlink")$setVisible(hasLinks)
     ## Back, Forward
     callEntry <- playState$widgets$callEntry
     nHistory <- callEntry$getModel()$iterNChildren()
@@ -87,6 +91,12 @@ clone_handler <- function(widget, playState)
     i <- length(playState$linked$subscribers) + 1
     playState$linked$subscribers[[i]] <- newOne
     playNewPlot(newOne)
+    updateGlobalActions(playState)
+}
+
+unlink_handler <- function(widget, playState)
+{
+    playUnlink(playState)
 }
 
 save_handler <- function(widget, playState)
@@ -200,12 +210,12 @@ close_handler <- function(widget, playState)
 edit.call_handler <- function(widget, playState)
 {
     callTxt <-
-        paste(deparse(playState$call, width=42, control=
+        paste(deparse(playState$call, width = 42, control=
                       playwith.getOption("deparse.options")),
               collapse="\n")
     repeat {
         newTxt <- guiTextInput(callTxt, title="Edit plot call",
-                               prompt="", accepts.tab=F)
+                               prompt="", accepts.tab = FALSE)
         if (is.null(newTxt)) break
         callTxt <- newTxt
         tmp <- tryCatch(parse(text=callTxt), error=function(e)e)
@@ -292,28 +302,26 @@ set.size_handler <- function(widget, playState) {
     da$setSizeRequest(-1, -1)
 }
 
-incr.font_handler <- function(widget, playState) {
+incr.font_handler <- function(widget, playState)
+{
+    playDevSet(playState)
     ps <- playState$pointsize <- playState$pointsize + 1
-    myDA <- makeDrawingArea(playState)
-    ## flag to avoid auto-close
-    playState$devoff <- TRUE
-    ## replace drawing area
-    playState$widgets$drawingArea$destroy()
-    playState$widgets$hbox$packStart(myDA)
-    playState$widgets$drawingArea <- myDA
-    asCairoDevice(myDA, pointsize = ps)
-    playState$dev <- dev.cur()
-    playState$devoff <- FALSE
+    par(ps = ps)
+    trellis.par.set(fontsize = list(text = ps))
     playReplot(playState)
-    ## TODO
-    #asCairoDevice(playState$widgets$drawingArea, pointsize = ps)
-    #playState$pointsize <- ps
 }
 
 decr.font_handler <- function(widget, playState)
-    gmessage.error("not yet implemented") ## TODO
+{
+    playDevSet(playState)
+    ps <- playState$pointsize <- playState$pointsize - 1
+    par(ps = ps)
+    trellis.par.set(fontsize = list(text = ps))
+    playReplot(playState)
 
-custom.style_handler <- function(widget, playState) {
+}
+
+style.settings_handler <- function(widget, playState) {
     playDevSet(playState)
     isBase <- (!playState$is.lattice && is.null(playState$viewport))
     latticeStyleGUI(pointsize = playState$pointsize,

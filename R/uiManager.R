@@ -14,11 +14,18 @@ constructUIManager <- function(playState)
              list("ToolsMenu", NULL, "_Tools"),
              list("DataMenu", NULL, "_Data"),
              list("OptionsMenu", NULL, "_Options"),
-             list("HelpMenu", NULL, "_Help")
+             list("HelpMenu", NULL, "_Help"),
+             ## submenus:
+             list("ShortcutsMenu", NULL, "_Style shortcuts"),
+             list("ThemesMenu", NULL, "_Themes")
              )
     menuGroup <- gtkActionGroupNew("Menus")
     menuGroup$addActions(menuEntries)
-
+    for (nm in c("ShortcutsMenu", "ThemesMenu")) {
+        tmp <- menuGroup$getAction(nm)
+        if (!is.null(tmp)) tmp["hide-if-empty"] <- FALSE
+    }
+    ## ui manager
     manager <- gtkUIManagerNew()
     window <- playState$win
     window$setData("ui-manager", manager)
@@ -26,6 +33,7 @@ constructUIManager <- function(playState)
     manager$insertActionGroup(globalActionGroup(playState), 0)
     ## user-defined actions:
     uact <- eval(playwith.getOption("custom.tools"))
+    ## TODO: and the 'tools' argument?
     if (is.character(uact)) uact <- get(uact)
     if (is.function(uact)) uact <- uact(playState)
     if (is.list(uact)) {
@@ -44,47 +52,17 @@ constructUIManager <- function(playState)
         if (is.character(uifile) && (nchar(uifile) > 0))
             manager$addUiFromFile(uifile)
     }
-    ## add style items
-    ## TODO: separate this somehow
+    manager$ensureUpdate()
     # manager$addUi(manager$newMergeId(), path, name, action = NULL, type, top)
     # type = GtkUIManagerItemType["auto"]
     # gtkActionGroup("foo")
     # manager$insertActionGroup(...)
-    styleMenu <- manager$getWidget("/MenuBar/StyleMenu")$getSubmenu()
-    styleMenu$append(gtkSeparatorMenuItem())
-    set.style_handler <- function(widget, theme) {
-        trellis.par.set(eval(theme))
-        playReplot(playState)
-    }
-    ## themes
-    themes <- playwith.getOption("themes")
-    foo <- gtkMenuItem("Themes:")
-    foo["sensitive"] <- FALSE
-    styleMenu$append(foo)
-    for (nm in names(themes)) {
-        item <- gtkMenuItem(nm)
-        styleMenu$append(item)
-        gSignalConnect(item, "activate", set.style_handler,
-                       data = themes[[nm]])
-    }
-    styleMenu$append(gtkSeparatorMenuItem())
-    ## style options
-    styleOptions <- playwith.getOption("styleOptions")
-    foo <- gtkMenuItem("Style shortcuts:")
-    foo["sensitive"] <- FALSE
-    styleMenu$append(foo)
-    for (nm in names(styleOptions)) {
-        item <- gtkMenuItem(nm)
-        styleMenu$append(item)
-        gSignalConnect(item, "activate", set.style_handler,
-                       data = styleOptions[[nm]])
-    }
+    createStyleActions(playState, manager)
     manager
 }
 
 initActions <- function(playState)
 {
-    ## TODO: wrap in try() and maybe catch errors
     playDevSet(playState)
     initClickActions(playState)
     initIdentifyActions(playState)
@@ -102,7 +80,6 @@ initActions <- function(playState)
 
 updateActions <- function(playState)
 {
-    ## TODO: wrap in try() and maybe catch errors
     playDevSet(playState)
     updateGlobalActions(playState)
     updateClickActions(playState)

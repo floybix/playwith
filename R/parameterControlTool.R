@@ -36,7 +36,7 @@ parameterControlTool <-
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
-        if (!playState$plot.ready) return()
+        if (!playState$tmp$plot.ready) return()
         playReplot(playState)
     }
     updateParamCombobox <- function(widget, playState) {
@@ -46,7 +46,7 @@ parameterControlTool <-
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
-        if (!playState$plot.ready) return()
+        if (!playState$tmp$plot.ready) return()
         playReplot(playState)
     }
     updateParamActive <- function(widget, playState) {
@@ -54,7 +54,7 @@ parameterControlTool <-
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
-        if (!playState$plot.ready) return()
+        if (!playState$tmp$plot.ready) return()
         playReplot(playState)
     }
     ## construct widget based on the type of value.

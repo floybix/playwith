@@ -1,7 +1,7 @@
 
 
 guiTextView <-
-    function(text, title,
+    function(text, title = "Text View",
              wrap.mode=c("none", "char", "word", "word_char"),
              size=c(640, 400))
 {
@@ -32,7 +32,6 @@ guiTextInput <-
     function(text="",
              title="Text Input",
              prompt="",
-             readOnly=FALSE,
              oneLiner=FALSE,
              accepts.tab=TRUE,
              wrap.mode=c("none", "char", "word", "word_char"),
@@ -44,14 +43,14 @@ guiTextInput <-
     ## construct dialog
     editBox <- gtkDialog(title=title, NULL, NULL,
                          "OK", GtkResponseType["ok"], "Cancel", GtkResponseType["cancel"],
-                         show = F)
+                         show = FALSE)
     editBox$setDefaultResponse(GtkResponseType["ok"])
     if (nchar(prompt) > 0) {
-        editBox$vbox$packStart(gtkLabel(prompt), expand=F, pad=2)
+        editBox$vbox$packStart(gtkLabel(prompt), expand=FALSE, pad=2)
     }
     if (oneLiner) {
         editEntry <- gtkEntry()
-        editEntry["activates-default"] <- T
+        editEntry["activates-default"] <- TRUE
         editEntry["text"] <- text
         editEntry["width-chars"] <- width.chars
         editBox$vbox$packStart(editEntry, pad=10)

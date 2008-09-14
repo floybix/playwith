@@ -5,22 +5,28 @@
 
 getDataArg <- function(playState, eval = TRUE)
 {
-    if (is.null(playState$data.points)) {
+    if (!is.null(playState$data.points)) {
+        ## data.points were supplied
+        tmp.data <- if (eval) playState$data.points
+        else quote(playDevCur()$data.points)
+    } else {
+        ## data.points missing; guess from call
         mainCall <- mainCall(playState)
         if (length(mainCall > 1)) {
             ## check for named "data" argument
-            tmp.data <- callArg(playState, "data", eval=eval)
+            tmp.data <- callArg(playState, "data", eval = eval)
             if (is.null(tmp.data)) {
                 ## look at first argument
                 tmp.x <- callArg(playState, 1, eval=TRUE)
                 if (inherits(tmp.x, "formula")) {
-                    ## if 1st arg is formula, 2nd is `data` (by convention)
+                    ## if 1st arg is formula, 2nd is data if un-named (by convention)
                     if (is.null(tmp.data) &&
                         (length(mainCall) >= 3) &&
                         (is.null(names(mainCall)) ||
-                         identical(names(mainCall)[[3]], ""))
-                        )
-                        tmp.data <- callArg(playState, 2, eval=eval)
+                         identical(names(mainCall)[[3]], "")))
+                    {
+                        tmp.data <- callArg(playState, 2, eval = eval)
+                    }
                 }
             }
         }
@@ -31,10 +37,6 @@ getDataArg <- function(playState, eval = TRUE)
                 if (eval) tmp.data <- eval(tmp.data, playState$env)
             }
         }
-    } else {
-        ## data.points were supplied
-        tmp.data <- if (eval) playState$data.points
-        else quote(playDevCur()$data.points)
     }
     tmp.data
 }
@@ -57,7 +59,7 @@ xyData <- function(playState = playDevCur(), space="plot")
     callName <- playState$callName
     class(callName) <- callName
 
-    ## lattice -- can get data from stored trellis object
+    ## lattice -- get panel data from stored trellis object
     if (playState$is.lattice) {
         if (space == "page") {
             ## TODO: this only works with standard coords (xyplot etc)
@@ -92,6 +94,9 @@ xyData <- function(playState = playDevCur(), space="plot")
                data = getDataArg(playState))
 }
 
+## TODO: allow plotCoords to return multiple coords for each data point (a list?) eg splom
+## TODO: allow plotCoords to return a line structure for each data point? eg parallel
+
 plotCoords <- function(name, call, envir, ...)
     UseMethod("plotCoords")
 
@@ -110,8 +115,12 @@ plotCoords.default <- function(name, call, envir, panel.args, data, ...)
             return(plotCoords.cloud(name, call, envir,
                                     panel.args = panel.args))
         }
-        if (length(foo$x) != length(foo$y)) {
-            if ((nx <- length(foo$x)) < (ny <- length(foo$y)))
+        nx <- length(foo$x)
+        ny <- length(foo$y)
+        if ((nx == 0) || (ny == 0))
+            return(NULL)
+        if (nx != ny) {
+            if (nx < ny)
                 foo$x <- rep(foo$x, length.out = ny)
             else foo$y <- rep(foo$y, length.out = nx)
         }
@@ -123,29 +132,11 @@ plotCoords.default <- function(name, call, envir, panel.args, data, ...)
         tmp.x <- eval(call[[2]], data, envir)
         tmp.y <- eval(call[["y"]], data, envir)
         xy.coords_with_class(tmp.x, tmp.y, data = data, envir = envir)
-        ## check for named "data" argument
-#        tmp.data <- eval(call[["data"]], envir)
-        ## look at first argument (tmp.data may be NULL)
-#        tmp.x <- eval(call[[2]], tmp.data, envir)
-#        if (inherits(tmp.x, "formula")) {
-            ## if 1st arg is formula, 2nd is `data` if un-named (by convention)
-#            if (is.null(tmp.data) && (length(call) > 2) &&
-#                (is.null(names(call)) ||
-#                 identical(names(call)[[3]], "")))
-#                tmp.data <- eval(call[[3]], envir)
-#        }
-#        if (is.null(tmp.data)) {
-            ## objects may also come from a with() block
-#            if (identical(call[[1]], as.symbol("with")))
-#                tmp.data <- eval(call[[2]], playState$env)
-#        }
-#        tmp.y <- callArg(playState, "y", data=tmp.data)
-#        xy.coords_with_class(tmp.x, tmp.y, data=tmp.data, envir = playState$env)
-
     }
 }
 
-plotCoords.qqnorm <- plotCoords.qqplot <-
+plotCoords.qqnorm <-
+plotCoords.qqplot <-
     function(name, call, envir, ...)
 {
     ## these return plotted coordinates in a list
@@ -201,7 +192,9 @@ plotCoords.cloud <- function(name, call, envir, panel.args, ...)
 {
     idcall <- call("panel.identify.cloud", panel.args = panel.args)
     for (x in c("screen", "R.mat", "perspective", "distance", "aspect")) {
-        idcall[[x]] <- call[[x]]
+        val <- call[[x]]
+        if (!is.null(val))
+            idcall[x] <- list(val)
     }
     idcall$panel.3d.identify <-
         function(x, y, z, rot.mat = diag(4), distance, xlim.scaled,
@@ -236,7 +229,7 @@ xy.coords_with_class <-
                     x <- eval(x[[3]], environment(x), envir)
                 }
             }
-            else stop("invalid first argument")
+            else return(NULL) #stop("invalid first argument")
         }
         else if (inherits(x, "zoo")) {
             y <- if (is.matrix(x)) x[, 1] else x
@@ -283,6 +276,13 @@ xy.coords_with_class <-
         } else stop("'x' and 'y' lengths differ")
     }
     list(x = x, y = y)
+}
+
+labels.zoo <-
+labels.ts <-
+    function(object, ...)
+{
+    rep(format(stats::time(object)), length = length(object))
 }
 
 ## aka playUnLog

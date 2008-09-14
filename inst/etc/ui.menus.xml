@@ -2,12 +2,13 @@
   <menubar name='MenuBar'>
     <menu action='FileMenu'>
       <menuitem action='Clone'/>
+      <menuitem action='Unlink'/>
+      <separator/>
       <menuitem action='Keep'/>
+      <menuitem action='SaveCode'/>
       <separator/>
       <menuitem action='Save'/>
       <menuitem action='Copy'/>
-      <separator/>
-      <menuitem action='SaveCode'/>
       <separator/>
       <menuitem action='Print'/>
       <separator/>
@@ -28,20 +29,28 @@
       <menuitem action='ViewSource'/>
     </menu>
     <menu action='StyleMenu'>
-      <menuitem action='CustomStyle'/>
+      <menuitem action='StyleSettings'/>
       <menuitem action='SetLabelStyle'/>
       <menuitem action='SetArrowStyle'/>
       <menuitem action='SetBrushStyle'/>
       <separator/>
+      <menuitem action='StyleSolidPoints'/>
+      <menuitem action='StyleTransPoints'/>
+      <menuitem action='StyleThickLines'/>
+      <separator/>
+      <menu action='ShortcutsMenu'/>
+      <menu action='ThemesMenu'/>
     </menu>
     <menu action='LabelsMenu'>
       <menuitem action='SetLabelsTo'/>
-      <menuitem action='SetLabelOffset'/>
       <separator/>
-      <menuitem action='IdTable'/>
+      <menuitem action='Identify'/>
       <menuitem action='FindLabels'/>
+      <menuitem action='IdTable'/>
       <separator/>
       <menuitem action='SaveIDs'/>
+      <separator/>
+      <menuitem action='Clear'/>
     </menu>
     <menu action='ToolsMenu'>
       <menuitem action='PlotSettings'/>
@@ -90,4 +99,17 @@
       <menuitem action='Website'/>
     </menu>
   </menubar>
+  <popup name='ContextMenu'>
+      <menuitem action='Zoom'/>
+      <menuitem action='Identify'/>
+      <menuitem action='Brush'/>
+      <menuitem action='Annotation'/>
+      <menuitem action='Arrow'/>
+      <separator/>
+      <menuitem action='PlotSettings'/>
+      <menuitem action='StyleSettings'/>
+      <menuitem action='SetSize'/>
+      <separator/>
+      <menuitem action='ViewSource'/>
+  </popup>
 </ui>

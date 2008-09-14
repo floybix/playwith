@@ -454,7 +454,7 @@ makeLatticist <- function(dat)
         ## generate formula and other args from widget settings
         composePlot <- function(playState, newXY = FALSE) {
             ## this is needed by handler functions to fiddle with GUI:
-            if (!isTRUE(playState$plot.ready)) return()
+            if (!isTRUE(playState$tmp$plot.ready)) return()
             ## parse variables / expressions
             xvar <- tryParse(xvarW$getActiveText())
             yvar <- tryParse(yvarW$getActiveText())
@@ -856,7 +856,6 @@ makeLatticist <- function(dat)
                         callArg(playState, 1) <- tabcall
                         callArg(playState, "panel.3d.cloud") <- quote(panel.3dbars)
                         callArg(playState, "col.facet") <- "grey"
-                        callArg(playState, "alpha.facet") <- 0.5
                         callArg(playState, "xbase") <- 0.4
                         callArg(playState, "ybase") <- 0.4
                         ## set aspect so that bars have square bases, like "iso"
@@ -1236,8 +1235,8 @@ makeLatticist <- function(dat)
         }
 
         handler.flip <- function(widget, event, playState) {
-            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
-            playState$plot.ready <- FALSE
+            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
+            playState$tmp$plot.ready <- FALSE
             xvarActive <- xvarW["active"]
             yvarActive <- yvarW["active"]
             xdisc <- xdiscW["active"]
@@ -1250,42 +1249,42 @@ makeLatticist <- function(dat)
             ydiscW["active"] <- xdisc
             xonW["sensitive"] <- ysens
             yonW["sensitive"] <- xsens
-            playState$plot.ready <- TRUE
+            playState$tmp$plot.ready <- TRUE
             doRecompose(playState = playState)
             return(FALSE)
         }
         handler.reset <- function(widget, event, playState) {
-            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
-            playState$plot.ready <- FALSE
+            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
+            playState$tmp$plot.ready <- FALSE
             xvarW["active"] <- 0
             yvarW["active"] <- 0
             xonW["sensitive"] <- FALSE
             yonW["sensitive"] <- FALSE
-            playState$plot.ready <- TRUE
+            playState$tmp$plot.ready <- TRUE
             doRecompose(playState = playState)
             return(FALSE)
         }
         handler.hexbin <- function(widget, event, playState) {
-            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
-            playState$plot.ready <- FALSE
+            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
+            playState$tmp$plot.ready <- FALSE
             xdiscW["active"] <- TRUE
             ydiscW["active"] <- TRUE
-            playState$plot.ready <- TRUE
+            playState$tmp$plot.ready <- TRUE
             doRecompose(playState = playState)
             return(FALSE)
         }
         handler.unbin <- function(widget, event, playState) {
-            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
-            playState$plot.ready <- FALSE
+            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
+            playState$tmp$plot.ready <- FALSE
             xdiscW["active"] <- FALSE
             ydiscW["active"] <- FALSE
-            playState$plot.ready <- TRUE
+            playState$tmp$plot.ready <- TRUE
             doRecompose(playState = playState)
             return(FALSE)
         }
         handler.superpose <- function(widget, event, playState) {
-            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
-            playState$plot.ready <- FALSE
+            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
+            playState$tmp$plot.ready <- FALSE
             c1Active <- c1W["active"]
             c2Active <- c2W["active"]
             if (c1Active <= 1) return(FALSE)
@@ -1297,13 +1296,13 @@ makeLatticist <- function(dat)
                 c2W["active"] <- 0
             }
             widget["visible"] <- FALSE
-            playState$plot.ready <- TRUE
+            playState$tmp$plot.ready <- TRUE
             doRecompose(playState = playState)
             return(FALSE)
         }
         handler.explode <- function(widget, event, playState) {
-            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
-            playState$plot.ready <- FALSE
+            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
+            playState$tmp$plot.ready <- FALSE
             grActive <- groupsW["active"]
             if (grActive <= 1) return(FALSE)
             c1Active <- c1W["active"]
@@ -1314,38 +1313,38 @@ makeLatticist <- function(dat)
                 c2W["active"] <- grActive
             groupsW["active"] <- 0
             widget["visible"] <- FALSE
-            playState$plot.ready <- TRUE
+            playState$tmp$plot.ready <- TRUE
             doRecompose(playState = playState)
             return(FALSE)
         }
         handler.go3D <- function(widget, event, playState) {
-            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
-            playState$plot.ready <- FALSE
+            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
+            playState$tmp$plot.ready <- FALSE
             grActive <- groupsW["active"]
             if (grActive <= 1) return(FALSE)
             #zActive <- zvarW["active"]
             zvarW["active"] <- grActive
             groupsW["active"] <- 0
             widget["visible"] <- FALSE
-            playState$plot.ready <- TRUE
+            playState$tmp$plot.ready <- TRUE
             doRecompose(playState = playState)
             return(FALSE)
         }
         handler.squash <- function(widget, event, playState) {
-            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
-            playState$plot.ready <- FALSE
+            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
+            playState$tmp$plot.ready <- FALSE
             zActive <- zvarW["active"]
             if (zActive <= 1) return(FALSE)
             #grActive <- groupsW["active"]
             groupsW["active"] <- zActive
             zvarW["active"] <- 0
             widget["visible"] <- FALSE
-            playState$plot.ready <- TRUE
+            playState$tmp$plot.ready <- TRUE
             doRecompose(playState = playState)
             return(FALSE)
         }
         handler.subsetSelect <- function(widget, event, playState) {
-            #if (!isTRUE(playState$plot.ready)) {alarm(); return(FALSE)}
+            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
             selectScales <- c(if (!is.null(xvar)) "x",
                               if (!is.null(yvar)) "y")
             foo <- playRectInput(playState, scales=selectScales,
@@ -1417,7 +1416,8 @@ makeLatticist <- function(dat)
         xyBox$packStart(gtkLabel(labtxt), expand=FALSE)
         ## "hexbin" button
         hexbinW <- niceButton("hexbin")
-        hexbinW["visible"] <- isBivarNumeric && !xdisc && !ydisc
+        hexbinW["visible"] <- (isBivarNumeric && !xdisc && !ydisc &&
+                               require("hexbin", quietly = TRUE))
         gSignalConnect(hexbinW, "button-press-event",
                        handler.hexbin, data=playState)
         xyBox$packStart(hexbinW, padding = 2)

@@ -8,7 +8,11 @@ initOptionsActions <- function(playState)
 {
     hasArgs <- playState$accepts.arguments
     ## sensible default for time.mode based on data
-    if (hasArgs && playState$.args$missing_time.mode) {
+    ## DISABLED -- do not want to evaluate data by default
+    ## and anyway, it is easier now to zoom along x axis
+    #if (hasArgs && playState$.args$missing_time.mode) {
+    if (hasArgs && is.na(playState$time.mode)) {
+        ## detect default for time.mode based on data
         dat <- xyData(playState, space="packet 1")
         playState$time.mode <-
             (inherits(dat$x, "ts") ||
@@ -117,7 +121,7 @@ time.mode_postplot_action <- function(widget, playState)
 
 time.mode_scrollbar_handler <- function(widget, playState)
 {
-    if (!playState$plot.ready) return()
+    if (!playState$tmp$plot.ready) return()
     newLim <- widget$getValue()
     if (!is.null(playState$time.vector)) {
         newLim <- round(newLim)
@@ -137,7 +141,7 @@ time.mode_scrollbar_handler <- function(widget, playState)
 
 time.mode_entry_handler <- function(widget, playState)
 {
-    if (!playState$plot.ready) return()
+    if (!playState$tmp$plot.ready) return()
     if (!is.null(playState$time.vector)) {
         newLim <- widget["text"]
         time.vector <- playState$time.vector

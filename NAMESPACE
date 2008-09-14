@@ -23,6 +23,7 @@ export(latticist,
 export(latticeStyleGUI,
        latticeStyleToBasePar,
        panel.usertext,
+       panel.brush.points,
        latticeStyleDemo,
        custom.theme.2,
        custom.theme.black)
@@ -40,6 +41,7 @@ export(playNewPlot,
        playDevList,
        playDevOff,
        playGetIDs,
+       playUnlink,
        callArg,
        "callArg<-",
        mainCall,
@@ -67,6 +69,8 @@ S3method(plotCoords, qqnorm)
 S3method(plotCoords, qqplot)
 S3method(plotCoords, qqmath)
 S3method(plotCoords, cloud)
+S3method(labels, ts)
+S3method(labels, zoo)
 
 ## clickOrDrag
 export(playSelectData,

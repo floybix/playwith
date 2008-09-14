@@ -7,7 +7,6 @@
 updateAnnotationActions <- function(playState)
 {
     drawAnnotations(playState)
-    drawLinkedLocal(playState)
     updateAnnotationActionStates(playState)
 }
 
@@ -30,9 +29,6 @@ updateAnnotationActionStates <- function(playState)
     showEdit <- !isBasicDeviceMode(playState)
     showEdit <- showEdit && (length(playState$annotations) > 0)
     aGroup$getAction("EditAnnotations")$setSensitive(showEdit)
-    ## Brush
-    showBrush <- !isBasicDeviceMode(playState)
-    aGroup$getAction("Brush")$setSensitive(showBrush)
 }
 
 drawAnnotations <- function(playState, return.code = FALSE)
@@ -51,66 +47,6 @@ drawAnnotations <- function(playState, return.code = FALSE)
             theCode <- c(theCode, expr)
     }
     theCode
-}
-
-drawLinkedLocal <- function(playState, return.code = FALSE)
-{
-    ## draw linked brushed points
-    theCode <- expression()
-    subscripts <- unlist(playState$linked$ids)
-    if (length(subscripts) == 0) return(theCode)
-    subscripts <- unique(sort(subscripts))
-    playDevSet(playState)
-    for (space in playState$spaces) {
-        data <- xyCoords(playState, space = space)
-        if (length(data$x) == 0) next
-        if (length(data$y) == 0) next
-        ## convert to log scale if necessary
-        data <- dataCoordsToSpaceCoords(playState, data)
-        if (!is.null(data$subscripts)) {
-            ## 'data' is a subset given by data$subscripts,
-            ## so need to find which ones match the label subscripts
-            which <- match(subscripts, data$subscripts, 0)
-            x <- data$x[which]
-            y <- data$y[which]
-        } else {
-            ## 'data' (x and y) is the whole dataset
-            x <- data$x[subscripts]
-            y <- data$y[subscripts]
-        }
-        if (length(x) == 0) next
-        annot <- call("panel.points", x, y)
-        ## TODO: use settings
-        annot$pch <- 21
-        annot$col <- "black"
-        annot$fill <- "yellow"
-        expr <- playDo(playState, annot, space = space,
-                       return.code = return.code)
-        if (return.code)
-            theCode <- c(theCode, expr)
-    }
-    theCode
-}
-
-updateLinkedSubscribers <- function(playState, redraw = FALSE)
-{
-    whichDead <- NULL
-    for (i in seq_along(playState$linked$subscribers)) {
-        otherPlayState <- playState$linked$subscribers[[i]]
-        if (!identical(otherPlayState$ID, playState$ID)) {
-            ## first check that this subscriber is still alive
-            if (!inherits(otherPlayState$win, "GtkWindow")) {
-                whichDead <- c(whichDead, i)
-                next
-            }
-            ## trigger draw / redraw
-            if (redraw) playReplot(otherPlayState)
-            else drawLinkedLocal(otherPlayState)
-        }
-    }
-    if (length(whichDead))
-        playState$linked$subscribers <-
-            playState$linked$subscribers[-whichDead]
 }
 
 clear_handler <- function(widget, playState)
@@ -180,31 +116,23 @@ undo.annotation_handler <- function(widget, playState)
 
 edit.annotations_handler <- function(widget, playState)
 {
-    ## TODO: allow select annotation space within dialog
-    annotSpaces <- names(playState$annotations)
-    if (length(annotSpaces) == 0) return()
-    if (length(annotSpaces) == 1) {
-        space <- annotSpaces[1]
-    }
-    else if (length(annotSpaces) > 1) {
-        space <- select.list(annotSpaces,
-                             multiple = FALSE, title = "Choose annotation space")
-        playState$win$present()
-        if (space == "") return()
-    }
-    annots <- playState$annotations[[space]]
-    callTxt <- paste(unlist(lapply(annots, deparse, control="showAttributes")), collapse="\n")
+    annotTxt <- deparse(playState$annotations, width = 42,
+                        control = playwith.getOption("deparse.options"))
+    annotTxt <- paste(annotTxt, collapse = "\n")
+    ## TODO: deparse / parse in a more readable form
     repeat {
-        newTxt <- guiTextInput(callTxt, title="Edit annotations",
-                               prompt="", accepts.tab=F)
+        newTxt <- guiTextInput(annotTxt, title="Edit annotations",
+                               prompt=paste("Make sure you keep this structure!",
+                               "(a list of expressions, named by space)", sep="\n"),
+                               accepts.tab=FALSE)
         if (is.null(newTxt)) break
-        callTxt <- newTxt
-        tmp <- tryCatch(parse(text=callTxt), error=function(e)e)
+        annotTxt <- newTxt
+        tmp <- tryCatch(eval(parse(text=annotTxt)), error=function(e)e)
         ## check whether there was a syntax error
         if (inherits(tmp, "error")) {
             gmessage.error(conditionMessage(tmp))
         } else {
-            playState$annotations[[space]] <- tmp
+            playState$annotations <- tmp
             playReplot(playState)
             break
         }
@@ -348,7 +276,7 @@ annotateCore <- function(playState, foo)
     visible(lay) <- TRUE
     wid$set.defaults <- gcheckbox("Set as default label style",
                                   container = stylegroup)
-    glabel("For more control, try Customise Style from the Style menu.",
+    glabel("For more control, try Style Settings from the Style menu.",
            container = stylegroup)
 
     ## store plot display for fast redrawing
@@ -531,35 +459,8 @@ annotateCore <- function(playState, foo)
     #defaultWidget(okbutt) <- TRUE
 }
 
-brushCore <- function(playState, foo, remove = FALSE)
-{
-    foo <- playSelectData(playState, foo = foo)
-    if (is.null(foo)) return()
-    if (length(foo$which) == 0) return()
-    ids <- foo$subscripts
-    ## TODO: if (remove)
-    i <- length(playState$linked$ids) + 1
-    playState$linked$ids[[i]] <- ids
-    playState$undoStack <- c(playState$undoStack, "linked")
-    updateAnnotationActionStates(playState)
-    drawLinkedLocal(playState)
-    updateLinkedSubscribers(playState)
-}
-
 legend_handler <- function(widget, playState)
 {
     ## TODO
-}
-
-set.arrow.style_handler <- function(widget, playState)
-{
-    ## TODO
-    gmessage.error("not yet implemented")
-}
-
-set.brush.style_handler <- function(widget, playState)
-{
-    ## TODO
-    gmessage.error("not yet implemented")
 }
 

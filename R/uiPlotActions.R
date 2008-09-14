@@ -8,30 +8,34 @@ plotActionGroup <- function(playState)
     entries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback
              list("PlotSettings", "gtk-preferences", "Plot _settings", "<Ctrl>O", "Change the plot type and settings", plot.settings_handler),
-             list("Zoomfit", "gtk-zoom-fit", "_Fit data", "<Ctrl>space", "Revert to default plot region", zoomfit_handler),
+             list("Zoomfit", "gtk-zoom-fit", "_Reset scales", "<Ctrl>space", "Revert to default plot region", zoomfit_handler),
              list("ZeroY", "gtk-goto-bottom", "Full y scale", "<Ctrl>Return", "Show the full y (response) scale starting from zero", zero.y_handler),
              list("ZeroX", "gtk-goto-first", "Full x scale", "<Ctrl>BackSpace", "Show the full x (domain) scale starting from zero", zero.x_handler),
              ## identify (uiIdentifyActions.R)
              list("SetLabelsTo", "gtk-index", "Set _labels to...", "<Ctrl>L", NULL, set.labels_handler),
-             list("IdTable", "gtk-info", "Select from _table...", NULL, "Select points from a table", id.table_handler),
              list("FindLabels", "gtk-find", "_Find...", "<Ctrl>F", "Find points with labels matching...", id.find_handler),
+             list("IdTable", "gtk-sort-ascending", "Select from _table...", NULL, "Select points from a table", id.table_handler),
              list("SaveIDs", NULL, "_Save IDs...", NULL, "_Save current IDs to an object", save.ids_handler),
-             list("SetLabelStyle", NULL, "Set label st_yle...", NULL, NULL, set.label.style_handler),
-             list("SetLabelOffset", NULL, "Set label _offset...", NULL, NULL, set.label.offset_handler),
              ## annotations (uiAnnotationActions.R)
              list("Legend", "gtk-sort-ascending", "Legend", NULL, "Place a legend", legend_handler),
-             list("EditAnnotations", "gtk-edit", "Edit ann.", "<Ctrl><Shift>E", "Edit annotations (including arrows) code", edit.annotations_handler),
-             list("UndoAnnotation", "gtk-undo", "Undo ann.", "<Ctrl>Z", "Remove last annotation", undo.annotation_handler),
+             list("EditAnnotations", "gtk-edit", "Edit annot.", "<Ctrl><Shift>E", "Edit annotations (including arrows) code", edit.annotations_handler),
+             list("UndoAnnotation", "gtk-undo", "Undo annot.", "<Ctrl>Z", "Remove last annotation", undo.annotation_handler),
              list("Clear", "gtk-clear", "Clear", "<Shift>Delete", "Remove labels and annotations", clear_handler),
-             list("SetArrowStyle", NULL, "Set arrow style...", NULL, NULL, set.arrow.style_handler),
-             list("SetBrushStyle", NULL, "Set brush style...", NULL, NULL, set.brush.style_handler),
+             ## style (uiStyleActions.R)
+             list("SetLabelStyle", NULL, "Set _label style...", NULL, NULL, set.label.style_handler),
+             list("SetArrowStyle", NULL, "Set _arrow style...", NULL, NULL, set.arrow.style_handler),
+             list("SetBrushStyle", NULL, "Set _brush style...", NULL, NULL, set.brush.style_handler),
              ## grobs (uiGrobActions.R)
-             list("GrobInspector", "gtk-properties", "Grob inspector", NULL, NULL, grob.inspector_handler)
+             list("GrobInspector", "gtk-properties", "_Grob inspector", NULL, NULL, grob.inspector_handler)
              )
 
     toggleEntries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback, active
              list("Expand", "gtk-fullscreen", "_Panel", NULL, "Choose a panel to expand to fill the figure (for further interaction)", expand_handler, FALSE),
+             ## style shortcuts (uiStyleActions.R)
+             list("StyleSolidPoints", NULL, "Solid points", NULL, NULL, style.solid.points_handler, FALSE),
+             list("StyleTransPoints", NULL, "Translucent points", NULL, NULL, style.trans.points_handler, FALSE),
+             list("StyleThickLines", NULL, "Thick lines", NULL, NULL, style.thick.lines_handler, FALSE),
              ## options (uiOptionsActions.R)
              list("TimeMode", "gtk-media-forward-ltr", "_Time mode", "<Ctrl>T", "Time mode: scroll along the x axis", time.mode_handler, FALSE)
              )

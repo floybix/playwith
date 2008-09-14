@@ -7,18 +7,16 @@
 initIdentifyActions <- function(playState)
 {
     playState$tmp$identify.ok <- FALSE
+    if (isBasicDeviceMode(playState)) return()
     hasArgs <- playState$accepts.arguments
     isLatt <- playState$is.lattice
-    isLatt3D <- isLatt && !is.null(playState$trellis$panel.args.common$scales.3d)
     isBase <- !isLatt && is.null(playState$viewport)
     isBaseMulti <- isBase && any(par("mfrow") > 1)
     ## detect known plots that this will not work with
-    ## TODO: check that xyData() has x and y coords
     if (is.null(playState$data.points)) {
         if (!hasArgs) return()
         if (isBaseMulti) return()
         ## lattice package:
-        if (isLatt3D) return()
         if (playState$callName %in%
             c("splom", "contourplot",
               "histogram", "densityplot", "barchart")) return()
@@ -31,91 +29,58 @@ initIdentifyActions <- function(playState)
               "coplot", "image", "contour", "persp",
               "pie", "pairs")) return()
     }
-    mainCall <- mainCall(playState)
     labels <- playState$.args$labels
+    labelsOrFormat <- function(object, ...) {
+        if (is.somesortoftime(object))
+            return(format(object))
+        #if (is.factor(object))
+        #    return(format(object))
+        result <- labels(object, ...)
+        ## labels() may return a list; item 1 is the rownames
+        if (is.list(result))
+            result <- result[[1]]
+        result
+    }
     ## try to guess labels if they were not given
     if (is.null(labels)) {
-        if (is.null(playState$data.points)) {
-            ## try to construct labels from the plot call
-
-            tmp.data <- getDataArg(playState)
-
-            if (length(mainCall > 1)) {
-                ## check for named "data" argument
-                tmp.data <- callArg(playState, "data")
-                if (!is.null(tmp.data))
-                    labels <- makeLabels(tmp.data)
-                ## hard-coded exceptions...
-                if (playState$callName == "qqplot") {
-                    tmp.x <- callArg(playState, 1)
-                    tmp.y <- callArg(playState, 2)
-                    x.lab <- makeLabels(tmp.x, orSeq=T)
-                    y.lab <- makeLabels(tmp.y, orSeq=T)
-                    labels <- paste(sep="",
-                                    x.lab[order(tmp.x)], ",",
-                                    y.lab[order(tmp.y)])
-                }
-                ## otherwise: default handler...
-                if (is.null(labels)) {
-                    ## look at first argument (tmp.data may be NULL)
-                    tmp.x <- callArg(playState, 1, data=tmp.data)
-                    if (inherits(tmp.x, "formula")) {
-                        ## if 1st arg is formula, 2nd is `data`
-                        if (is.null(tmp.data) &&
-                            (length(mainCall) >= 3) &&
-                            (is.null(names(mainCall)) ||
-                             identical(names(mainCall)[[3]], ""))
-                            )
-                            tmp.data <- callArg(playState, 2)
-                        xObj <- if (length(tmp.x) == 2)
-                            tmp.x[[2]] else tmp.x[[3]]
-                        ## get left-most term in formula
-                        while (is.call(xObj) && toString(xObj[[1]]) %in%
-                               c("|", "*", "+"))
-                            xObj <- xObj[[2]]
-                        xObj <- if (!is.null(tmp.data))
-                            eval(xObj, tmp.data, playState$env)
-                        else eval(xObj, environment(tmp.x), playState$env)
-                        labels <- makeLabels(xObj, orSeq=T)
-                    } else {
-                        if (is.null(row.names(tmp.x)) &&
-                            is.list(tmp.x) &&
-                            all(c("x","y") %in% names(tmp.x)))
-                            tmp.x <- tmp.x$x
-                        labels <- makeLabels(tmp.x, orSeq=T)
-                    }
-                }
-            }
+        tmp.data <- getDataArg(playState)
+        if (!is.null(tmp.data) &&
+            !is.list(tmp.data) &&
+            !is.environment(tmp.data))
+        {
+            ## data arg, probably a data.frame
+            labels <- labelsOrFormat(tmp.data)
         } else {
-            ## data.points were supplied
-            tmp.x <- playState$data.points
-            if (is.null(row.names(tmp.x)) &&
-                is.list(tmp.x) &&
-                all(c("x","y") %in% names(tmp.x)))
-                tmp.x <- tmp.x$x
-            labels <- makeLabels(tmp.x, orSeq=T)
+            ## no useful data arg; take arg 1 instead
+            tmp.x <- callArg(playState, 1)
+            if (inherits(tmp.x, "formula")) {
+                ## get left-most term in RHS of formula
+                xObj <- if (length(tmp.x) == 2)
+                    tmp.x[[2]] else tmp.x[[3]]
+                while (is.call(xObj) && toString(xObj[[1]]) %in%
+                       c("|", "*", "+"))
+                    xObj <- xObj[[2]]
+                xObj <- eval(xObj, tmp.data, playState$env)
+                                        #else eval(xObj, environment(tmp.x), playState$env)
+                labels <- labelsOrFormat(xObj)
+            } else {
+                ## first arg is an object, not a formula
+                labels <- labelsOrFormat(tmp.x)
+            }
         }
+                ## hard-coded exceptions...
+#                if (playState$callName == "qqplot") {
+#                    tmp.x <- callArg(playState, 1)
+#                    tmp.y <- callArg(playState, 2)
+#                    x.lab <- makeLabels(tmp.x, orSeq=T)
+#                    y.lab <- makeLabels(tmp.y, orSeq=T)
+#                    labels <- paste(sep="",
+#                                    x.lab[order(tmp.x)], ",",
+#                                    y.lab[order(tmp.y)])
+#                }
     }
     playState$labels <- labels
     playState$tmp$identify.ok <- TRUE
-}
-
-makeLabels <- function(x, orSeq=FALSE)
-{
-    labels <- row.names(x)
-    if (is.factor(x) || is.character(x))
-        labels <- as.character(x)
-    if (inherits(x, "POSIXt") ||
-        inherits(x, "Date") ||
-        inherits(x, "yearmon") ||
-        inherits(x, "yearqtr"))
-        labels <- format(x)
-    if (inherits(x, "ts") || inherits(x, "zoo"))
-        labels <- rep(format(stats::time(x)), NCOL(x))
-    if (is.null(labels) && is.numeric(x))
-        labels <- names(x)
-    if (is.null(labels) && orSeq) labels <- seq_along(x)
-    labels
 }
 
 updateIdentifyActions <- function(playState)
@@ -125,10 +90,17 @@ updateIdentifyActions <- function(playState)
     canIdent <- playState$tmp$identify.ok
     aGroup$getAction("Identify")$setSensitive(canIdent)
     aGroup$getAction("IdTable")$setSensitive(canIdent)
-    aGroup$getAction("SaveIDs")$setSensitive(canIdent)
-    ## draw persistent labels
-    if (canIdent)
+    aGroup$getAction("FindLabels")$setSensitive(canIdent)
+    hasIDs <- ((length(playState$ids) > 0) ||
+               (length(playState$linkeds$ids) > 0))
+    aGroup$getAction("SaveIDs")$setSensitive(hasIDs)
+    ## Brush
+    aGroup$getAction("Brush")$setSensitive(canIdent)
+    ## draw persistent labels and brushed points
+    if (canIdent) {
         drawLabels(playState)
+        drawLinkedLocal(playState)
+    }
 }
 
 drawLabels <- function(playState, return.code = FALSE)
@@ -183,91 +155,60 @@ drawLabelsInSpace <- function(playState, subscripts, space = "plot",
            return.code = return.code)
 }
 
-set.labels_handler <- function(widget, playState)
+drawLinkedLocal <- function(playState, return.code = FALSE)
 {
-    box <- ggroup(horizontal = FALSE)
-    datArg <- getDataArg(playState, eval = FALSE)
-    dat <- try(eval(datArg, playState$env))
-    labcode <- NULL
-    labdesc <- NULL
-    if (!is.null(dat)) {
-        labcode <- colnames(dat)
-        labdesc <- colnames(dat)
-    }
-    rnCode <- deparseOneLine(call("rownames", datArg))
-    labcode <- c(labcode,
-                 "xyData(playDevCur())$x",
-                 "xyData(playDevCur())$y",
-                 'with(xyData(playDevCur()), paste(y, x, sep="@"))',
-                 "NULL",
-                 rnCode)
-    labdesc <- c(labdesc,
-                 "data x values",
-                 "data y values",
-                 "data y@x values",
-                 "data subscripts",
-                 rnCode)
-    labradio <- gradio(labdesc, selected = length(labcode), container = box,
-                       handler = function(h, ...) {
-                           idx <- max(1, svalue(labradio, index=TRUE))
-                           svalue(labedit) <- labcode[idx]
-                       })
-    labedit <- gedit(rnCode, container = box)
-    ## show dialog
-    gbasicdialog("Set labels to...", widget = box,
-                 handler = function(h, ...) {
-                     expr <- parse(text=svalue(labedit))
-                     tmp <- tryCatch(
-                             eval(expr, dat, playState$env),
-                                     error=function(e)e)
-                     ## check whether there was an error
-                     if (inherits(tmp, "error")) {
-                         gmessage.error(conditionMessage(tmp))
-                     } else {
-                         playState$labels <- tmp
-                     }
-                 })
-}
-
-set.label.offset_handler <- function(widget, playState)
-{
-    ## TODO
-    gmessage.error("not yet implemented")
-}
-
-## TODO: get rid of this -- set label style now means changing lattice settings
-set.label.style_handler <- function(widget, playState)
-{
-    style <- playState$label.style
-    if (is.null(playState$label.style)) {
-        style <- do.call(gpar, trellis.par.get("add.text"))
-    }
-    if (inherits(style, "gpar"))
-        style <- as.call(c(quote(gpar), style))
-
-    callTxt <- deparseOneLine(style)
-
-    repeat {
-        newTxt <- NA
-        editbox <- gedit(callTxt, width=120)
-        gbasicdialog("Edit label style", widget=editbox, action=environment(),
-                     handler=function(h, ...) {
-                         h$action$newTxt <- svalue(editbox)
-                     })
-        if (is.na(newTxt)) break
-        if (newTxt == "") break
-        if (identical(newTxt, callTxt)) break
-        callTxt <- newTxt
-        tmp <- tryCatch(parse(text=callTxt), error=function(e)e)
-        ## check whether there was a syntax error
-        if (inherits(tmp, "error")) {
-            gmessage.error(conditionMessage(tmp))
+    ## draw linked brushed points
+    theCode <- expression()
+    subscripts <- unlist(playState$linked$ids)
+    if (length(subscripts) == 0) return(theCode)
+    subscripts <- unique(sort(subscripts))
+    playDevSet(playState)
+    for (space in playState$spaces) {
+        data <- xyCoords(playState, space = space)
+        if (length(data$x) == 0) next
+        if (length(data$y) == 0) next
+        ## convert to log scale if necessary
+        data <- dataCoordsToSpaceCoords(playState, data)
+        if (!is.null(data$subscripts)) {
+            ## 'data' is a subset given by data$subscripts,
+            ## so need to find which ones match the label subscripts
+            which <- match(subscripts, data$subscripts, 0)
+            x <- data$x[which]
+            y <- data$y[which]
         } else {
-            playState$label.style <- eval(tmp)
-            break
+            ## 'data' (x and y) is the whole dataset
+            x <- data$x[subscripts]
+            y <- data$y[subscripts]
+        }
+        if (length(x) == 0) next
+        annot <- call("panel.brush.points", x, y)
+        expr <- playDo(playState, annot, space = space,
+                       return.code = return.code)
+        if (return.code)
+            theCode <- c(theCode, expr)
+    }
+    theCode
+}
+
+updateLinkedSubscribers <- function(playState, redraw = FALSE)
+{
+    whichDead <- NULL
+    for (i in seq_along(playState$linked$subscribers)) {
+        otherPlayState <- playState$linked$subscribers[[i]]
+        if (!identical(otherPlayState$ID, playState$ID)) {
+            ## first check that this subscriber is still alive
+            if (!inherits(otherPlayState$win, "GtkWindow")) {
+                whichDead <- c(whichDead, i)
+                next
+            }
+            ## trigger draw / redraw
+            if (redraw) playReplot(otherPlayState)
+            else drawLinkedLocal(otherPlayState)
         }
     }
-    playState$win$present()
+    if (length(whichDead))
+        playState$linked$subscribers <-
+            playState$linked$subscribers[-whichDead]
 }
 
 identifyCore <- function(playState, foo, remove = FALSE)
@@ -329,6 +270,13 @@ identifyCore <- function(playState, foo, remove = FALSE)
                                updateAnnotationActionStates(playState)
                            }, data = list(ss = ss, pos = pos))
         }
+        idMenu$append(gtkSeparatorMenuItem())
+        item <- gtkMenuItem("(Right-click for details)")
+        item["sensitive"] <- FALSE
+        idMenu$append(item)
+        aGroup <- playState$actionGroups[["PlotActions"]]
+        idMenu$append(aGroup$getAction("SetLabelsTo")$createMenuItem())
+        idMenu$append(aGroup$getAction("SetLabelStyle")$createMenuItem())
         ## show the menu
         while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
     } else {
@@ -340,10 +288,6 @@ identifyCore <- function(playState, foo, remove = FALSE)
             if (!is.click) pos <- 1
             ## store newly identified points in playState
             ids.new <- data.frame(subscripts = subscripts, pos = pos)
-                                        #ids.old <- playState$ids[[space]] ## may be NULL
-                                        #if (is.null(ids.old)) ids.old <- ids.new
-                                        #else ids.new <- rbind(ids.old, ids.new)
-                                        #playState$ids[[space]] <- ids.new
             i <- length(playState$ids) + 1
             playState$ids[[i]] <- ids.new
             names(playState$ids)[i] <- space
@@ -363,9 +307,86 @@ id.table_handler <- function(widget, playState) {
 }
 
 id.find_handler <- function(widget, playState) {
+    ## TODO
     gmessage.error("not yet implemented")
 }
 
-save.ids_handler <- function(widget, playState) {
-    gmessage.error("not yet implemented")
+set.labels_handler <- function(widget, playState)
+{
+    playFreezeGUI(playState)
+    on.exit(playThawGUI(playState))
+    ## widgets
+    box <- ggroup(horizontal = FALSE)
+    datArg <- getDataArg(playState, eval = FALSE)
+    dat <- try(eval(datArg, playState$env))
+    labcode <- NULL
+    labdesc <- NULL
+    if (!is.null(dat)) {
+        labcode <- colnames(dat)
+        labdesc <- colnames(dat)
+    }
+    rnCode <- deparseOneLine(call("rownames", datArg))
+    labcode <- c(labcode,
+                 "xyData(playDevCur())$x",
+                 "xyData(playDevCur())$y",
+                 'with(xyData(playDevCur()), paste(y, x, sep="@"))',
+                 "NULL",
+                 rnCode)
+    labdesc <- c(labdesc,
+                 "data x values",
+                 "data y values",
+                 "data y@x values",
+                 "data subscripts",
+                 rnCode)
+    labradio <- gradio(labdesc, selected = length(labcode), container = box,
+                       handler = function(h, ...) {
+                           idx <- max(1, svalue(labradio, index=TRUE))
+                           svalue(labedit) <- labcode[idx]
+                       })
+    labedit <- gedit(rnCode, container = box)
+    ## show dialog
+    gbasicdialog("Set labels to...", widget = box,
+                 handler = function(h, ...) {
+                     expr <- parse(text=svalue(labedit))
+                     tmp <- tryCatch(
+                             eval(expr, dat, playState$env),
+                                     error=function(e)e)
+                     ## check whether there was an error
+                     if (inherits(tmp, "error")) {
+                         gmessage.error(conditionMessage(tmp))
+                     } else {
+                         ## set labels
+                         playState$labels <- tmp
+                         ## and set default for playNewPlot
+                         playState$.args$labels <- tmp
+                         ## redraw
+                         if (length(playState$ids))
+                             playReplot(playState)
+                     }
+                 })
 }
+
+save.ids_handler <- function(widget, playState) {
+    name <- ginput("Save subscripts of labelled / brushed points to variable:",
+                   title = "Save IDs", text = "myIds")
+    if ((length(name) == 0) || (nchar(name) == 0))
+        return()
+    playDevSet(playState)
+    assign(name, playGetIDs(playState), globalenv())
+}
+
+brushCore <- function(playState, foo, remove = FALSE)
+{
+    foo <- playSelectData(playState, foo = foo)
+    if (is.null(foo)) return()
+    if (length(foo$which) == 0) return()
+    ids <- foo$subscripts
+    ## TODO: if (remove)
+    i <- length(playState$linked$ids) + 1
+    playState$linked$ids[[i]] <- ids
+    playState$undoStack <- c(playState$undoStack, "linked")
+    updateAnnotationActionStates(playState)
+    drawLinkedLocal(playState)
+    updateLinkedSubscribers(playState)
+}
+

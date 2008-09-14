@@ -8,48 +8,47 @@
          ## explicit arguments to playwith():
          new = FALSE,
          width = 6,
-         height = 5,
-         pointsize = 10,
+         height = 6,
+         pointsize = 12,
+         time.mode = FALSE,
          eval.args = NA,
          on.close = NULL,
          ## implicit arguments to playwith():
          page.annotation = FALSE,
-         clip.annotations = FALSE,
+         clip.annotations = TRUE,
          label.offset = 0.5,
          arrow = list(length = 0.15, unit = "inches"),
          ## themes:
          themes = alist(
-         "Default" = standard.theme("pdf"),
-         "WhiteBG" = col.whitebg(),
-         "Greyscale (for print)" = standard.theme("postscript"),
-         "DarkBG" = standard.theme("X11"),
-         "ColorBrewer 1" = custom.theme(),
-         "ColorBrewer 2" = custom.theme.2(),
-         "ColorBrewer Black" = custom.theme.black()
+         "Default" = trellis.par.set(standard.theme("pdf")),
+         "WhiteBG" = trellis.par.set(col.whitebg()),
+         "Greyscale (for print)" = trellis.par.set(standard.theme("postscript")),
+         "DarkBG" = trellis.par.set(standard.theme("X11")),
+         "ColorBrewer 1" = trellis.par.set(custom.theme()),
+         "ColorBrewer 2" = trellis.par.set(custom.theme.2()),
+         "ColorBrewer Black" = trellis.par.set(custom.theme.black())
          ),
-         styleOptions = alist(
-         "Filled points" =
-             simpleTheme(pch = 16),
-         "Translucent points" =
-             simpleTheme(alpha.points = 0.25),
-         "Thick lines" =
-             list(plot.line = list(lwd = 2),
-                  superpose.line = list(lwd = 2)),
+         styleShortcuts = alist(
+         "Transparent strips" =
+         trellis.par.set(list(strip.background = list(col = "transparent"),
+                              strip.shingle = list(col = grey(0.1)))),
          "Grey strips" =
-             list(strip.background = list(col = grey(7:1/8)),
-                  strip.shingle = list(col = grey(6:0/8)))
-         ),
-         colorKeyPalettes = alist(
-         "Seq. blues (YlGnBu)" =
-             list(regions = colorRampPalette(brewer.pal(9, "YlGnBu"))(100)),
-         "Seq. oranges (YlOrRd)" =
-             list(regions = colorRampPalette(brewer.pal(9, "YlOrRd"))(100)),
-         "Seq. greys (Greys)" =
-             list(regions = colorRampPalette(brewer.pal(9, "Greys"))(100)),
-         "Div. red/blue (Spectral)" =
-             list(regions = colorRampPalette(brewer.pal(11, "Spectral"))(100)),
-         "Div. dry/wet (BrBG)" =
-             list(regions = colorRampPalette(brewer.pal(11, "BrBG"))(100))
+         trellis.par.set(list(strip.background = list(col = grey(7:1/8)),
+                              strip.shingle = list(col = grey(6:0/8)))),
+         "Grey color ramp" =
+         trellis.par.set(list(regions = colorRampPalette(brewer.pal(9, "Greys"))(100))),
+         "Spectral color ramp" =
+         trellis.par.set(list(regions = colorRampPalette(brewer.pal(11, "Spectral"))(100))),
+         "Red vs blue via white" =
+         trellis.par.set(list(regions = colorRampPalette(brewer.pal(11, "RdBu"))(100))),
+         "Dry vs wet (BrBG)" =
+         trellis.par.set(list(regions = colorRampPalette(brewer.pal(11, "BrBG"))(100))),
+         "Yl - Gn - Bu" =
+         trellis.par.set(list(regions = colorRampPalette(brewer.pal(9, "YlGnBu"))(100))),
+         "Yl - Or - Rd" =
+         trellis.par.set(list(regions = colorRampPalette(brewer.pal(9, "YlOrRd"))(100))),
+         "Layout as table" =
+         lattice.options(default.args = list(as.table = TRUE))
          ),
          ## global:
          save.as.format = "pdf",

@@ -45,11 +45,34 @@ playGetIDs <- function(playState = playDevCur(),
     if (labels) playState$labels[ids] else ids
 }
 
+playUnlink <- function(playState)
+{
+    oldlinked <- playState$linked
+    newlinked <- new.env(parent = baseenv())
+    newlinked$ids <- playState$linked$ids
+    newlinked$subscribers <- list(playState)
+    playState$linked <- newlinked
+    ## remove self from (old) list of subscribers
+    for (i in seq_along(oldlinked$subscribers)) {
+        otherPlayState <- oldlinked$subscribers[[i]]
+        if (identical(otherPlayState$ID, playState$ID)) {
+            oldlinked$subscribers <- oldlinked$subscribers[-i]
+            break
+        }
+    }
+    ## update action states
+    for (x in oldlinked$subscribers)
+        updateGlobalActions(x)
+    updateGlobalActions(playState)
+}
+
 print.playState <- function(x, ...)
 {
     stopifnot(inherits(x, "playState"))
-    cat(paste("<playState: ",
-              toString(x$win["title"]), ">\n", sep=""))
+    title <- "(invalid)"
+    if (inherits(x$win, "GtkWindow"))
+        title <- toString(x$win["title"])
+    cat(paste("<playState: ", title, ">\n", sep=""))
 }
 
 cleanupStateEnv <- function()
@@ -71,10 +94,8 @@ cleanupStateEnv <- function()
 callArg <- function(playState, arg, eval = TRUE, data = NULL)
 {
     if (is.symbol(arg)) arg <- as.character(arg)
-    ## work-around since the `exact` argument only appeared in R 2.6
-    exactbit <- if (getRversion() <= "2.6") '"]]' else '", exact=TRUE]]'
     getx <- if (is.numeric(arg)) paste('[[', arg+1, ']]', sep="")
-    else if (is.character(arg)) paste('[["', arg, exactbit, sep="")
+    else if (is.character(arg)) paste('[["', arg, '", exact=TRUE]]', sep="")
     else paste("$", deparseOneLine(arg), sep="")
     mainCall <- mainCall(playState)
     zap <- eval(parse(text=paste("mainCall", getx, sep="")))
@@ -267,7 +288,7 @@ playSetFreezeGUI <- function(playState, frozen)
             latticist["sensitive"] <- !frozen
     })
     playState$win$getWindow()$setCursor(
-      if (frozen) gdkCursorNew("watch") else NULL)
+      if (frozen) gdkCursorNew(GdkCursorType["watch"]) else NULL)
 }
 
 blockRedraws <- function(expr, playState = playDevCur())

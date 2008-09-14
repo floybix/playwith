@@ -333,10 +333,10 @@ latticeSettingsGUI <- function(playState)
                        action="apply", container=buttgroup)
     canbutt <- gbutton("Cancel", container=buttgroup,
                        handler = function(h, ...) {
+                           dispose(h$obj)
                            playState$call <- origCall
                            if (showingPreview)
                                playReplot(playState)
-                           dispose(h$obj)
                        })
     size(okbutt) <- size(prebutt) <- size(canbutt) <- c(80, 30)
 }
@@ -565,10 +565,10 @@ basePlotSettingsGUI <- function(playState)
                        action="apply", container=buttgroup)
     canbutt <- gbutton("Cancel", container=buttgroup,
                        handler=function(h, ...) {
+                           dispose(h$obj)
                            playState$call <- origCall
                            if (showingPreview)
                                playReplot(playState)
-                           dispose(h$obj)
                        })
     size(okbutt) <- size(prebutt) <- size(canbutt) <- c(80, 30)
 }

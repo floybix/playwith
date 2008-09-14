@@ -32,6 +32,21 @@ panel.usertext <-
                fontface = fontface, adj = adj, pos = pos, offset = offset, ...)
 }
 
+## TODO: how should this be managed?
+brush.symbol.default <-
+    list(pch = 21, col = "black", fill = "yellow", alpha = 1, cex = 1)
+
+panel.brush.points <-
+    function(x, y = NULL, col = brush.symbol$col, pch = brush.symbol$pch,
+    alpha = brush.symbol$alpha, fill = brush.symbol$fill, cex = brush.symbol$cex, ...)
+{
+    brush.symbol <- trellis.par.get("brush.symbol")
+    if (is.null(brush.symbol))
+        brush.symbol <- brush.symbol.default
+    panel.points(x, y, col = col, pch = pch, alpha = alpha,
+                 fill = fill, cex = cex, ...)
+}
+
 latticeStyleGUI <-
     function(width = 300, height = 300, pointsize = 12,
              target.device = dev.cur(),
@@ -208,7 +223,7 @@ latticeStyleGUI <-
     }
 
     ## used for the coerce.with argument to pch widgets
-    getPchValue <- function(x) {
+    pchValue <- function(x) {
         match <- which(names(pchList) == x)
         if (length(match)) return(pchList[[ match[1] ]])
         ## otherwise just return the value as character
@@ -219,10 +234,18 @@ latticeStyleGUI <-
     ## used for the coerce.with argument to lty widgets
     ## (the names can be used directly, but causes problems
     ##  with superpose.line if mixed names / numerics!)
-    getLtyValue <- function(x) {
+    ltyValue <- function(x) {
         if (identical(x, "blank")) return(0)
         ## return index of item in ltyList
-        which(x == ltyList)
+        match <- which(x == ltyList)
+        if (length(match)) return(match)
+        x
+    }
+    faceValue <- function(x) {
+        ## return index of item in faceList
+        match <- which(x == faceList)
+        if (length(match)) return(match)
+        x
     }
 
     ## update widget states to reflect current settings
@@ -259,6 +282,10 @@ latticeStyleGUI <-
         ltyName <- function(x) {
             if (identical(x, 0)) x <- "blank"
             if (is.numeric(x)) x <- ltyList[x]
+            x
+        }
+        faceName <- function(x) {
+            if (is.numeric(x)) x <- faceList[x]
             x
         }
         with(par, {
@@ -307,7 +334,7 @@ latticeStyleGUI <-
             svalue(wid.user.text.alpha) <- ok(user.text$alpha)
             svalue(wid.user.text.cex) <- ok(user.text$cex)
             svalue(wid.user.text.fontfamily) <- ok(user.text$fontfamily)
-            svalue(wid.user.text.fontface) <- ok(user.text$fontface)
+            svalue(wid.user.text.fontface) <- faceName(ok(user.text$fontface))
             svalue(wid.user.text.lineheight) <- ok(user.text$lineheight)
             ## add.line
             svalue(wid.add.line.col) <- colName(ok(add.line$col))
@@ -342,7 +369,7 @@ latticeStyleGUI <-
     win <- gwindow(title = "Lattice Style GUI")
     metagroup <- ggroup(horizontal = FALSE, container = win)
     displayg <- gframe("Display", horizontal = TRUE, container = metagroup)
-    font(displayg) <- list(weight="bold")
+    #font(displayg) <- list(weight="bold")
     hgroup <- ggroupThin(horizontal = TRUE, container = metagroup, expand = TRUE)
     vgroup <- ggroupThin(horizontal = FALSE, container = hgroup)
     ## add the graphics device
@@ -475,12 +502,12 @@ latticeStyleGUI <-
     wid.super.list$pch <- list()
     wid.super.list$pch[[1]] <-
         gdroplist(names(pchList), selected = 0, container = styg,
-                  editable = TRUE, coerce.with = getPchValue, handler = setPar,
+                  editable = TRUE, coerce.with = pchValue, handler = setPar,
                   action = maintargets$pch)
     wid.super.list$lty <- list()
     wid.super.list$lty[[1]] <-
         gdroplist(ltyList, selected = 0, width = 60, container = styg,
-                  editable = TRUE, coerce.with = getLtyValue, handler = setPar,
+                  editable = TRUE, coerce.with = ltyValue, handler = setPar,
                   action = maintargets$lty)
     styg[1,2] <- "Color:"
     styg[1,3] <- "Symbol:"
@@ -508,11 +535,11 @@ latticeStyleGUI <-
                   handler = setPar, action = action.col)
         wid.super.list$pch[[i]] <-
             gdroplist(names(pchList), selected = 0, container = styg,
-                      editable = TRUE, coerce.with = getPchValue, handler = setPar,
+                      editable = TRUE, coerce.with = pchValue, handler = setPar,
                       action = action.pch)
         wid.super.list$lty[[i]] <-
             gdroplist(ltyList, selected = 0, width = 60, container = styg,
-                      editable = TRUE, coerce.with = getLtyValue, handler = setPar,
+                      editable = TRUE, coerce.with = ltyValue, handler = setPar,
                       action = action.lty)
         styg[i+3, 2] <- wid.super.list$col[[i]]
         styg[i+3, 3] <- wid.super.list$pch[[i]]
@@ -816,6 +843,7 @@ latticeStyleGUI <-
     glabel("Face:  ", container = tmp3g)
     wid.user.text.fontface <-
         gdroplist(c("", faceList), container = tmp3g,
+                  coerce.with = faceValue,
                   handler = setPar, action = "user.text$fontface")
     glabel(" Lineheight:", container = tmp3g)
     wid.user.text.lineheight <-
@@ -839,7 +867,8 @@ latticeStyleGUI <-
     glabel("Type:", container = tmp2g)
     wid.add.line.lty <- gdroplist(ltyList, selected = 0, container = tmp2g,
                                   editable = TRUE, handler = setPar,
-                                  action = "add.line$lty")
+                                  coerce.with = ltyValue,
+                                  action = "add.line$lty",)
     glabel(" Width:", container = tmp2g)
     wid.add.line.lwd <- gedit("", width = 4, container = tmp2g,
                               coerce.with = as.numeric, handler = setPar,
@@ -861,6 +890,7 @@ latticeStyleGUI <-
     glabel("Type:", container = tmp2g)
     wid.ref.line.lty <- gdroplist(ltyList, selected = 0, container = tmp2g,
                                   editable = TRUE, handler = setPar,
+                                  coerce.with = ltyValue,
                                   action = "reference.line$lty")
     glabel(" Width:", container = tmp2g)
     wid.ref.line.lwd <- gedit("", width = 4, container = tmp2g,
@@ -885,25 +915,26 @@ latticeStyleToBasePar <- function() {
     user.text <- trellispar$user.text
     if (is.null(user.text))
         user.text <- trellispar$add.text
-    ## par() has no alpha setting; need to apply it to col
-    applyAlpha <- function(col, alpha) {
+    ## palette() has no alpha setting; need to apply it to col
+    setAlpha <- function(col, alpha) {
         crgb <- col2rgb(col, alpha = TRUE)
-        crgb[4] <- crgb[4] * alpha
-        rgb(crgb[1], crbg[2], crgb[3], crgb[4], max = 255)
+        crgb[4] <- alpha * 255
+        rgb(crgb[1], crgb[2], crgb[3], crgb[4], max = 255)
     }
-    col <- plot.symbol$col
-    alpha <- plot.symbol$alpha
-    if (alpha < 1)
-        col <- applyAlpha(col, alpha)
     with(trellispar, {
+        col <- plot.symbol$col
+        alpha <- plot.symbol$alpha
+        col <- setAlpha(col, alpha)
+        cols <- c(col, superpose.symbol$col[-1])
+        palette(cols)
         par(bg = background$col,
             fg = axis.line$col)
-        par(col = col,
-            pch = plot.symbol$pch,
+        par(pch = plot.symbol$pch,
             lty = plot.line$lty,
             lwd = plot.line$lwd,
             cex = plot.symbol$cex,
             ps = fontsize$text,
+            col = axis.line$col,
             col.axis = axis.line$col,
             cex.axis = axis.text$cex,
             col.main = par.main.text$col,
@@ -915,7 +946,6 @@ latticeStyleToBasePar <- function() {
             lheight = user.text$lineheight)
         if (!is.null(grid.pars$fontfamily))
             par(family = grid.pars$fontfamily)
-        palette(superpose.symbol$col)
     })
     invisible(opar)
 }

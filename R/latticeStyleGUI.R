@@ -36,7 +36,7 @@ panel.usertext <-
 brush.symbol.default <-
     list(pch = 21, col = "black", fill = "yellow", alpha = 1, cex = 1)
 
-panel.brush.points <-
+panel.brushpoints <-
     function(x, y = NULL, col = brush.symbol$col, pch = brush.symbol$pch,
     alpha = brush.symbol$alpha, fill = brush.symbol$fill, cex = brush.symbol$cex, ...)
 {

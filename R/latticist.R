@@ -91,18 +91,6 @@ latticist <-
         }
     }
 
-    if (isDefaultPlotCall) {
-        pageFn <- function(n) NA
-        body(pageFn) <- as.expression(call("{",
-            call("panel.text", 0.5, 0, paste("Latticist ",
-                                             packageDescription("playwith")$Version, ". ",
-                                             "Select variables below to begin.", sep=""),
-                 pos=3, font=2)
-            ))
-        ## assuming that the top-level call is the main call!
-        plot.call$page <- pageFn
-    }
-
     playwith(plot.call = plot.call,
              title = title, ...,
              labels = labels,
@@ -140,6 +128,7 @@ makeLatticist <- function(dat)
             playState$latticist <- list()
         ## get arguments to current call
         callName <- playState$callName
+        isHypervar <- (callName %in% c("splom", "parallel", "marginal.plot"))
         is3D <- !is.null(playState$trellis$panel.args.common$scales.3d)
         isTrivar <- (callName %in%
                      c("levelplot", "contourplot", "segplot", "tileplot"))
@@ -242,9 +231,11 @@ makeLatticist <- function(dat)
             if (length(vars) >= 2) c2 <- vars[[2]]
             subset <- arg1$subset
         } else {
-            ## unrecognised object
-
+            ## other object (probably data.frame method)
         }
+
+        if (isHypervar)
+            xvar <- yvar <- zvar <- NULL
 
         if (isTRUE(groups) || identical(groups, FALSE))
             groups <- NULL
@@ -362,7 +353,8 @@ makeLatticist <- function(dat)
                 ## a regular sample down by one order of magnitude
                 subN <- 10 ^ (round(log10(nrow(dat))) - 1)
                 subsetopts <- c(subsetopts,
-                                sprintf("seq(1, nrow(dat), length=%i)", subN))
+                                sprintf("seq(1, nrow(dat), length = %i)", subN))
+                subsetopts <- c(subsetopts, "-----------------")
             }
             ## is.finite() of variables with missing values
             missings <- lapply(names(dat), function(nm) {
@@ -593,15 +585,30 @@ makeLatticist <- function(dat)
                 if (ncond > MAXPANELS) tooManyPanels <- TRUE
             }
 
-            ## create plot call
+            ## create template plot call
             oldCall <- playState$call
-            playState$call <- quote(xyplot(0 ~ 0, data=dat))
+#            if (is.null(xvar) && is.null(yvar)) {
+            ## TODO: delete
+                ## no variables selected
+                ## only reset call if user changed x / y vars
+#                if (newXY) {
+#                    playState$call <-
+#                        quote(marginal.plot(dat, reorder = FALSE))
+#                    updateMainCall(playState)
+#                }
+#            } else {
+                ## basic template call
+                playState$call <- quote(xyplot(0 ~ 0, data = dat))
+                updateMainCall(playState)
+#            }
+            callArg(playState, "subset") <-
+                if (!isTRUE(subset)) subset else NULL
             ## useOuterStrips unless we are going to use layout=...
             if (!is.null(c1) && !is.null(c2) && !tooManyPanels) {
                 playState$call <-
-                    quote(useOuterStrips(xyplot(0 ~ 0, data=dat)))
+                    call("useOuterStrips", playState$call)
+                updateMainCall(playState)
             }
-            updateMainCall(playState)
             #if (is.numeric(groupsVal)) {
                 ## handled below
 
@@ -619,7 +626,6 @@ makeLatticist <- function(dat)
             #} else {
                 callArg(playState, "groups") <- groups ## may be NULL
             #}
-            callArg(playState, "subscripts") <- TRUE
             if (tooManyPanels)
                 callArg(playState, "layout") <-
                     c(0, min(MAXPANELS, ceiling(ncond / 2)))
@@ -664,11 +670,33 @@ makeLatticist <- function(dat)
 
             ## choose plot type and formula
             if (is.null(xVal) && is.null(yVal)) {
-                ## NO VARIABLES CHOSEN
-                playState$call <- quote(marginal.plot(dat, reorder=FALSE))
-                updateMainCall(playState)
-                callArg(playState, "subset") <-
-                    if (!isTRUE(subset)) subset else NULL
+                ## HYPERVARIATE
+
+                opt <- playState$latticist$defaultPlotType
+                if (is.null(opt)) opt <- "marginals"
+                varsub <- playState$latticist$varsubset
+                dat.expr <- quote(dat)
+                if (!is.null(varsub))
+                    dat.expr <- call("[", quote(dat), varsub)
+                dat.form <- call("~", dat.expr)
+                if (!is.null(cond))
+                    dat.form <- call("~", call("|", dat.expr, cond))
+
+                if (opt == "marginals") {
+                    callArg(playState, 0) <- quote(marginal.plot)
+                    callArg(playState, 1) <- dat.expr
+                    callArg(playState, "data") <- NULL
+
+                } else if (opt == "splom") {
+                    callArg(playState, 0) <- quote(splom)
+                    callArg(playState, 1) <- dat.form
+                    callArg(playState, "cex") <- 0.5
+                    callArg(playState, "pscales") <- 0
+
+                } else if (opt == "parallel") {
+                    callArg(playState, 0) <- quote(parallel)
+                    callArg(playState, 1) <- dat.form
+                }
 
             } else if (is.null(xVal) || is.null(yVal)) {
                 ## UNIVARIATE
@@ -858,6 +886,9 @@ makeLatticist <- function(dat)
                         callArg(playState, "col.facet") <- "grey"
                         callArg(playState, "xbase") <- 0.4
                         callArg(playState, "ybase") <- 0.4
+                        ## rotate view 180 around z axis (better with reordering)
+                        callArg(playState, "screen") <-
+                            list(z = 180, z = 40, x = -60)
                         ## set aspect so that bars have square bases, like "iso"
                         ## aspect for cloud is in the form c(y/x, z/x)
                         asp.y.x <- length(levelsOK(yVal)) / length(levelsOK(xVal))
@@ -866,7 +897,7 @@ makeLatticist <- function(dat)
                         callArg(playState, "xlab") <- expression(NULL)
                         callArg(playState, "ylab") <- expression(NULL)
                         callArg(playState, "zlab") <- expression(NULL)
-                        # scales = list(rot = 90) # etc, use generic code below
+                        # scales = list(rot = 90) # TODO use generic code below
                     }
                 } else
 
@@ -1031,12 +1062,12 @@ makeLatticist <- function(dat)
                     callArg(playState, 0) <- quote(segplot)
                     if (is.categorical(xVal) && !is.categorical(yVal)) {
                         ## switch x and y, so categorical is on y axis
-                        tmp <- xvar
+                        oldx <- xvar
                         xvar <- yvar
-                        yvar <- tmp
-                        tmp <- xVal
+                        yvar <- oldx
+                        oldx <- xVal
                         xVal <- yVal
-                        yVal <- tmp
+                        yVal <- oldx
                     }
                     form <- call("~", yvar, call("+", xvar, zvar))
                     if (doAsError) {
@@ -1073,10 +1104,10 @@ makeLatticist <- function(dat)
             }
 
             ## generic stuff...
-            if (!is.null(xVal) || !is.null(yVal)) {
 
                 ## aspect and scales
-                if (identical(callArg(playState, 0, eval=FALSE), quote(cloud))) {
+                #if (identical(callArg(playState, 0, eval=FALSE), quote(cloud))) {
+                if (is.call.to(mainCall(playState), "cloud")) { ## TODO: ok?
                     ## for 3D plots, aspect widget applies to "panel.aspect".
                     ## set panel.aspect to "fill" by default if only one panel
                     if (is.null(aspect) && is.null(cond))
@@ -1098,6 +1129,8 @@ makeLatticist <- function(dat)
                 anyNumerics <- ((!is.null(xvar) && !is.categorical(xVal)) ||
                                 (!is.null(yvar) && !is.categorical(yVal)) ||
                                 (!is.null(zvar)))
+            anyNumerics <- (anyNumerics ||
+                            identical(callArg(playState, 0, eval=FALSE), quote(splom)))
                 ## style settings for points
                 if (anyNumerics) {
                     theme <- call("simpleTheme")
@@ -1113,7 +1146,7 @@ makeLatticist <- function(dat)
                         theme$alpha.points <- if (nPoints >= HEAPS) 0.15 else 0.3
                         ## bug in lattice: grouped lines take alpha from points setting
                         if (!is.null(groups) &&
-                            (packageDescription("lattice")$Version <= "0.17-12"))
+                            (packageDescription("lattice")$Version <= "0.17-12")) ##fixed yet?
                             theme$alpha.points <- if (nPoints >= HEAPS) 0.4 else 0.6
                     }
                     if (nPoints >= HEAPS) {
@@ -1140,11 +1173,11 @@ makeLatticist <- function(dat)
                     auto.key <- list()
                     ## work out key type
                     typeVal <- callArg(playState, "type")
-                    if (all(c("p","l") %in% typeVal)) {
-                        typeVal <- c(setdiff(typeVal, c("p","l")), "o")
+                    if (all(c("p", "l") %in% typeVal)) {
+                        typeVal <- c(setdiff(typeVal, c("p", "l")), "o")
                     }
                     ## all type values other than "p" and "g" imply lines
-                    if (any(typeVal %in% c("p","g") == FALSE)) {
+                    if (any(typeVal %in% c("p", "g") == FALSE)) {
                         auto.key$lines <- TRUE
                         if (any(c("o", "b") %in% typeVal))
                             auto.key$type <- "o"
@@ -1192,6 +1225,8 @@ makeLatticist <- function(dat)
                 }
 
             }
+            callArg(playState, "subscripts") <- TRUE
+
 
             ## sub-title
             Rvers <- paste("R ", R.version$major, ".",
@@ -1249,17 +1284,6 @@ makeLatticist <- function(dat)
             ydiscW["active"] <- xdisc
             xonW["sensitive"] <- ysens
             yonW["sensitive"] <- xsens
-            playState$tmp$plot.ready <- TRUE
-            doRecompose(playState = playState)
-            return(FALSE)
-        }
-        handler.reset <- function(widget, event, playState) {
-            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
-            playState$tmp$plot.ready <- FALSE
-            xvarW["active"] <- 0
-            yvarW["active"] <- 0
-            xonW["sensitive"] <- FALSE
-            yonW["sensitive"] <- FALSE
             playState$tmp$plot.ready <- TRUE
             doRecompose(playState = playState)
             return(FALSE)
@@ -1335,7 +1359,6 @@ makeLatticist <- function(dat)
             playState$tmp$plot.ready <- FALSE
             zActive <- zvarW["active"]
             if (zActive <= 1) return(FALSE)
-            #grActive <- groupsW["active"]
             groupsW["active"] <- zActive
             zvarW["active"] <- 0
             widget["visible"] <- FALSE
@@ -1343,12 +1366,102 @@ makeLatticist <- function(dat)
             doRecompose(playState = playState)
             return(FALSE)
         }
+        handler.gohyper <- function(widget, opt) {
+            playState$latticist$defaultPlotType <- opt
+            ## TODO reset
+            #playState$call <-
+            #    switch(opt,
+            #           marginals = quote(marginal.plot(dat, reorder = FALSE)),
+            #           splom = quote(splom(~ dat, data = dat, cex = 0.5, pscales = 0)),
+            #           parallel = quote(parallel(~ dat, data = dat)))
+            #playState$call$subset <- subset
+            #updateMainCall(playState)
+            ## prompt for variables before plotting (can be slow with too many)
+            handler.choosevars(playState = playState)
+            #playNewPlot(playState)
+        }
+        ## TODO: delete this
+        blahreset <- function(...) {
+            optList <- list(marginals = "marginal distributions",
+                            splom = "pairwise scatter plot matrix",
+                            parallel = "parallel coordinates plot")
+            optW <- gradio(unlist(optList))
+            gbasicdialog(title = "Reset to...",
+                         widget = optW,
+                         handler = function(h, ...) {
+                             i <- which(unlist(optList) == svalue(optW))
+                             opt <- names(optList)[i]
+                             playState$call <-
+                                 switch(opt,
+                                        marginals = quote(marginal.plot(dat, reorder = FALSE)),
+                                        splom = quote(splom(~ dat, pscales = 0)),
+                                        parallel = quote(parallel(~ dat)))
+                             playState$call$subset <- subset
+                             dispose(h$obj)
+                             playNewPlot(playState)
+                         })
+            return(FALSE)
+        }
+        handler.choosevars <- function(widget, event, playState) {
+            ## applies to hypervariate plots:
+            ## splom, parallel and marginal.plot
+            ## note, this is called by handler.gohyper
+            vars <- names(dat)
+            checked <- playState$latticist$varsubset
+            if (is.null(checked))
+                checked <- TRUE
+#            arg1 <- callArg(playState, 1, eval = FALSE)
+#            if (is.call.to(arg1, "~"))
+#                arg1 <- arg1[[2]]
+#            if (is.call.to(arg1, "|"))
+#                arg1 <- arg1[[2]]
+#            if (is.call.to(arg1, "[")) {
+#                checked <- (vars %in% eval(arg1[[3]]))
+#            }
+            theW <- ggroup(horizontal = FALSE)
+            tmpg <- ggroup(horizontal = TRUE, cont = theW)
+            varsW <- gcheckboxgroup(vars, checked = checked, cont = theW)
+            gbutton("All", cont = tmpg,
+                    handler = function(h, ...) svalue(varsW) <- vars )
+            gbutton("None", cont = tmpg,
+                    handler = function(h, ...) svalue(varsW) <- NULL )
+            gbasicdialog(title = "Choose set of variables",
+                         widget = theW,
+                         handler = function(h, ...) {
+                             varsub <- svalue(varsW)
+                             if (identical(varsub, vars))
+                                 varsub <- NULL
+                             playState$latticist$varsubset <- varsub
+                             dispose(h$obj)
+                             doRecomposeNewXY(playState = playState)
+                             return()
+                             ## TODO: delete?
+                             varsub <- svalue(varsW)
+                             varsub.expr <- call("[", quote(dat), varsub)
+                             arg1 <- callArg(playState, 1, eval = FALSE)
+                             if (is.call.to(arg1, "~")) {
+                                 if (is.call.to(arg1[[2]], "|")) {
+                                     arg1[[2]][[2]] <- varsub.expr
+                                 } else {
+                                     arg1[[2]] <- varsub.expr
+                                 }
+                             } else {
+                                 arg1 <- varsub.expr
+                             }
+                             callArg(playState, 1) <- arg1
+                             dispose(h$obj)
+                             playNewPlot(playState)
+                         })
+        }
+            ## TODO: this is currently disabled
         handler.subsetSelect <- function(widget, event, playState) {
             #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
-            selectScales <- c(if (!is.null(xvar)) "x",
-                              if (!is.null(yvar)) "y")
-            foo <- playRectInput(playState, scales=selectScales,
-                                 prompt="Click and drag to define a data subset")
+            #selectScales <- c(if (!is.null(xvar)) "x",
+            #                  if (!is.null(yvar)) "y")
+            foo <- playRectInput(playState, #scales=selectScales,
+                                 prompt=paste("Click and drag to define a data subset",
+                                 "(hold Shift to constrain),",
+                                 "Right-click or Esc to cancel."))
             if (is.null(foo)) return(FALSE)
             if (is.null(foo$coords)) return(FALSE)
             if (foo$is.click) return(FALSE)
@@ -1405,6 +1518,90 @@ makeLatticist <- function(dat)
         ## set up widgets
         box <- gtkHBox()
 
+        ## TITLE, HYPERVAR, SUBSET
+        setBox <- gtkVBox()
+        titleBox <- gtkHBox()
+        ## "help" button
+        helpW <- niceButton("help")
+        gSignalConnect(helpW, "button-press-event",
+                       function(...) print(help("latticist")))
+        titleBox$packStart(helpW, padding = 1, expand = FALSE)
+        ## (Title)
+        txt <- paste("Latticist",
+                     packageDescription("playwith")$Version)
+        titleW <- gtkLabel(txt)
+        titleW$setMarkup(paste("<big><b><i>", txt, "</i></b></big>"))
+        titleBox$packStart(titleW, expand = TRUE)
+        setBox$packStart(titleBox, expand=FALSE)
+        ## (prompt)
+        promptxt <- paste('<span foreground="#888888">',
+                          "Select variables to begin --&gt;",
+                          '</span>', sep = "")
+        promptW <- gtkLabel("")
+        promptW$setMarkup(promptxt)
+        promptW["visible"] <- (is.null(xvar) && is.null(yvar))
+        ## SUBSET
+        subsetBox <- gtkHBox()
+        subsetBox$packStart(gtkLabel(" Subset: "), expand = FALSE)
+        subsetBox$packEnd(promptW, expand = FALSE)
+        ## "interactive" subset button
+        #subsetSelW <- niceButton("interactive...")
+        #showSub <- !is.null(xvar) || !is.null(yvar)
+        #arg1 <- callArg(playState, 1, eval = FALSE)
+        #if (isHypervar ||
+        #    is.call.to(arg1, "xtabs") ||
+        #    is.call.to(arg1, "prop.table") ||
+        #    is.call.to(arg1, "margin.table"))
+        #    showSub <- FALSE
+        #subsetSelW["visible"] <- showSub
+        #gSignalConnect(subsetSelW, "button-press-event",
+        #               handler.subsetSelect, data=playState)
+        #subsetBox$packStart(subsetSelW)
+        setBox$packStart(subsetBox, expand=FALSE)
+        ## subset
+        subsetW <- gtkComboBoxEntryNewText()
+        subsetW$show()
+        subsetW["width-request"] <- -1
+        for (item in subsetopts) subsetW$appendText(item)
+        index <- match(deparseOneLine(subset), subsetopts)
+        if (is.na(index)) index <- 1 ## should never happen
+        subsetW["active"] <- (index - 1)
+        ## "changed" emitted on typing and selection
+        gSignalConnect(subsetW, "changed",
+                       doRecomposeOnSelect, data=playState)
+        gSignalConnect(subsetW$getChild(), "activate",
+                       doRecompose, data=playState)
+        setBox$packStart(subsetW, expand = FALSE)
+        ## HYPERVAR
+        hyperBox0 <- gtkHBox()
+        hyperBox0$packStart(gtkLabel(" Hyper-variate plots: "),
+                            expand = FALSE)
+        ## "choose variables..." button
+        choosevarsW <- niceButton("choose variables...")
+        choosevarsW["visible"] <- isHypervar
+        gSignalConnect(choosevarsW, "button-press-event",
+                       handler.choosevars, data=playState)
+        hyperBox0$packStart(choosevarsW)
+        setBox$packStart(hyperBox0, expand=FALSE, padding = 1)
+        ## hypervar reset buttons
+        hyperBox <- gtkHBox()
+        marginalsW <- gtkButton("marginals")
+        splomW <- gtkButton("splom (pairs)")
+        parallelW <- gtkButton("parallel")
+        gSignalConnect(marginalsW, "clicked",
+                       handler.gohyper, data = "marginals")
+        gSignalConnect(splomW, "clicked",
+                       handler.gohyper, data = "splom")
+        gSignalConnect(parallelW, "clicked",
+                       handler.gohyper, data = "parallel")
+        hyperBox$packStart(marginalsW, expand = FALSE, padding = 2)
+        hyperBox$packStart(splomW, expand = FALSE, padding = 2)
+        hyperBox$packStart(parallelW, expand = FALSE, padding = 2)
+        setBox$packStart(hyperBox, expand = FALSE)
+        box$packStart(setBox, expand=FALSE, padding=1)
+
+        box$packStart(gtkVSeparator(), expand=FALSE, padding=1)
+
         ## X Y VARS
         varsBox <- gtkVBox()
         xyBox <- gtkHBox()
@@ -1427,20 +1624,12 @@ makeLatticist <- function(dat)
         gSignalConnect(unbinW, "button-press-event",
                        handler.unbin, data=playState)
         xyBox$packStart(unbinW, padding = 2)
-        #xyBox$packStart(gtkLabel(" "), padding=1)
         ## "switch" button
         xyflipW <- niceButton("switch")
         xyflipW["visible"] <- !is.null(xvar) || !is.null(yvar)
         gSignalConnect(xyflipW, "button-press-event",
                        handler.flip, data=playState)
         xyBox$packStart(xyflipW, padding = 2)
-        #xyBox$packStart(gtkLabel(" "), padding=1)
-        ## "reset" button
-        resetW <- niceButton("reset")
-        resetW["visible"] <- !is.null(xvar) || !is.null(yvar)
-        gSignalConnect(resetW, "button-press-event",
-                       handler.reset, data=playState)
-        xyBox$packStart(resetW, expand=FALSE)
         varsBox$packStart(xyBox, expand=FALSE)
         ## Y VAR
         yvarBox <- gtkHBox()
@@ -1563,7 +1752,7 @@ makeLatticist <- function(dat)
 
         ## GROUPS / Z VARIABLE
         gzBox <- gtkVBox()
-        gzBox["sensitive"] <- !is.null(xvar) || !is.null(yvar)
+        #gzBox["sensitive"] <- !is.null(xvar) || !is.null(yvar)
         ## GROUPS
         groupsBox <- gtkHBox()
         groupsBox$packStart(gtkLabel(" Groups / Color: "), expand=FALSE)
@@ -1584,6 +1773,7 @@ makeLatticist <- function(dat)
         gBox <- gtkHBox()
         groupsW <- gtkComboBoxEntryNewText()
         groupsW$show()
+        groupsW["sensitive"] <- (playState$callName != "marginal.plot")
         groupsW["width-request"] <- 100
         for (item in varexprs) groupsW$appendText(item)
         index <- match(deparseOneLine(groups), varexprs)
@@ -1652,7 +1842,7 @@ makeLatticist <- function(dat)
 
         ## CONDITIONING VARS
         cvarsBox <- gtkVBox()
-        cvarsBox["sensitive"] <- !is.null(xvar) || !is.null(yvar)
+        #cvarsBox["sensitive"] <- !is.null(xvar) || !is.null(yvar)
         cBox <- gtkHBox()
         cBox$packStart(gtkLabel(" Conditioning: "), expand=FALSE)
         ## "superpose" button
@@ -1666,6 +1856,7 @@ makeLatticist <- function(dat)
         c1Box <- gtkHBox()
         c1W <- gtkComboBoxEntryNewText()
         c1W$show()
+        c1W["sensitive"] <- (playState$callName != "marginal.plot")
         c1W["width-request"] <- 100
         for (item in varexprs) c1W$appendText(item)
         index <- match(deparseOneLine(c1), varexprs)
@@ -1715,44 +1906,11 @@ makeLatticist <- function(dat)
         cvarsBox$packStart(scalesBox, expand=FALSE, padding=1)
         box$packStart(cvarsBox, padding=1)
 
-        box$packStart(gtkVSeparator(), expand=FALSE, padding=1)
-
-        ## SETS
-        setBox <- gtkVBox()
-        ## SUBSET
-        subsetBox <- gtkHBox()
-        subsetBox$packStart(gtkLabel(" Subset: "), expand=FALSE)
-        ## "interactive" subset button
-        subsetSelW <- niceButton("interactive...")
-        showSub <- !is.null(xvar) || !is.null(yvar)
-        if (is.call.to(mainCall(playState), "barchart") &&
-            !is.null(xvar) && !is.null(yvar))
-            showSub <- FALSE
-        subsetSelW["visible"] <- showSub
-        gSignalConnect(subsetSelW, "button-press-event",
-                       handler.subsetSelect, data=playState)
-        subsetBox$packStart(subsetSelW)
-        setBox$packStart(subsetBox, expand=FALSE, padding=1)
-        subsetW <- gtkComboBoxEntryNewText()
-        subsetW$show()
-        subsetW["width-request"] <- -1
-        for (item in subsetopts) subsetW$appendText(item)
-        index <- match(deparseOneLine(subset), subsetopts)
-        if (is.na(index)) index <- 1 ## should never happen
-        subsetW["active"] <- (index - 1)
-        ## "changed" emitted on typing and selection
-        gSignalConnect(subsetW, "changed",
-                       doRecomposeOnSelect, data=playState)
-        gSignalConnect(subsetW$getChild(), "activate",
-                       doRecompose, data=playState)
-        setBox$packStart(subsetW, expand=FALSE)
-
-        box$packStart(setBox, expand=FALSE, padding=1)
-
         ## add it directly to the window (not a toolbar!)
         if (!is.null(playState$widgets$latticist))
             playState$widgets$latticist$destroy()
         playState$widgets$latticist <- box
+
         playState$widgets$vbox$packEnd(box, expand=FALSE)
 
         return(NA)
@@ -1793,8 +1951,7 @@ try.prepanel.loess <- function(...) {
 }
 
 levelplot.table <-
-    function(x, data = NULL, ...,
-             col.regions = grey.colors(100, start = 1, end = 0))
+    function(x, data = NULL, ...)
 {
     if (!is.null(data))
         warning("explicit 'data' specification ignored")

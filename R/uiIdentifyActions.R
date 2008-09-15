@@ -26,8 +26,7 @@ initIdentifyActions <- function(playState)
         if (playState$callName %in%
             c("hist", "barplot", "spineplot", "mosaic",
               "assocplot", "fourfoldplot",
-              "coplot", "image", "contour", "persp",
-              "pie", "pairs")) return()
+              "coplot", "persp", "pie", "pairs")) return()
     }
     labels <- playState$.args$labels
     labelsOrFormat <- function(object, ...) {
@@ -181,7 +180,7 @@ drawLinkedLocal <- function(playState, return.code = FALSE)
             y <- data$y[subscripts]
         }
         if (length(x) == 0) next
-        annot <- call("panel.brush.points", x, y)
+        annot <- call("panel.brushpoints", x, y)
         expr <- playDo(playState, annot, space = space,
                        return.code = return.code)
         if (return.code)

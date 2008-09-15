@@ -14,7 +14,7 @@ plotActionGroup <- function(playState)
              ## identify (uiIdentifyActions.R)
              list("SetLabelsTo", "gtk-index", "Set _labels to...", "<Ctrl>L", NULL, set.labels_handler),
              list("FindLabels", "gtk-find", "_Find...", "<Ctrl>F", "Find points with labels matching...", id.find_handler),
-             list("IdTable", "gtk-sort-ascending", "Select from _table...", NULL, "Select points from a table", id.table_handler),
+             list("IdTable", "gtk-index", "Select from _table...", NULL, "Select points from a table", id.table_handler),
              list("SaveIDs", NULL, "_Save IDs...", NULL, "_Save current IDs to an object", save.ids_handler),
              ## annotations (uiAnnotationActions.R)
              list("Legend", "gtk-sort-ascending", "Legend", NULL, "Place a legend", legend_handler),

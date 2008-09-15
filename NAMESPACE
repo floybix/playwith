@@ -18,12 +18,13 @@ export(latticist,
        reorderByFreq,
        cutEq,
        try.prepanel.loess)
+S3method(levelplot, table)
 
 ## latticeStyleGUI
 export(latticeStyleGUI,
        latticeStyleToBasePar,
        panel.usertext,
-       panel.brush.points,
+       panel.brushpoints,
        latticeStyleDemo,
        custom.theme.2,
        custom.theme.black)

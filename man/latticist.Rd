@@ -14,7 +14,7 @@ latticist(dat,
           time.mode = FALSE)
 }
 \arguments{
-  \item{dat}{ a data frame containing numeric and/or categorical variables. }
+  \item{dat}{ a data frame (with numeric and/or categorical variables). }
   \item{reorder.levels}{ if \code{TRUE}, change the ordering of levels of factor
   variables so they are in order of frequency. Note that this does not
   change the data, only its internal representation: see
@@ -32,10 +32,13 @@ latticist(dat,
   }
 }
 \details{
-  Just try it...
+  Latticist is an extension to \code{\link{playwith}}, adding a
+  toolbar to construct lattice displays for a given dataset.
+  As such, many of the features, such as style settings and linked
+  brushing, are described in the help for \code{\link{playwith}}.
 
-  It is recommended to install \pkg{hexbin}, which is a BioConductor
-  package, as follows:
+  It is recommended to install the \pkg{deldir} package, as well as
+  \pkg{hexbin}, a BioConductor package, which can be installed as follows:
 
   \code{source("http://bioconductor.org/biocLite.R")}
 
@@ -43,7 +46,7 @@ latticist(dat,
 }
 \value{
   invisibly returns the \code{playState} object representing the plot
-  window: see \code{\link{playDevCur}}.
+  window: see \code{\link{playwith.API}}.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \references{

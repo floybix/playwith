@@ -2,10 +2,7 @@
 \alias{playwith}
 \title{An interactive plot GUI}
 \description{
-  Open a graphical user interface for viewing and interacting with \R plots.
-  It tries to work out the structure of a plot, in order to interact with it.
-  The built-in features include: navigating the data space, identifying data points,
-  editing and annotating the plot, and saving to a file. New tools can be defined.
+  A graphical user interface for viewing and interacting with \R plots.
 }
 \usage{
 playwith(expr,

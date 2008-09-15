@@ -81,6 +81,9 @@ xyData <- function(playState = playDevCur(), space="plot")
             space <- paste("packet", space)
         }
         packet <- as.numeric(sub("packet ", "", space))
+        if (is.na(packet) ||
+            (packet > length(playState$trellis$panel.args)))
+            return(NULL)
         foo <- trellis.panelArgs(playState$trellis, packet.number=packet)
         ## look for plotCoords method and pass panel.args
         return(plotCoords(callName, call = mainCall(playState),

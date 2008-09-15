@@ -197,11 +197,12 @@ playSourceCode <- function(playState = playDevCur())
     theHeader <-
         paste("library(grid)",
               "library(lattice)",
-              "library(playwith) ## for panel.usertext, etc",
-              "## + might need others; try library(latticeExtra)",
-              "## we are assuming that the data are attached",
-              "## and any customised style settings are in place",
-              "## e.g. trellis.par.set(custom.theme())",
+              "library(playwith) ## (panel.usertext, panel.brushpoints, etc)",
+              "## + might need others; try library(latticeExtra).",
+              "## Assuming that the data are attached and any",
+              "## customised style settings are in place; save with",
+              "## myStyle <- trellis.par.get(); then restore with",
+              "## trellis.par.set(myStyle)",
               sep = "\n")
     code <- list()
     comm <- list()

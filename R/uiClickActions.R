@@ -50,6 +50,10 @@ updateClickActions <- function(playState)
     modeOK <- playState$tmp$click.mode
     if ((modeOK == "Zoom") && actions$nav3D)
         modeOK <- "Nav3D"
+    if ((modeOK == "Zoom") && !actions$nav2D)
+        modeOK <- "Coords"
+    if ((modeOK == "Identify") && !actions$identify)
+        modeOK <- "Coords"
     msg <- switch(modeOK,
                   Zoom = paste("Click for coordinates",
                   "Drag to zoom (hold Shift to constrain)", sep = ", "),
@@ -59,7 +63,8 @@ updateClickActions <- function(playState)
                   "(hold Shift to constrain)"),
                   Annotation = "Click or drag to place text",
                   Arrow = paste("Drag to draw an arrow",
-                  "(hold Shift to constrain)"))
+                  "(hold Shift to constrain)"),
+                  Coords = "Click for coordinates") ## fallback
     ## Zoom actions are always accessible, if possible:
     if (actions$nav2D || actions$nav3D) {
         if (modeOK != "Zoom")
@@ -80,9 +85,13 @@ device.click_handler <- function(widget, event, playState)
     x <- event$x
     y <- event$y
     ## work out which actions are relevant to the plot
-    click.mode <- playState$tmp$click.mode
-    pageOK <- (click.mode %in% c("Annotation", "Arrow"))
     actions <- playState$tmp$ok.actions
+    modeOK <- playState$tmp$click.mode
+    if ((modeOK == "Zoom") && !actions$nav2D && !actions$nav3D)
+        modeOK <- "Coords"
+    if ((modeOK == "Identify") && !actions$identify)
+        modeOK <- "Coords"
+    pageOK <- (modeOK %in% c("Annotation", "Arrow"))
     isCtrlClick <- (as.flag(event$state) & GdkModifierType["control-mask"])
     isAltClick <- ((as.flag(event$state) & GdkModifierType["mod1-mask"]) ||
                    (as.flag(event$state) & GdkModifierType["mod2-mask"]))
@@ -93,9 +102,9 @@ device.click_handler <- function(widget, event, playState)
         ## standard (left) mouse button
         dragShape <- "rect"
         if (!isAltClick) {
-            if ((click.mode == "Zoom") && actions$nav3D)
+            if ((modeOK == "Zoom") && actions$nav3D)
                 dragShape <- "line"
-            if (click.mode == "Arrow")
+            if (modeOK == "Arrow")
                 dragShape <- "line"
         }
         ## handle click or drag
@@ -138,7 +147,7 @@ device.click_handler <- function(widget, event, playState)
             }
         } else {
             ## plain click: normal actions
-            if (click.mode == "Zoom") {
+            if (modeOK == "Zoom") {
                 if (actions$nav3D) {
                     ## Nav3D
                     if (!foo$is.click)
@@ -149,16 +158,16 @@ device.click_handler <- function(widget, event, playState)
                         zoomCore(playState, foo)
                 }
             }
-            if (click.mode == "Identify") {
+            if (modeOK == "Identify") {
                 identifyCore(playState, foo, remove = isShiftClick)
             }
-            if (click.mode == "Brush") {
+            if (modeOK == "Brush") {
                 brushCore(playState, foo, remove = isShiftClick)
             }
-            if (click.mode == "Annotation") {
+            if (modeOK == "Annotation") {
                 annotateCore(playState, foo)
             }
-            if (click.mode == "Arrow") {
+            if (modeOK == "Arrow") {
                 arrowCore(playState, foo)
             }
         }

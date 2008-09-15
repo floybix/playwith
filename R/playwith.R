@@ -666,7 +666,8 @@ generateSpaces <- function(playState)
 error_handler <- function(e)
 {
     if (inherits(e, "error")) {
-        callText <- deparseOneLine(conditionCall(e))#playState$call)
+        callText <- toString(deparseOneLine(conditionCall(e)),
+                             width = 200)
         msg <- paste("Error: ", conditionMessage(e),
                      "\n\nThe error occurred in: \n",
                      callText, sep="")

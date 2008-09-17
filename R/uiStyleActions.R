@@ -147,7 +147,7 @@ set.label.style_handler <- function(widget, playState)
                        coerce.with = as.numeric)
     ## current settings
     user.text <- trellis.par.get("user.text")
-    if (is.null(user.text))
+    if (is.null(eval(user.text)))
         user.text <- trellis.par.get("add.text")
     ## values
     svalue(wid.col) <- user.text$col
@@ -314,7 +314,7 @@ set.brush.style_handler <- function(widget, playState)
                      coerce.with = as.numeric)
     ## current settings
     brush.symbol <- trellis.par.get("brush.symbol")
-    if (is.null(brush.symbol))
+    if (is.null(eval(brush.symbol)))
         brush.symbol <- brush.symbol.default
     ## values
     svalue(wid.fill) <- brush.symbol$fill

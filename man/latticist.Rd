@@ -26,7 +26,9 @@ latticist(dat,
   \code{ordered}!
   Numeric variables with discrete values in {0, 1, -1} are converted to factors.
   }
-  \item{plot.call}{ call defining the initial plot display. }
+  \item{plot.call}{ call defining the initial plot display.
+  This can be given instead of \code{dat}, and the dataset will be
+  derived from it (see examples). }
   \item{\dots, labels, time.mode}{
     further arguments passed to \code{\link{playwith}}.
   }
@@ -35,7 +37,8 @@ latticist(dat,
   Latticist is an extension to \code{\link{playwith}}, adding a
   toolbar to construct lattice displays for a given dataset.
   As such, many of the features, such as style settings and linked
-  brushing, are described in the help for \code{\link{playwith}}.
+  brushing, are (or should be) described in the help for
+  \code{\link{playwith}}.
 
   It is recommended to install the \pkg{deldir} package, as well as
   \pkg{hexbin}, a BioConductor package, which can be installed as follows:

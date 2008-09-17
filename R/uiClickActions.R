@@ -52,7 +52,7 @@ updateClickActions <- function(playState)
         modeOK <- "Nav3D"
     if ((modeOK == "Zoom") && !actions$nav2D)
         modeOK <- "Coords"
-    if ((modeOK == "Identify") && !actions$identify)
+    if ((modeOK == "Identify") && !actions$ident)
         modeOK <- "Coords"
     msg <- switch(modeOK,
                   Zoom = paste("Click for coordinates",
@@ -89,7 +89,7 @@ device.click_handler <- function(widget, event, playState)
     modeOK <- playState$tmp$click.mode
     if ((modeOK == "Zoom") && !actions$nav2D && !actions$nav3D)
         modeOK <- "Coords"
-    if ((modeOK == "Identify") && !actions$identify)
+    if ((modeOK == "Identify") && !actions$ident)
         modeOK <- "Coords"
     pageOK <- (modeOK %in% c("Annotation", "Arrow"))
     isCtrlClick <- (as.flag(event$state) & GdkModifierType["control-mask"])

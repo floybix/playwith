@@ -248,7 +248,7 @@ annotateCore <- function(playState, foo)
 
     ## STYLE
     user.text <- trellis.par.get("user.text")
-    if (is.null(user.text))
+    if (is.null(eval(user.text)))
         user.text <- trellis.par.get("add.text")
     stylegroup <- gframe("Style",
                          horizontal=FALSE, container=wingroup)

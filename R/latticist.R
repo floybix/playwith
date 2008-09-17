@@ -196,14 +196,14 @@ makeLatticist <- function(dat)
                  is.call.to(arg1, "prop.table")) {
             propMargins <- NULL
             if (is.call.to(arg1, "prop.table")) {
-                arg1 <- arg1[[2]]
                 propMargins <- eval(arg1$margin)
+                arg1 <- arg1[[2]]
             }
             xform <- arg1[[2]]
             ## parse xtabs formula
             vars.expr <- attr(terms(eval(xform)), "variables")
             vars <- as.list(vars.expr)[-1]
-            if (callName == "cloud") {
+            if (callName %in% c("cloud", "levelplot")) {
                 xvar <- vars[[1]]
                 yvar <- vars[[2]]
                 vars <- vars[-(1:2)]
@@ -231,7 +231,7 @@ makeLatticist <- function(dat)
             if (length(vars) >= 2) c2 <- vars[[2]]
             subset <- arg1$subset
         } else {
-            ## other object (probably data.frame method)
+            ## other object (probably data.frame)
         }
 
         if (isHypervar)
@@ -262,7 +262,7 @@ makeLatticist <- function(dat)
         ydisc <- !identical(yvar, oyvar)
         c1 <- stripDisc(c1)
         c2 <- stripDisc(c2)
-        #groups <- stripDisc(groups) ## TODO - ?
+                                        #groups <- stripDisc(groups) ## TODO - ?
         ## histogram by convention has x discretized
         if (callName == "histogram") {
             xdisc <- TRUE
@@ -315,24 +315,24 @@ makeLatticist <- function(dat)
                           "-------------------",
                           "1:nrow(dat)")
             ## log() of positive numerics
-            #logs <- lapply(names(dat)[!iscat], function(nm) {
-            #    if (all(dat[[nm]] > 0, na.rm=TRUE))
-            #        paste("log(", nm, ")", sep="")
-            #    else NULL
-            #})
-            #varexprs <- c(varexprs, unlist(logs))
+                                        #logs <- lapply(names(dat)[!iscat], function(nm) {
+                                        #    if (all(dat[[nm]] > 0, na.rm=TRUE))
+                                        #        paste("log(", nm, ")", sep="")
+                                        #    else NULL
+                                        #})
+                                        #varexprs <- c(varexprs, unlist(logs))
 
             ## is.na() of variables with missing values
-            #missings <- lapply(names(dat), function(nm) {
-            #    if (any(is.na(dat[[nm]])))
-            #        paste("is.na(", nm, ")", sep="")
-            #    else NULL
-            #})
-            #varexprs <- c(varexprs, unlist(missings))
+                                        #missings <- lapply(names(dat), function(nm) {
+                                        #    if (any(is.na(dat[[nm]])))
+                                        #        paste("is.na(", nm, ")", sep="")
+                                        #    else NULL
+                                        #})
+                                        #varexprs <- c(varexprs, unlist(missings))
         }
         varexprs <- unique(c(varexprs,
-                      xvarStr, yvarStr,
-                      c1Str, c2Str, groupsStr))
+                             xvarStr, yvarStr,
+                             c1Str, c2Str, groupsStr))
         playState$latticist$varexprs <- varexprs
         varexprs[[1]] <- NULLNAMES[[1]]
 
@@ -426,7 +426,7 @@ makeLatticist <- function(dat)
                              conditionMessage(result), sep="")
                 gmessage.error(msg)
                 stop(result) ## kills R under linux ("stack smashing detected")
-              }
+            }
             result
         }
         tryEval <- function(x0, ...) {
@@ -465,9 +465,11 @@ makeLatticist <- function(dat)
             doYProp <- ypropW["active"]
             nlev <- nLevelsW["value"]
             doLines <- playState$latticist$linesSetting
-            doTile <- tileW["active"]      #### TODO: does not keep state...
+            doTile <- tileW["active"] #### TODO: does not keep state...
             doSegments <- segmentsW["active"]
             doAsError <- aserrorW["active"]
+            do3DTable <- playState$latticist$do3DTable
+            if (is.null(do3DTable)) do3DTable <- FALSE
             ## keep for titles etc
             xvarOrigStr <- deparseOneLine(xvar)
             yvarOrigStr <- deparseOneLine(yvar)
@@ -558,20 +560,20 @@ makeLatticist <- function(dat)
             }
 
             ## reorder factor levels of groups
-#            if (!is.null(groupsVal)) {
-#                if (isUnordered(groups, groupsVal)) {
-#                    groups <- call("reorderByFreq", groups)
-#                    groupsVal <- tryEval(groups, dat)
-#                }
-#            }
+                                        #            if (!is.null(groupsVal)) {
+                                        #                if (isUnordered(groups, groupsVal)) {
+                                        #                    groups <- call("reorderByFreq", groups)
+                                        #                    groupsVal <- tryEval(groups, dat)
+                                        #                }
+                                        #            }
 
             ## reorder conditioning (TODO: index.cond)
             if (!is.null(c1Val)) {
-#                    if (!is.null(yVal) || !is.null(xVal)) {
-#                        c1 <- call("reorder", c1,
-#                                   if (!is.null(yVal)) yvar else xvar)
-#                    }
-#                    c1Val <- tryEval(c1, dat)
+                                        #                    if (!is.null(yVal) || !is.null(xVal)) {
+                                        #                        c1 <- call("reorder", c1,
+                                        #                                   if (!is.null(yVal)) yvar else xvar)
+                                        #                    }
+                                        #                    c1Val <- tryEval(c1, dat)
             }
 
             ## combined conditioning term (may be NULL)
@@ -587,20 +589,8 @@ makeLatticist <- function(dat)
 
             ## create template plot call
             oldCall <- playState$call
-#            if (is.null(xvar) && is.null(yvar)) {
-            ## TODO: delete
-                ## no variables selected
-                ## only reset call if user changed x / y vars
-#                if (newXY) {
-#                    playState$call <-
-#                        quote(marginal.plot(dat, reorder = FALSE))
-#                    updateMainCall(playState)
-#                }
-#            } else {
-                ## basic template call
-                playState$call <- quote(xyplot(0 ~ 0, data = dat))
-                updateMainCall(playState)
-#            }
+            playState$call <- quote(xyplot(0 ~ 0, data = dat))
+            updateMainCall(playState)
             callArg(playState, "subset") <-
                 if (!isTRUE(subset)) subset else NULL
             ## useOuterStrips unless we are going to use layout=...
@@ -609,23 +599,23 @@ makeLatticist <- function(dat)
                     call("useOuterStrips", playState$call)
                 updateMainCall(playState)
             }
-            #if (is.numeric(groupsVal)) {
-                ## handled below
+                                        #if (is.numeric(groupsVal)) {
+            ## handled below
 
-                #playState$call <- call("+", playState$call,
-                #                       bquote(layer.col(with(dat, .(groups)))))
-                #updateMainCall(playState)
-                #endpoints <- range(groupsVal)
-                #digits <- max(2 - floor(log10(diff(endpoints))), 0)
-                #endpoints <- round(endpoints, digits=digits)
-                #callArg(playState, "legend") <-
-                #    bquote(list(right =
-                #                list(fun = draw.colorkey,
-                #                     args = list(at=do.breaks(.(endpoints), 30))
-                #                     )))
-            #} else {
-                callArg(playState, "groups") <- groups ## may be NULL
-            #}
+                                        #playState$call <- call("+", playState$call,
+                                        #                       bquote(layer.col(with(dat, .(groups)))))
+                                        #updateMainCall(playState)
+                                        #endpoints <- range(groupsVal)
+                                        #digits <- max(2 - floor(log10(diff(endpoints))), 0)
+                                        #endpoints <- round(endpoints, digits=digits)
+                                        #callArg(playState, "legend") <-
+                                        #    bquote(list(right =
+                                        #                list(fun = draw.colorkey,
+                                        #                     args = list(at=do.breaks(.(endpoints), 30))
+                                        #                     )))
+                                        #} else {
+            callArg(playState, "groups") <- groups ## may be NULL
+                                        #}
             if (tooManyPanels)
                 callArg(playState, "layout") <-
                     c(0, min(MAXPANELS, ceiling(ncond / 2)))
@@ -644,22 +634,21 @@ makeLatticist <- function(dat)
 
             ## construct plot title
             if (!is.null(xvar) || !is.null(yvar)) {
-              title <- paste(c(if (!is.null(yvar)) yvarOrigStr,
-                               if (!is.null(xvar)) xvarOrigStr),
-                             collapse=" vs ")
-              if (!is.null(zvar))
-                  title <- paste(zvarOrigStr, "vs", xvarOrigStr,
-                                 "and", yvarOrigStr)
-              if (is.null(xvar) || is.null(yvar))
-                  title <- paste("Distribution of", title)
-              byStr <- paste(c(if (!is.null(c1)) c1OrigStr,
-                               if (!is.null(c2)) c2OrigStr,
-                               if (!is.null(groups)) groupsOrigStr),
-                             collapse=" and ")
-              if (nchar(byStr) > 0)
-                  title <- paste(title, byStr, sep=" by ")
-              ## TODO: wrap title if too long?
-              callArg(playState, "main") <- title
+                title <- paste(c(if (!is.null(yvar)) yvarOrigStr,
+                                 if (!is.null(xvar)) xvarOrigStr),
+                               collapse=" vs ")
+                if (!is.null(zvar))
+                    title <- paste(zvarOrigStr, "vs", xvarOrigStr,
+                                   "and", yvarOrigStr)
+                if (is.null(xvar) || is.null(yvar))
+                    title <- paste("Distribution of", title)
+                byStr <- paste(c(if (!is.null(c1)) c1OrigStr,
+                                 if (!is.null(c2)) c2OrigStr,
+                                 if (!is.null(groups)) groupsOrigStr),
+                               collapse=" and ")
+                if (nchar(byStr) > 0)
+                    title <- paste(title, byStr, sep=" by ")
+                callArg(playState, "main") <- title
             }
 
             ## axis labels (not for categoricals)
@@ -873,8 +862,6 @@ makeLatticist <- function(dat)
                                           if (!is.null(c2)) deparseOneLine(c2),
                                           if (!is.null(groups)) deparseOneLine(groups)),
                                         collapse=" + ")
-                        ## and set logical `groups` argument
-                        callArg(playState, "groups") <- !is.null(groups)
                         xform <- as.formula(paste("~", xterms))
                         tabcall <- call("xtabs", xform, quote(dat), subset=subset)
                         if (doXProp || doYProp) {
@@ -882,22 +869,29 @@ makeLatticist <- function(dat)
                             tabcall <- call("prop.table", tabcall, margin = mgn)
                         }
                         callArg(playState, 1) <- tabcall
-                        callArg(playState, "panel.3d.cloud") <- quote(panel.3dbars)
-                        callArg(playState, "col.facet") <- "grey"
-                        callArg(playState, "xbase") <- 0.4
-                        callArg(playState, "ybase") <- 0.4
-                        ## rotate view 180 around z axis (better with reordering)
-                        callArg(playState, "screen") <-
-                            list(z = 180, z = 40, x = -60)
-                        ## set aspect so that bars have square bases, like "iso"
-                        ## aspect for cloud is in the form c(y/x, z/x)
-                        asp.y.x <- length(levelsOK(yVal)) / length(levelsOK(xVal))
-                        callArg(playState, "aspect") <- round(c(asp.y.x, min(asp.y.x, 1)), 2)
-                        callArg(playState, quote(scales$z$draw)) <- FALSE
-                        callArg(playState, "xlab") <- expression(NULL)
-                        callArg(playState, "ylab") <- expression(NULL)
-                        callArg(playState, "zlab") <- expression(NULL)
-                        # scales = list(rot = 90) # TODO use generic code below
+                        if (do3DTable) {
+                            ## and set logical `groups` argument
+                            callArg(playState, "groups") <- !is.null(groups)
+                            callArg(playState, "panel.3d.cloud") <- quote(panel.3dbars)
+                            callArg(playState, "col.facet") <- "grey"
+                            callArg(playState, "xbase") <- 0.4
+                            callArg(playState, "ybase") <- 0.4
+                            ## rotate view 180 around z axis (better with reordering)
+                            callArg(playState, "screen") <-
+                                list(z = 180, z = 40, x = -60)
+                            ## set aspect so that bars have square bases, like "iso"
+                            ## aspect for cloud is in the form c(y/x, z/x)
+                            asp.y.x <- length(levelsOK(yVal)) / length(levelsOK(xVal))
+                            callArg(playState, "aspect") <- round(c(asp.y.x, min(asp.y.x, 1)), 2)
+                            callArg(playState, quote(scales$z$draw)) <- FALSE
+                            callArg(playState, "xlab") <- expression(NULL)
+                            callArg(playState, "ylab") <- expression(NULL)
+                            callArg(playState, "zlab") <- expression(NULL)
+                                        # scales = list(rot = 90) # TODO use generic code below
+                        } else {
+                            ## levelplot: use color rather than depth for frequencies
+                            callArg(playState, 0) <- quote(levelplot)
+                        }
                     }
                 } else
 
@@ -907,19 +901,19 @@ makeLatticist <- function(dat)
                     ## TODO: if only one value for each level use dotplot
 
                     if (is.logical(xVal))
-                      callArg(playState, "horizontal") <- FALSE
+                        callArg(playState, "horizontal") <- FALSE
 
                     ## reorder factor levels if more than 2
                     if (is.categorical(yVal) && isUnordered(yvar, yVal)) {
                         if (nlevels(yVal) > 2) {
-                          yvar <- call("reorder", yvar, xvar, na.rm=T)
-                          yVal <- tryEval(yvar, dat)
+                            yvar <- call("reorder", yvar, xvar, na.rm=T)
+                            yVal <- tryEval(yvar, dat)
                         }
                     }
                     if (is.categorical(xVal) && isUnordered(xvar, xVal)) {
                         if (nlevels(xVal) > 2) {
-                          xvar <- call("reorder", xvar, yvar, na.rm=T)
-                          xVal <- tryEval(xvar, dat)
+                            xvar <- call("reorder", xvar, yvar, na.rm=T)
+                            xVal <- tryEval(xvar, dat)
                         }
                     }
                     ## formula
@@ -934,13 +928,13 @@ makeLatticist <- function(dat)
                         if (doLines) {
                             callArg(playState, "type") <- c("p", "a")
                             ## TODO: check whether there are any missing values
-                            #callArg(playState, "fun") <- quote(median)
+                                        #callArg(playState, "fun") <- quote(median)
                             callArg(playState, "fun") <- quote(function(x) median(x, na.rm=TRUE))
                         }
 
                     } else {
                         callArg(playState, 0) <- quote(bwplot)
-                        #callArg(playState, "origin") <- 0
+                                        #callArg(playState, "origin") <- 0
                         callArg(playState, "varwidth") <- FALSE
                     }
 
@@ -1105,126 +1099,125 @@ makeLatticist <- function(dat)
 
             ## generic stuff...
 
-                ## aspect and scales
-                #if (identical(callArg(playState, 0, eval=FALSE), quote(cloud))) {
-                if (is.call.to(mainCall(playState), "cloud")) { ## TODO: ok?
-                    ## for 3D plots, aspect widget applies to "panel.aspect".
-                    ## set panel.aspect to "fill" by default if only one panel
-                    if (is.null(aspect) && is.null(cond))
-                        aspect <- "fill"
-                    if (identical(eval(aspect), "fill"))
-                        aspect <- round(dev.size()[2] / dev.size()[1], 2)
-                    if (is.numeric(aspect))
-                        callArg(playState, "panel.aspect") <- aspect
-                } else {
-                    callArg(playState, "aspect") <- aspect ## may be NULL
-                }
+            ## aspect and scales
+                                        #if (identical(callArg(playState, 0, eval=FALSE), quote(cloud))) {
+            if (is.call.to(mainCall(playState), "cloud")) { ## TODO: ok?
+                ## for 3D plots, aspect widget applies to "panel.aspect".
+                ## set panel.aspect to "fill" by default if only one panel
+                if (is.null(aspect) && is.null(cond))
+                    aspect <- "fill"
+                if (identical(eval(aspect), "fill"))
+                    aspect <- round(dev.size()[2] / dev.size()[1], 2)
+                if (is.numeric(aspect))
+                    callArg(playState, "panel.aspect") <- aspect
+            } else {
+                callArg(playState, "aspect") <- aspect ## may be NULL
+            }
 
-                if (!is.null(x.relation) || !is.null(y.relation)) {
-                    ## either of these may be NULL
-                    callArg(playState, quote(scales$x$relation)) <- x.relation
-                    callArg(playState, quote(scales$y$relation)) <- y.relation
-                }
+            if (!is.null(x.relation) || !is.null(y.relation)) {
+                ## either of these may be NULL
+                callArg(playState, quote(scales$x$relation)) <- x.relation
+                callArg(playState, quote(scales$y$relation)) <- y.relation
+            }
 
-                anyNumerics <- ((!is.null(xvar) && !is.categorical(xVal)) ||
-                                (!is.null(yvar) && !is.categorical(yVal)) ||
-                                (!is.null(zvar)))
+            anyNumerics <- ((!is.null(xvar) && !is.categorical(xVal)) ||
+                            (!is.null(yvar) && !is.categorical(yVal)) ||
+                            (!is.null(zvar)))
             anyNumerics <- (anyNumerics ||
-                            identical(callArg(playState, 0, eval=FALSE), quote(splom)))
-                ## style settings for points
-                if (anyNumerics) {
-                    theme <- call("simpleTheme")
-                    if (is.categorical(groupsVal))
-                        theme$cex <- 0.6
-                    if (ncond > 2)
-                        theme$cex <- 0.6
-                    if (ncond > 6)
-                        theme$cex <- 0.4
-                    if ((nPoints >= LOTS) &&
-                        is.null(callArg(playState, "f.value")))
-                    {
-                        theme$alpha.points <- if (nPoints >= HEAPS) 0.15 else 0.3
-                        ## bug in lattice: grouped lines take alpha from points setting
-                        if (!is.null(groups) &&
-                            (packageDescription("lattice")$Version <= "0.17-12")) ##fixed yet?
-                            theme$alpha.points <- if (nPoints >= HEAPS) 0.4 else 0.6
-                    }
-                    if (nPoints >= HEAPS) {
-                        if (is.call.to(mainCall(playState), "xyplot") ||
-                            is.call.to(mainCall(playState), "stripplot")) {
-                            theme$pch <- "." ## or 0, empty square?
-                            theme$cex <- 3
-                        }
-                    }
-                    callArg(playState, "par.settings") <- theme
-
-                }
-                ## add a grid if there are multiple panels
-                if (anyNumerics && !is.null(cond)) {
-                    type <- callArg(playState, "type")
-                    if (is.null(type)) type <- "p" ## assumed
-                    type <- unique(c("g", type))
-                    callArg(playState, "type") <- type
-                }
-
-                ## set up key
+                            is.call.to(mainCall(playState), "splom"))
+            ## style settings for points
+            if (anyNumerics) {
+                theme <- call("simpleTheme")
                 if (is.categorical(groupsVal))
+                    theme$cex <- 0.6
+                if (ncond > 2)
+                    theme$cex <- 0.6
+                if (ncond > 6)
+                    theme$cex <- 0.4
+                if ((nPoints >= LOTS) &&
+                    is.null(callArg(playState, "f.value")))
                 {
-                    auto.key <- list()
-                    ## work out key type
-                    typeVal <- callArg(playState, "type")
-                    if (all(c("p", "l") %in% typeVal)) {
-                        typeVal <- c(setdiff(typeVal, c("p", "l")), "o")
-                    }
-                    ## all type values other than "p" and "g" imply lines
-                    if (any(typeVal %in% c("p", "g") == FALSE)) {
-                        auto.key$lines <- TRUE
-                        if (any(c("o", "b") %in% typeVal))
-                            auto.key$type <- "o"
-                        if (("p" %in% typeVal) == FALSE)
-                            auto.key$points <- FALSE
-                    }
-                    ## get group levels that will appear in key
-                    levs <- levelsOK(groupsVal)
-                    ## if groups are discretised, need a title
-                    if (do.gdisc) {
-                        auto.key$title <- groupsOrigStr
-                        auto.key$cex.title <- 1
-                    }
-                    n.items <- length(levs)
-                    if (n.items > 1 && n.items <= 4)
-                        auto.key$columns <- n.items
-                    if (n.items > 4)
-                        auto.key$space <- "right"
-                    if (n.items == 4)
-                        auto.key$between.columns <- 1
-                    if (n.items >= 3)
-                        auto.key$cex <- 0.7
-                    ## TODO: check lengths of text, abbreviate?
-                    callArg(playState, "auto.key") <- auto.key
+                    theme$alpha.points <- if (nPoints >= HEAPS) 0.15 else 0.3
+                    ## bug in lattice: grouped lines take alpha from points setting
+                    if (!is.null(groups) &&
+                        (packageDescription("lattice")$Version <= "0.17-12")) ##fixed yet?
+                        theme$alpha.points <- if (nPoints >= HEAPS) 0.4 else 0.6
                 }
-
-                ## fix up long x axis labels
-                if (is.categorical(xVal) && !is.categorical(yVal) &&
-                    !is.call.to(mainCall(playState), "histogram"))
-                {
-                    if (nlevels(xVal) >= 4) {
-                        scales <- callArg(playState, "scales")
-                        if (!is.list(scales)) scales <- list()
-                        if (max(sapply(levelsOK(xVal), nchar)) >= 12) {
-                            scales$x$rot <- 30
-                            scales$x$cex <- 0.7
-                                        #scales$x$abbreviate <- TRUE
-                        } else
-                        if ((nlevels(xVal) >= 8) ||
-                            (mean(sapply(levelsOK(xVal), nchar)) >= 8)) {
-                            scales$x$rot <- 60
-                        }
-                        callArg(playState, "scales") <- scales
+                if (nPoints >= HEAPS) {
+                    if (is.call.to(mainCall(playState), "xyplot") ||
+                        is.call.to(mainCall(playState), "stripplot")) {
+                        theme$pch <- "." ## or 0, empty square?
+                        theme$cex <- 3
                     }
                 }
+                callArg(playState, "par.settings") <- theme
 
             }
+            ## add a grid if there are multiple panels
+            if (anyNumerics && !is.null(cond)) {
+                type <- callArg(playState, "type")
+                if (is.null(type)) type <- "p" ## assumed
+                type <- unique(c("g", type))
+                callArg(playState, "type") <- type
+            }
+
+            ## set up key
+            if (is.categorical(groupsVal))
+            {
+                auto.key <- list()
+                ## work out key type
+                typeVal <- callArg(playState, "type")
+                if (all(c("p", "l") %in% typeVal)) {
+                    typeVal <- c(setdiff(typeVal, c("p", "l")), "o")
+                }
+                ## all type values other than "p" and "g" imply lines
+                if (any(typeVal %in% c("p", "g") == FALSE)) {
+                    auto.key$lines <- TRUE
+                    if (any(c("o", "b") %in% typeVal))
+                        auto.key$type <- "o"
+                    if (("p" %in% typeVal) == FALSE)
+                        auto.key$points <- FALSE
+                }
+                ## get group levels that will appear in key
+                levs <- levelsOK(groupsVal)
+                ## if groups are discretised, need a title
+                if (do.gdisc) {
+                    auto.key$title <- groupsOrigStr
+                    auto.key$cex.title <- 1
+                }
+                n.items <- length(levs)
+                if (n.items > 1 && n.items <= 4)
+                    auto.key$columns <- n.items
+                if (n.items > 4)
+                    auto.key$space <- "right"
+                if (n.items == 4)
+                    auto.key$between.columns <- 1
+                if (n.items >= 3)
+                    auto.key$cex <- 0.7
+                ## TODO: check lengths of text, abbreviate?
+                callArg(playState, "auto.key") <- auto.key
+            }
+
+            ## fix up long x axis labels
+            if (is.categorical(xVal) &&
+                !is.call.to(mainCall(playState), "histogram"))
+            {
+                if (nlevels(xVal) >= 4) {
+                    scales <- callArg(playState, "scales")
+                    if (!is.list(scales)) scales <- list()
+                    if (max(sapply(levelsOK(xVal), nchar)) >= 12) {
+                        scales$x$rot <- 30
+                        scales$x$cex <- 0.7
+                                        #scales$x$abbreviate <- TRUE
+                    } else
+                    if ((nlevels(xVal) >= 8) ||
+                        (mean(sapply(levelsOK(xVal), nchar)) >= 8)) {
+                        scales$x$rot <- 60
+                    }
+                    callArg(playState, "scales") <- scales
+                }
+            }
+
             callArg(playState, "subscripts") <- TRUE
 
 
@@ -1270,7 +1263,7 @@ makeLatticist <- function(dat)
         }
 
         handler.flip <- function(widget, event, playState) {
-            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
+                                        #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
             playState$tmp$plot.ready <- FALSE
             xvarActive <- xvarW["active"]
             yvarActive <- yvarW["active"]
@@ -1289,7 +1282,6 @@ makeLatticist <- function(dat)
             return(FALSE)
         }
         handler.hexbin <- function(widget, event, playState) {
-            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
             playState$tmp$plot.ready <- FALSE
             xdiscW["active"] <- TRUE
             ydiscW["active"] <- TRUE
@@ -1298,7 +1290,6 @@ makeLatticist <- function(dat)
             return(FALSE)
         }
         handler.unbin <- function(widget, event, playState) {
-            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
             playState$tmp$plot.ready <- FALSE
             xdiscW["active"] <- FALSE
             ydiscW["active"] <- FALSE
@@ -1307,7 +1298,6 @@ makeLatticist <- function(dat)
             return(FALSE)
         }
         handler.superpose <- function(widget, event, playState) {
-            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
             playState$tmp$plot.ready <- FALSE
             c1Active <- c1W["active"]
             c2Active <- c2W["active"]
@@ -1325,7 +1315,6 @@ makeLatticist <- function(dat)
             return(FALSE)
         }
         handler.explode <- function(widget, event, playState) {
-            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
             playState$tmp$plot.ready <- FALSE
             grActive <- groupsW["active"]
             if (grActive <= 1) return(FALSE)
@@ -1342,11 +1331,10 @@ makeLatticist <- function(dat)
             return(FALSE)
         }
         handler.go3D <- function(widget, event, playState) {
-            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
+            playState$latticist$do3DTable <- TRUE
             playState$tmp$plot.ready <- FALSE
             grActive <- groupsW["active"]
             if (grActive <= 1) return(FALSE)
-            #zActive <- zvarW["active"]
             zvarW["active"] <- grActive
             groupsW["active"] <- 0
             widget["visible"] <- FALSE
@@ -1355,7 +1343,7 @@ makeLatticist <- function(dat)
             return(FALSE)
         }
         handler.squash <- function(widget, event, playState) {
-            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
+            playState$latticist$do3DTable <- FALSE
             playState$tmp$plot.ready <- FALSE
             zActive <- zvarW["active"]
             if (zActive <= 1) return(FALSE)
@@ -1368,39 +1356,13 @@ makeLatticist <- function(dat)
         }
         handler.gohyper <- function(widget, opt) {
             playState$latticist$defaultPlotType <- opt
-            ## TODO reset
-            #playState$call <-
-            #    switch(opt,
-            #           marginals = quote(marginal.plot(dat, reorder = FALSE)),
-            #           splom = quote(splom(~ dat, data = dat, cex = 0.5, pscales = 0)),
-            #           parallel = quote(parallel(~ dat, data = dat)))
-            #playState$call$subset <- subset
-            #updateMainCall(playState)
+            ## reset
+            playState$tmp$plot.ready <- FALSE
+            xvarW["active"] <- 0
+            yvarW["active"] <- 0
+            playState$tmp$plot.ready <- TRUE
             ## prompt for variables before plotting (can be slow with too many)
             handler.choosevars(playState = playState)
-            #playNewPlot(playState)
-        }
-        ## TODO: delete this
-        blahreset <- function(...) {
-            optList <- list(marginals = "marginal distributions",
-                            splom = "pairwise scatter plot matrix",
-                            parallel = "parallel coordinates plot")
-            optW <- gradio(unlist(optList))
-            gbasicdialog(title = "Reset to...",
-                         widget = optW,
-                         handler = function(h, ...) {
-                             i <- which(unlist(optList) == svalue(optW))
-                             opt <- names(optList)[i]
-                             playState$call <-
-                                 switch(opt,
-                                        marginals = quote(marginal.plot(dat, reorder = FALSE)),
-                                        splom = quote(splom(~ dat, pscales = 0)),
-                                        parallel = quote(parallel(~ dat)))
-                             playState$call$subset <- subset
-                             dispose(h$obj)
-                             playNewPlot(playState)
-                         })
-            return(FALSE)
         }
         handler.choosevars <- function(widget, event, playState) {
             ## applies to hypervariate plots:
@@ -1408,24 +1370,21 @@ makeLatticist <- function(dat)
             ## note, this is called by handler.gohyper
             vars <- names(dat)
             checked <- playState$latticist$varsubset
+            if (!is.null(checked))
+                checked <- vars %in% checked
             if (is.null(checked))
                 checked <- TRUE
-#            arg1 <- callArg(playState, 1, eval = FALSE)
-#            if (is.call.to(arg1, "~"))
-#                arg1 <- arg1[[2]]
-#            if (is.call.to(arg1, "|"))
-#                arg1 <- arg1[[2]]
-#            if (is.call.to(arg1, "[")) {
-#                checked <- (vars %in% eval(arg1[[3]]))
-#            }
             theW <- ggroup(horizontal = FALSE)
-            tmpg <- ggroup(horizontal = TRUE, cont = theW)
-            varsW <- gcheckboxgroup(vars, checked = checked, cont = theW)
-            gbutton("All", cont = tmpg,
+            tmpg <- ggroup(horizontal = TRUE, container = theW)
+            varsW <- gcheckboxgroup(vars, checked = checked, container = theW)
+            gbutton("All", container = tmpg,
                     handler = function(h, ...) svalue(varsW) <- vars )
-            gbutton("None", cont = tmpg,
+            gbutton("None", container = tmpg,
                     handler = function(h, ...) svalue(varsW) <- NULL )
-            gbasicdialog(title = "Choose set of variables",
+            glabel(paste("NOTE: too many variables will result in a very slow",
+                         "\nplot, especially so for splom (scatter plot matrix)."),
+                   container = theW)
+            gbasicdialog(title = "Choose variables to plot",
                          widget = theW,
                          handler = function(h, ...) {
                              varsub <- svalue(varsW)
@@ -1434,30 +1393,13 @@ makeLatticist <- function(dat)
                              playState$latticist$varsubset <- varsub
                              dispose(h$obj)
                              doRecomposeNewXY(playState = playState)
-                             return()
-                             ## TODO: delete?
-                             varsub <- svalue(varsW)
-                             varsub.expr <- call("[", quote(dat), varsub)
-                             arg1 <- callArg(playState, 1, eval = FALSE)
-                             if (is.call.to(arg1, "~")) {
-                                 if (is.call.to(arg1[[2]], "|")) {
-                                     arg1[[2]][[2]] <- varsub.expr
-                                 } else {
-                                     arg1[[2]] <- varsub.expr
-                                 }
-                             } else {
-                                 arg1 <- varsub.expr
-                             }
-                             callArg(playState, 1) <- arg1
-                             dispose(h$obj)
-                             playNewPlot(playState)
                          })
         }
-            ## TODO: this is currently disabled
+        ## TODO: this is currently disabled...
         handler.subsetSelect <- function(widget, event, playState) {
-            #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
-            #selectScales <- c(if (!is.null(xvar)) "x",
-            #                  if (!is.null(yvar)) "y")
+                                        #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
+                                        #selectScales <- c(if (!is.null(xvar)) "x",
+                                        #                  if (!is.null(yvar)) "y")
             foo <- playRectInput(playState, #scales=selectScales,
                                  prompt=paste("Click and drag to define a data subset",
                                  "(hold Shift to constrain),",
@@ -1471,10 +1413,10 @@ makeLatticist <- function(dat)
             yStr <- deparseOneLine(yvar)
             xsub <- call("(",
                          call("&", call("<", min(coords$x), xvar),
-                         call("<", xvar, max(coords$x))))
+                              call("<", xvar, max(coords$x))))
             ysub <- call("(",
                          call("&", call("<", min(coords$y), yvar),
-                         call("<", yvar, max(coords$y))))
+                              call("<", yvar, max(coords$y))))
             ## construct factor subsets
             packet <- as.numeric(sub("packet ", "", foo$space))
             x.limits <- playState$trellis$x.limits
@@ -1534,7 +1476,7 @@ makeLatticist <- function(dat)
         titleBox$packStart(titleW, expand = TRUE)
         setBox$packStart(titleBox, expand=FALSE)
         ## (prompt)
-        promptxt <- paste('<span foreground="#888888">',
+        promptxt <- paste('<span foreground="#666666">',
                           "Select variables to begin --&gt;",
                           '</span>', sep = "")
         promptW <- gtkLabel("")
@@ -1545,18 +1487,18 @@ makeLatticist <- function(dat)
         subsetBox$packStart(gtkLabel(" Subset: "), expand = FALSE)
         subsetBox$packEnd(promptW, expand = FALSE)
         ## "interactive" subset button
-        #subsetSelW <- niceButton("interactive...")
-        #showSub <- !is.null(xvar) || !is.null(yvar)
-        #arg1 <- callArg(playState, 1, eval = FALSE)
-        #if (isHypervar ||
-        #    is.call.to(arg1, "xtabs") ||
-        #    is.call.to(arg1, "prop.table") ||
-        #    is.call.to(arg1, "margin.table"))
-        #    showSub <- FALSE
-        #subsetSelW["visible"] <- showSub
-        #gSignalConnect(subsetSelW, "button-press-event",
-        #               handler.subsetSelect, data=playState)
-        #subsetBox$packStart(subsetSelW)
+                                        #subsetSelW <- niceButton("interactive...")
+                                        #showSub <- !is.null(xvar) || !is.null(yvar)
+                                        #arg1 <- callArg(playState, 1, eval = FALSE)
+                                        #if (isHypervar ||
+                                        #    is.call.to(arg1, "xtabs") ||
+                                        #    is.call.to(arg1, "prop.table") ||
+                                        #    is.call.to(arg1, "margin.table"))
+                                        #    showSub <- FALSE
+                                        #subsetSelW["visible"] <- showSub
+                                        #gSignalConnect(subsetSelW, "button-press-event",
+                                        #               handler.subsetSelect, data=playState)
+                                        #subsetBox$packStart(subsetSelW)
         setBox$packStart(subsetBox, expand=FALSE)
         ## subset
         subsetW <- gtkComboBoxEntryNewText()
@@ -1576,8 +1518,8 @@ makeLatticist <- function(dat)
         hyperBox0 <- gtkHBox()
         hyperBox0$packStart(gtkLabel(" Hyper-variate plots: "),
                             expand = FALSE)
-        ## "choose variables..." button
-        choosevarsW <- niceButton("choose variables...")
+        ## "choose variables" button
+        choosevarsW <- niceButton("choose variables")
         choosevarsW["visible"] <- isHypervar
         gSignalConnect(choosevarsW, "button-press-event",
                        handler.choosevars, data=playState)
@@ -1586,8 +1528,11 @@ makeLatticist <- function(dat)
         ## hypervar reset buttons
         hyperBox <- gtkHBox()
         marginalsW <- gtkButton("marginals")
+        marginalsW["tooltip-text"] <- "Show marginal distributions"
         splomW <- gtkButton("splom (pairs)")
+        splomW["tooltip-text"] <- "Show a scatterplot matrix with all pairs of variables"
         parallelW <- gtkButton("parallel")
+        parallelW["tooltip-text"] <- "Show a parallel coordinates plot"
         gSignalConnect(marginalsW, "clicked",
                        handler.gohyper, data = "marginals")
         gSignalConnect(splomW, "clicked",
@@ -1605,12 +1550,22 @@ makeLatticist <- function(dat)
         ## X Y VARS
         varsBox <- gtkVBox()
         xyBox <- gtkHBox()
-        isBivarNumeric <- (!is.null(xvar) && !is.null(yvar) &&
-                           !xcat && !ycat)
+        isBivarNumeric <-
+            (!is.null(xvar) && !is.null(yvar) && is.null(zvar) &&
+             !xcat && !ycat)
+        isBivarCat <-
+            (!is.null(xvar) && !is.null(yvar) && is.null(zvar) &&
+             xcat && ycat)
         labtxt <- " Variables / expressions on axes: "
-        if (isBivarNumeric) ## abbreviate
-            labtxt <- " Variables on axes: "
+        #if (isBivarNumeric) ## abbreviate
+        #    labtxt <- " Variables on axes: "
         xyBox$packStart(gtkLabel(labtxt), expand=FALSE)
+        ## "switch" button
+        xyflipW <- niceButton("switch")
+        xyflipW["visible"] <- !is.null(xvar) || !is.null(yvar)
+        gSignalConnect(xyflipW, "button-press-event",
+                       handler.flip, data=playState)
+        xyBox$packStart(xyflipW, padding = 2)
         ## "hexbin" button
         hexbinW <- niceButton("hexbin")
         hexbinW["visible"] <- (isBivarNumeric && !xdisc && !ydisc &&
@@ -1624,12 +1579,20 @@ makeLatticist <- function(dat)
         gSignalConnect(unbinW, "button-press-event",
                        handler.unbin, data=playState)
         xyBox$packStart(unbinW, padding = 2)
-        ## "switch" button
-        xyflipW <- niceButton("switch")
-        xyflipW["visible"] <- !is.null(xvar) || !is.null(yvar)
-        gSignalConnect(xyflipW, "button-press-event",
-                       handler.flip, data=playState)
-        xyBox$packStart(xyflipW, padding = 2)
+        ## "go 2D" button
+        squashW <- niceButton("go 2D")
+        squashW["visible"] <- (isBivarCat &&
+                               playState$callName == "cloud")
+        gSignalConnect(squashW, "button-press-event",
+                       handler.squash, data=playState)
+        xyBox$packStart(squashW)
+        ## "go 3D" button
+        go3DW <- niceButton("go 3D")
+        go3DW["visible"] <- (isBivarCat &&
+                             playState$callName == "levelplot")
+        gSignalConnect(go3DW, "button-press-event",
+                       handler.go3D, data=playState)
+        xyBox$packStart(go3DW)
         varsBox$packStart(xyBox, expand=FALSE)
         ## Y VAR
         yvarBox <- gtkHBox()
@@ -1752,7 +1715,6 @@ makeLatticist <- function(dat)
 
         ## GROUPS / Z VARIABLE
         gzBox <- gtkVBox()
-        #gzBox["sensitive"] <- !is.null(xvar) || !is.null(yvar)
         ## GROUPS
         groupsBox <- gtkHBox()
         groupsBox$packStart(gtkLabel(" Groups / Color: "), expand=FALSE)
@@ -1764,7 +1726,8 @@ makeLatticist <- function(dat)
         groupsBox$packStart(explodeW)
         ## "go 3D" button
         go3DW <- niceButton("go 3D")
-        go3DW["visible"] <- !is.null(groups) && !gcat
+        go3DW["visible"] <- ((!is.null(groups) && !gcat) ||
+                             (playState$callName == "levelplot"))
         gSignalConnect(go3DW, "button-press-event",
                        handler.go3D, data=playState)
         groupsBox$packStart(go3DW)
@@ -1799,6 +1762,7 @@ makeLatticist <- function(dat)
         zBox$packStart(gtkLabel(" Depth (3D) or"), expand=FALSE)
         ## segments option
         segmentsW <- gtkCheckButton("Segments (x--z) ")
+        segmentsW["visible"] <-
         segmentsW["active"] <- segmentsVal
         segmentsW["sensitive"] <- !is.null(xvar) && !is.null(yvar)
         gSignalConnect(segmentsW, "clicked",
@@ -1829,7 +1793,7 @@ makeLatticist <- function(dat)
                        doRecompose, data=playState)
         zvarBox$packStart(zvarW)
         ## asError option
-        aserrorW <- gtkCheckButton("as error")# (x+/-z)")
+        aserrorW <- gtkCheckButton("as error") # (x+/-z)")
         aserrorW["active"] <- aserrorVal
         aserrorW["visible"] <- segmentsVal
         gSignalConnect(aserrorW, "clicked",
@@ -1842,7 +1806,6 @@ makeLatticist <- function(dat)
 
         ## CONDITIONING VARS
         cvarsBox <- gtkVBox()
-        #cvarsBox["sensitive"] <- !is.null(xvar) || !is.null(yvar)
         cBox <- gtkHBox()
         cBox$packStart(gtkLabel(" Conditioning: "), expand=FALSE)
         ## "superpose" button

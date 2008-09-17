@@ -26,7 +26,7 @@ panel.usertext <-
 {
     user.text <- trellis.par.get("user.text")
     add.text <- trellis.par.get("add.text")
-    if (is.null(user.text)) user.text <- add.text
+    if (is.null(eval(user.text))) user.text <- add.text
     panel.text(x, y, labels, col = col, alpha = alpha, cex = cex, srt = srt,
                lineheight = lineheight, font = font, fontfamily = fontfamily,
                fontface = fontface, adj = adj, pos = pos, offset = offset, ...)
@@ -41,14 +41,14 @@ panel.brushpoints <-
     alpha = brush.symbol$alpha, fill = brush.symbol$fill, cex = brush.symbol$cex, ...)
 {
     brush.symbol <- trellis.par.get("brush.symbol")
-    if (is.null(brush.symbol))
+    if (is.null(eval(brush.symbol)))
         brush.symbol <- brush.symbol.default
     panel.points(x, y, col = col, pch = pch, alpha = alpha,
                  fill = fill, cex = cex, ...)
 }
 
 latticeStyleGUI <-
-    function(width = 300, height = 300, pointsize = 12,
+    function(width = 480, height = 480, pointsize = 12,
              target.device = dev.cur(),
              base.graphics = FALSE)
 {
@@ -253,7 +253,7 @@ latticeStyleGUI <-
         checkDemoDevice()
         par <- trellis.par.get()
         ## user.text is a custom entry; falls back to add.text
-        if (is.null(par$user.text)) {
+        if (is.null(eval(par$user.text))) {
             trellis.par.set(user.text = trellis.par.get("add.text"))
             par <- trellis.par.get()
         }
@@ -868,7 +868,7 @@ latticeStyleGUI <-
     wid.add.line.lty <- gdroplist(ltyList, selected = 0, container = tmp2g,
                                   editable = TRUE, handler = setPar,
                                   coerce.with = ltyValue,
-                                  action = "add.line$lty",)
+                                  action = "add.line$lty")
     glabel(" Width:", container = tmp2g)
     wid.add.line.lwd <- gedit("", width = 4, container = tmp2g,
                               coerce.with = as.numeric, handler = setPar,
@@ -913,7 +913,7 @@ latticeStyleToBasePar <- function() {
     opar <- par(no.readonly = TRUE)
     trellispar <- trellis.par.get()
     user.text <- trellispar$user.text
-    if (is.null(user.text))
+    if (is.null(eval(user.text)))
         user.text <- trellispar$add.text
     ## palette() has no alpha setting; need to apply it to col
     setAlpha <- function(col, alpha) {
@@ -1015,9 +1015,9 @@ latticeStyleDemo <-
 }
 
 custom.theme.2 <-
-    function(symbol = brewer.pal(n = 9, name = "Set1")[c(2:1, 3:9)], ## blue first
-             fill = brewer.pal(n = 8, name = "Set2"),
-             region = rev(brewer.pal(n = 9, name = "YlOrRd")),
+    function(symbol = brewer.pal(n = 9, name = "Set1")[c(2:1, 3:5, 7:9)], ## blue first
+             fill = brewer.pal(n = 8, name = "Accent"),
+             region = brewer.pal(n = 11, name = "RdBu"),
              reference = "#e8e8e8", bg = "transparent", fg = "black")
 {
     custom.theme(symbol = symbol, fill = fill, region = region,
@@ -1026,8 +1026,8 @@ custom.theme.2 <-
 
 custom.theme.black <-
     function(symbol = brewer.pal(n = 8, name = "Set2"),
-             fill = brewer.pal(n = 8, name = "Accent"),
-             region = brewer.pal(n = 11, name = "RdBu"),
+             fill = brewer.pal(n = 8, name = "Set2"),
+             region = rev(brewer.pal(n = 9, name = "YlOrRd")),
              reference = "#444444", bg = "black", fg = "white",
              etc = TRUE)
 {
@@ -1038,7 +1038,7 @@ custom.theme.black <-
                     superpose.symbol = list(pch = 16, alpha = 0.5),
                     plot.line = list(lwd = 2),
                     superpose.line = list(lwd = 2),
-                    reference.line = list(lwd = 2, lty = 3),
+                    reference.line = list(lwd = 2),
                     add.line = list(lwd = 2),
                     plot.polygon = list(border = "transparent"),
                     superpose.polygon = list(border = "transparent"),
@@ -1046,6 +1046,9 @@ custom.theme.black <-
                     strip.shingle = list(col = grey(2:7/8)))
     if (etc)
         foo <- modifyList(foo, etcList)
+    ## need to reset any existing "user.text" entry (usually black)
+    ## this seems to be the only way to do it (needs to be eval'd later!)
+    foo$user.text <- expression(NULL)
     foo
 }
 

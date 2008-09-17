@@ -19,8 +19,8 @@ updateMainCall(playState)
 }
 \arguments{
   \item{playState}{ a \code{\link{playState}} object representing the plot, window and device. }
-  \item{arg}{ the argument name or number in the plot call (\code{playState$call}).
-  	Argument numbers start from 1 (so 0 refers to the function name).
+  \item{arg}{ the argument name or number in the main plot call.
+  	Argument numbers start from 1 (so 0 refers to the main function name).
   	This can also be a language object
 	(e.g. \code{quote(scales$log)}).
 	This is evaluated in the calling environment, so can
@@ -43,13 +43,12 @@ updateMainCall(playState)
  which is not necessarily the top-level call.
 	\item automatically evaluating variables that have been stored in a local environment
 	(\code{playState$env}).
-	\item converting lists to language objects so that the call can be deparsed elegantly.
+	\item converting lists to language objects as needed.
 	\item enforcing exact matching of argument names \code{exact=TRUE} (see \code{\link{[[}}).
   }
 }
 \value{
-	returns the value of the specified argument,
-	as if using the \code{$} or \code{[[} extractor functions, but
+	returns the value of the specified argument, possibly
 	evaluated in a local environment (\code{playState$env}).
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }

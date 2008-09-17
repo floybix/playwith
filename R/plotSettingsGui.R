@@ -98,7 +98,7 @@ latticeSettingsGUI <- function(playState)
         argVal <- trell[[nm]]
         if (inherits(argVal, "grob")) {
             isComplexTitle[[nm]] <- TRUE
-            argVal <- NULL
+            argVal <- toString(argVal)
         }
         if (is.list(argVal)) {
             isComplexTitle[[nm]] <- TRUE
@@ -124,8 +124,8 @@ latticeSettingsGUI <- function(playState)
             gcheckbox("plotmath", checked=isExpr, container = lay,
                       handler = setArgTitle, action = nm)
         if (isComplexTitle[[nm]]) {
-            enabled(wid[[nm]]) <- FALSE
-            enabled(wid[[nm.expr]]) <- FALSE
+            #enabled(wid[[nm]]) <- FALSE
+            #enabled(wid[[nm.expr]]) <- FALSE
         }
         rownum <- rownum + 1
     }
@@ -195,7 +195,7 @@ latticeSettingsGUI <- function(playState)
     tmp <- ggroup(horizontal=TRUE, container = aspectgroup)
     glabel("Panel aspect ratio y/x: ", container = tmp)
     val <- callArg(playState, "aspect")
-    if (is.null(val)) {
+    if (isLatt3D || is.null(val)) {
         val <- round(trell$aspect.ratio, 3)
         if (trell$aspect.fill) val <- "fill"
     }

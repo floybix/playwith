@@ -1,5 +1,6 @@
 \name{playwith}
 \alias{playwith}
+\alias{plotOnePage}
 \title{An interactive plot GUI}
 \description{
   A graphical user interface for viewing and interacting with \R plots.

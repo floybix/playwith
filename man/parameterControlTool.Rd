@@ -29,7 +29,7 @@ parameterControlTool(playState, name, value,
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{ \code{\link{quickTool}}, \code{\link{playwith}} }
 \examples{
-
+## none yet
 }
 \keyword{ iplot }
 \keyword{ programming }

@@ -24,13 +24,41 @@ playwith.getOption(name)
   see \code{\link[lattice]{lattice.options}}.
 
   The available options can be seen with \code{str(playwith.options())}.
-  Most of these simply provide defaults for corresponding arguments
+  Many of these simply provide defaults for corresponding arguments
   to the \code{\link{playwith}} function.
 }
 \seealso{ \code{\link{playwith}} }
 \examples{
 str(playwith.options())
-playwith.getOption("top.tools")
+
+## list options are merged, not replaced
+playwith.getOption("arrow")
+playwith.options(arrow = list(type = "closed", length = 0.1))
+playwith.getOption("arrow")
+
+oopt <- playwith.options()
+
+playwith.options(save.as.format = "png")
+playwith.options(toolbar.style = "icons")
+playwith.options(deparse.options =
+    c("keepInteger", "showAttributes", "keepNA"))
+
+## make a new "style shortcut" (an arbitrary expression)
+## to add a standard sub-title to the plot:
+doMySub <- quote({
+    txt <- ginput("Enter subtitle text:",
+                  text = paste(Sys.time(), Sys.info()["login"],
+                               R.version.string, sep = ", "))
+    if (!is.na(txt))
+        callArg(playState, "sub") <- if (nchar(txt) > 0) txt
+})
+playwith.options(styleShortcuts = list("mySub" = doMySub))
+
+## try it:
+playwith(plot(1:10))
+
+## reset
+playwith.options(oopt)
 }
 \keyword{ programming }
 

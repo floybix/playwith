@@ -409,7 +409,7 @@ playwith <-
                 if (side %in% c("Left", "Right")) {
                     tbar$setSizeRequest(sz$width, -1)
                 } else {
-                    tbar$setSizeRequest(-1, newsz$height)
+                    tbar$setSizeRequest(-1, sz$height)
                 }
             } else {
                 tbar$hide()

@@ -12,7 +12,7 @@
   Given a call to a plot function, return the data coordinates.
 }
 \usage{
-plotCoords(name, call, envir, ...}
+plotCoords(name, call, envir, ...)
 
 \method{plotCoords}{default}(name, call, envir, panel.args, data, ...)
 

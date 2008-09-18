@@ -60,8 +60,8 @@ inViewport <- function(x.px, y.px, viewport)
     x <- xy$x
     y <- xy$y
     ## test for point inside bounding box
-    ((min(x) <= x.px) && (x.px <= max(x)) &&
-     (min(y) <= y.px) && (y.px <= max(y)))
+    ((min(x) <= x.px) & (x.px <= max(x)) &
+     (min(y) <= y.px) & (y.px <= max(y)))
 }
 
 grobBBDevicePixels <- function(grob, viewport)
@@ -99,8 +99,6 @@ showGrobsBB <-
     function(draw = TRUE,
              gp.box = gpar(col = "yellow",
                            lwd = 5, alpha = 0.2),
-                      #gpar(fill="yellow",
-                      #     lwd=2, alpha=0.05),
              gp.text = gpar(cex=0.75, alpha=0.5))
 {
     ## current viewport, restore when finished

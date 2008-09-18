@@ -66,7 +66,7 @@
          show.statusbar = TRUE,
          show.tooltips = FALSE,
          catch.errors = TRUE,
-         deparse.options = c("keepInteger")
+         deparse.options = c()
          )
 
 ## code below copied from lattice

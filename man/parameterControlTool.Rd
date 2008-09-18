@@ -27,7 +27,7 @@ parameterControlTool(playState, name, value,
   a \code{\link[RGtk2]{gtkToolButton}}.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
-\seealso{ \code{\link{quickTool}}, \code{\link{playwith}} }
+\seealso{ \code{\link{playwith}} }
 \examples{
 ## none yet
 }

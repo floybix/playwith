@@ -58,7 +58,10 @@ latticist(dat,
 Sarkar, Deepayan (2008) "Lattice: Multivariate Data Visualization with
 R", Springer. \url{http://lmdvr.r-forge.r-project.org/}
 }
-\seealso{ \code{\link{playwith}}, \code{\link[lattice]{Lattice}} }
+\seealso{
+  \code{\link{playwith}},
+  \code{\link[lattice]{Lattice}},
+  \code{lattice.demo} in the \pkg{TeachingDemos} package. }
 \examples{
 if (interactive()) {
 options(device.ask.default = FALSE)

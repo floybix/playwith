@@ -849,7 +849,7 @@ latticeStyleGUI <-
     wid.user.text.lineheight <-
         gedit("", width = 4, container = tmp3g,
               coerce.with = as.numeric, handler = setPar,
-              action = "user.text$lineheight")
+              action = c("user.text$lineheight", "add.text$lineheight"))
 
     ## ADD.LINE
     addlineg <- gframe("Annotations (add.line)", horizontal = FALSE,
@@ -912,9 +912,6 @@ latticeStyleGUI <-
 latticeStyleToBasePar <- function() {
     opar <- par(no.readonly = TRUE)
     trellispar <- trellis.par.get()
-    user.text <- trellispar$user.text
-    if (is.null(eval(user.text)))
-        user.text <- trellispar$add.text
     ## palette() has no alpha setting; need to apply it to col
     setAlpha <- function(col, alpha) {
         crgb <- col2rgb(col, alpha = TRUE)
@@ -943,7 +940,7 @@ latticeStyleToBasePar <- function() {
             cex.sub = par.sub.text$cex,
             col.lab = par.xlab.text$col,
             cex.lab = par.xlab.text$cex,
-            lheight = user.text$lineheight)
+            lheight = add.text$lineheight)
         if (!is.null(grid.pars$fontfamily))
             par(family = grid.pars$fontfamily)
     })

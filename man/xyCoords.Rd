@@ -17,22 +17,18 @@ getDataArg(playState = playDevCur(), eval = TRUE)
   This is only relevant to multi-panel lattice plots, where data is split across panels.
   In this case, if \code{space="page"}, the combined data from all panels is returned.
   See the \code{space} argument to \code{\link{playDo}}. }
+  \item{eval}{ whether to evaluate the argument; otherwise return the
+    it as it appears in the call. }
 }
 \details{
-	\code{xyCoords} ...TODO
-
-	\code{xyData} is the same but does not convert the data to numeric.
-	Thus the returned data objects may be factors, time series, etc.
+None yet.
 }
 \value{
-	the returned value is a list with elements \code{x} and \code{y}, which are
-	numeric vectors in the case of \code{xyCoords}.
-
-	For lattice plots, the output is similar to that returned by
-	\code{\link[lattice]{trellis.panelArgs}}, so can include elements such as
-	\code{subscripts}.
-
-	\code{x} and \code{y} vectors are recycled to the same length.
+  the returned value is a list with elements \code{x} and \code{y}, which are
+  numeric vectors in the case of \code{xyCoords}.
+  Can also include an element \code{subscripts}, and generally will for
+  lattice plots (similar to the result of calling
+  \code{\link[lattice]{trellis.panelArgs}}).
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
 \seealso{
@@ -45,11 +41,11 @@ if (interactive()) {
 library(lattice)
 x <- as.Date("1990-01-01") + 1:20 - 1
 ab <- rep(c("a", "b"), each=10)
-playwith(xyplot(1:20 ~ x | ab))
+playwith(xyplot(1:20 ~ x | ab, subscripts = TRUE))
 playState <- playDevCur()
 xyCoords(playState, space="packet 2")
 xyData(playState, space="packet 2")
-xyData(playState, space="plot")
+try(xyData(playState, space="plot"))
 getDataArg(playState)
 
 }

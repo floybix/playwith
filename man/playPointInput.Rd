@@ -14,11 +14,11 @@ playRectInput(playState = playDevCur(), prompt)
 \arguments{
   \item{playState}{ a \code{\link{playState}} object representing the plot, window and device. }
   \item{prompt}{ text to display in the prompt. }
-  \item{scales}{ one or more of \code{"x"} and \code{"y"},
-	  constraining the dimensions of the region to select.
-	  E.g. if \code{scales="x"} then a section along the x-axis is selected,
-	  as might be appropriate for a time series.
-  }
+%  \item{scales}{ one or more of \code{"x"} and \code{"y"},
+%	  constraining the dimensions of the region to select.
+%	  E.g. if \code{scales="x"} then a section along the x-axis is selected,
+%	  as might be appropriate for a time series.
+%  }
 }
 \details{
 	\code{playPointInput} is similar to \code{\link{locator}}, but

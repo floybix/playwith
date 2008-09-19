@@ -2,7 +2,8 @@
 \alias{convertFromDevicePixels}
 \alias{convertToDevicePixels}
 \alias{inViewport}
-\alias{grobBB}
+\alias{grobBBDevicePixels}
+\alias{showGrobsBB}
 \title{ Utilities for working with grobs and viewports in device coordinates. }
 \description{
   Utilities for working with grobs and viewports in device coordinates. }

@@ -3,18 +3,20 @@
 \alias{try.prepanel.loess}
 \title{ A Lattice GUI }
 \description{
-  Interactively explore a data set using \code{\link[lattice]{Lattice}} displays.
+  Interactively explore a data set using \link[lattice]{Lattice} displays.
 }
 \usage{
 latticist(dat,
           reorder.levels = TRUE,
-          plot.call = quote(marginals(dat, reorder=FALSE)),
+          plot.call = quote(marginal.plot(dat, reorder = FALSE)),
           ...,
           labels = rownames(dat),
           time.mode = FALSE)
 }
 \arguments{
-  \item{dat}{ a data frame (with numeric and/or categorical variables). }
+  \item{dat}{ a data frame (with numeric and/or categorical variables),
+    or an object that can be coerced with \code{\link{as.data.frame}}
+    (such as a \code{table}). }
   \item{reorder.levels}{ if \code{TRUE}, change the ordering of levels of factor
   variables so they are in order of frequency. Note that this does not
   change the data, only its internal representation: see
@@ -49,7 +51,7 @@ latticist(dat,
 }
 \value{
   invisibly returns the \code{playState} object representing the plot
-  window: see \code{\link{playwith.API}}.
+  window: see \link{playwith.API}.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \references{
@@ -60,7 +62,7 @@ R", Springer. \url{http://lmdvr.r-forge.r-project.org/}
 }
 \seealso{
   \code{\link{playwith}},
-  \code{\link[lattice]{Lattice}},
+  \link[lattice]{Lattice},
   \code{lattice.demo} in the \pkg{TeachingDemos} package. }
 \examples{
 if (interactive()) {
@@ -72,6 +74,10 @@ options(device.ask.default = FALSE)
 ##      uptake ~ conc | Plant
 ##      uptake ~ conc | Type, groups = Treatment
 latticist(CO2)
+
+## Specify initial display:
+latticist(plot = quote(xyplot(uptake ~ conc, CO2)))
+## Now press Enter in one of the text fields to recompose.
 
 ## National Health and Nutrition Examination Survey.
 ## Try: ~ Smoke, groups = Sex

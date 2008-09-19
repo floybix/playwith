@@ -78,8 +78,7 @@ S3method(labels, zoo)
 export(playSelectData,
        playPointInput,
        playLineInput,
-       playRectInput,
-       whichSpace)
+       playRectInput)
 
 ## gridwork
 export(convertFromDevicePixels,

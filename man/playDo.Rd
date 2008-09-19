@@ -39,9 +39,11 @@ playDo(playState, expr, space = "plot",
 	the value returned by \code{expr}.
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
-\seealso{ \code{\link{playwith.API}},
-	\code{\link{playSelectData}}, \code{\link{playPointInput}},
-	\code{\link{whichSpace}} }
+\seealso{
+  \code{\link{playwith.API}},
+  \code{\link{playSelectData}},
+  \code{\link{playPointInput}}
+}
 \examples{
 if (interactive()) {
 

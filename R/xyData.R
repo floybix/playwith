@@ -3,7 +3,7 @@
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
-getDataArg <- function(playState, eval = TRUE)
+getDataArg <- function(playState = playDevCur(), eval = TRUE)
 {
     if (!is.null(playState$data.points)) {
         ## data.points were supplied

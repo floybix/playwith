@@ -237,8 +237,11 @@ playwith(expr,
   the plot, window and device.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
-\seealso{ \code{\link{autoplay}}, \link{playTools}, \link{playwith.API},
-  \code{\link{playwith.options}}, \code{\link{latticist}} }
+\seealso{
+  \code{\link{playwith.options}},
+  \code{\link{autoplay}},
+  \link{playwith.API},
+  \code{\link{latticist}} }
 \examples{
 if (interactive()) {
 options(device.ask.default = FALSE)
@@ -428,7 +431,7 @@ rm(subobj)
 rm(bigobj)
 }
 
-## See help(playwith.API) for examples of new tools.
+## See demo(package = "playwith") for examples of new tools.
 }
 }
 \keyword{ iplot }

@@ -110,7 +110,7 @@ playwith <-
         if (missing(width)) width <- daSize$width / 96
         if (missing(height)) height <- daSize$height / 96
         ## remove everything
-        playState$devoff <- TRUE ## to avoid trigger close
+        playState$tmp$devoff <- TRUE ## to avoid trigger close
         myWin$getChild()$destroy()
         myWin$present()
         myWin$resize(width * 96, height * 96)
@@ -738,8 +738,8 @@ devoff_handler <- function(widget, event, playState)
 {
     ## this handles dev.off()
     ## destroy the window, but store a flag to avoid destroying twice
-    if (isTRUE(playState$devoff)) return(FALSE)
-    playState$devoff <- TRUE
+    if (isTRUE(playState$tmp$devoff)) return(FALSE)
+    playState$tmp$devoff <- TRUE
     playDevOff(playState)
     return(FALSE)
 }

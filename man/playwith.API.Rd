@@ -2,75 +2,175 @@
 \alias{playwith.API}
 \title{The playwith API}
 \description{
-  The \code{\link{playwith}} Application Programming Interface.
+  The \pkg{playwith} Application Programming Interface.
 }
 \details{
   \code{\link{playwith}} plots (incorporating a plot, window and device)
   are represented by a \code{\link{playState}} object.
 
-	A \code{playwith} tool is a function ("constructor") that creates
-	a graphical-user-interface widget (a \code{\link[RGtk2]{gtkToolItem}}).
-	That widget may also have functions attached to it, which are run in
-	response to user interaction, or every time the plot is drawn.
+%	A \code{playwith} tool is a function ("constructor") that creates
+%	a graphical-user-interface widget (a \code{\link[RGtk2]{gtkToolItem}}).
+%	That widget may also have functions attached to it, which are run in
+%	response to user interaction, or every time the plot is drawn.
 
-	Constructors should use the
-	convenience function \code{\link{quickTool}} where possible.
-	If the constructor function returns \code{NA}, that tool is skipped.
-	So one should check whether the tool can work with the current plot,
-	and skip it otherwise.
+%	Constructors should use the
+%	convenience function \code{\link{quickTool}} where possible.
+%	If the constructor function returns \code{NA}, that tool is skipped.
+%	So one should check whether the tool can work with the current plot,
+%	and skip it otherwise.
 
-	Simple tools to control parameters can be created with
-	the convenience function \code{\link{parameterControlTool}},
-	corresponding to the \code{parameters} argument of \code{\link{playwith}}.
+%	Simple tools to control parameters can be created with
+%	the convenience function \code{\link{parameterControlTool}},
+%	corresponding to the \code{parameters} argument of \code{\link{playwith}}.
 
-	Following is a table of the API functions that can be used by tools.
+	Following is a table of the API functions that can be used to
+	work with the plot, and to write new interactive tools.
 	See the links to specific help pages for details.
-	In case these are inadequate, you may work with the \code{\link{playState}} object
-	itself.
+	In case these are insufficient, you may work with the
+	\code{\link{playState}} object itself.
 
-\preformatted{
-\link{playDevCur}()
-\link{playDevList}()
-\link{playDevSet}(playState)
-\link{playDevOff}(playState)
+	\section{Device management}{
+	  These are similar to \code{\link{dev.set}} etc.
+	  \describe{
+	    \item{\code{\link{playDevCur}()}{ returns the current or last
+		active \code{playState} -- which is not necessarily the active
+		graphics device. }
+	    \item{\code{\link{playDevList}()}{ lists all open \code{playState}s. }
+	    \item{\code{\link{playDevSet}(playState)}{ sets the
+		current \code{playState}, and sets the active graphics device. }
+	    \item{\code{\link{playDevOff}(playState)}{ closes the device and
+		window. }
+	  }
+	}
 
-\link{playGetIDs}(playState, labels = FALSE)
+	\section{Common user commands}{
+	  These functions are also available as menu items.
+	  \describe{
+	    \item{\code{\link{playGetIDs}(playState, type, labels)}}{ returns
+	      indices or labels of currently selected data points. }
+	    \item{\code{\link{playUnlink}(playState)}}{ removes links from the
+	      given plot to any other plots (for linked brushing). }
+	    \item{\code{\link{playSourceCode}(playState)}}{ returns (deparsed)
+	      R code to reproduce the current plot display. }
+	  }
+	}
 
-\link{playNewPlot}(playState)
-\link{playReplot}(playState)
-\link{playUnlink}(playState)
+	\section{Interaction}{
+	  These functions allow the user to click or drag on the plot.
+	  Click or drag locations are converted into the native
+	  coordinates of whatever plot \dfn{space} they occurred in (but
+	  are available as device coordinates too).
+	  \describe{
+	    \item{\code{\link{playSelectData}(playState, prompt, foo)}}{
+	      interactively select data from the plot (one point or a
+	      whole region). }
+	    \item{\code{\link{playPointInput}(playState, prompt)}}{ prompt for
+	      a click on the plot. Similar to \code{\link{locator}}. }
+	    \item{\code{\link{playLineInput}(playState, prompt)}}{ prompt to
+	      drag a line. }
+	    \item{\code{\link{playRectInput}(playState, prompt)}}{ prompt to
+	      drag a rectangular region. }
+	    \item{\code{\link{playPrompt}(playState, text)}}{ sets the
+	      statusbar text. }
+	    \item{\code{\link{playFreezeGUI}, playThawGUI}}{ disables or
+	      re-enables the GUI during interaction. }
+	  }
+	}
 
-\link{callArg}(playState, arg, expr, data = NULL)
-\link{callArg}(playState, arg, expr) <- value
+	\section{Working with the display}{
+	  \describe{
+	    \item{\code{\link{playDo}(playState, expr, space, clip.off,
+		return.code)}}{ evalutes the given expression in the
+	      given plot \dfn{space}, i.e. after moving to the
+	      corresponding grid viewport. }
+	    \item{\code{\link{rawXLim}(playState, space)}}{
+	      gets or sets the x axis limits, in native coordinates of
+	      the given \dfn{space} (viewport).
+	    }
+	    \item{\code{\link{rawYLim}(playState, space)}}{
+	      same as \code{rawXLim}, for y axis limits.
+	    }
+	    \item{\code{\link{spaceCoordsToDataCoords}(playState, xy)}}{
+	      converts raw space (viewport) coordinates to the data
+	      scale by applying an inverse log transformation if
+	      necessary. If there are no log scales this does nothing.
+	    }
+	    \item{\code{\link{dataCoordsToSpaceCoords}(playState, xy)}}{
+	      converts data coordinates to raw space (viewport)
+	      coordinates by applying a log transformation if
+	      necessary. If there are no log scales this does nothing.
+	    }
+	  }
+	}
 
-\link{playDo}(playState, expr, space = "plot", clip.off)
+	\section{Working with the call}{
+	  \describe{
+	    \item{\code{\link{callArg}(playState, arg, eval, data)}}{
+	      gets or sets arguments to the main plot call.
+	    }
+	    \item{\code{\link{mainCall}(playState)}}{ gets or replaces
+	      the main plot call (which is not necessarily the same as
+	      the top-level call, \code{playState$call}).
+	    }
+	    \item{\code{\link{updateMainCall}(playState)}}{
+	      locates the main plot call within the top-level call -- by
+	      matching against the given \code{main.function}, or by
+	      guessing. This allows \code{callArg()} to work correctly;
+	      it should be called if \code{playState$call} is replaced.
+	    }
+	    \item{\code{\link{playReplot}(playState)}}{
+	      redraws the plot by evaluating the plot call, and runs
+	      \dfn{update actions}.
+	      This should
+	      be called after changing plot arguments (or annotations if
+	      that requires a redraw). However, if the data has changed
+	      or the type of plot (e.g. the high-level plot function)
+	      has changed, \code{playNewPlot} should be used instead.
+	      \code{playReplot} is triggered when zooming,
+	      editing plot settings, removing annotations, etc.
+	    }
+	    \item{\code{\link{playNewPlot}(playState)}}{
+	      redraws the plot by evaluating the plot call,
+	      updates the main call, runs
+	      \dfn{init actions} (such as detecting whether zooming,
+	      identifying or brushing data points is possible),
+	      as well as \dfn{update actions} as with
+	      \code{playReplot}.
+	      Note: \code{playNewPlot} is triggered when the call text
+	      is edited manually in the GUI.
+	    }
+	  }
+	}
 
-\link{xyCoords}(playState, space = "plot")
-\link{xyData}(playState, space = "plot")
+	\section{Working with data}{
+	  \describe{
+	    \item{\code{\link{xyData}(playState, space)}}{
+	      attempts to extract plot data in terms of x and y
+	      locations, but in the original data form (such as factor,
+	      date or time). This uses the generic function
+	      \code{\link{plotCoords}} to generate plot locations;
+	      new methods can be defined for non-standard plot types.
+	    }
+	    \item{\code{\link{xyCoords}(playState, space)}}{
+	      same as \code{xyData}, converted to numeric coordinates.
+	    }
+	    \item{\code{\link{getDataArg}(playState, eval)}}{
+	      attempts to extract the underlying data set (typically a
+	      data.frame), which may contain more variables than those
+	      currently plotted. This may come from a \code{data}
+	      argument to the plot call, or from a \code{with()} block.
+	    }
+	  }
+	}
 
-\link{playSelectData}(playState, prompt, foo)
-\link{playPointInput}(playState, prompt)
-\link{playLineInput}(playState, prompt)
-\link{playRectInput}(playState, prompt)
-
-\link{rawXLim}(playState, space = "plot")
-\link{rawYLim}(playState, space = "plot")
-\link{rawXLim}(playState) <- value
-\link{rawYLim}(playState) <- value
-\link{spaceCoordsToDataCoords}(playState, xy)
-\link{dataCoordsToSpaceCoords}(playState, xy)
-
-\link{whichSpace}(playState, x.device, y.device)
-
-\link{playPrompt}(playState, text = NULL)
-\link{playFreezeGUI}(playState)
-\link{playThawGUI}(playState)
-\link{blockRedraws}(expr, playState = playDevCur())
-}
+      }
 
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
-\seealso{ \code{\link{playwith}} }
+\seealso{
+  \code{\link{playwith}},
+  \code{\link{convertFromDevicePixels}}
+}
 \examples{
 if (interactive()) {
 

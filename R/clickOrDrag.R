@@ -8,7 +8,7 @@ playSelectData <-
              prompt = paste(
              "Click or drag to select data points;",
              "Right-click or Esc to cancel."),
-             foo = playRectInput(playState, prompt=prompt))
+             foo = playRectInput(playState, prompt = prompt))
 {
     force(foo)
     if (is.null(foo)) return(NULL)

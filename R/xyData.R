@@ -17,7 +17,7 @@ getDataArg <- function(playState, eval = TRUE)
             tmp.data <- callArg(playState, "data", eval = eval)
             if (is.null(tmp.data)) {
                 ## look at first argument
-                tmp.x <- callArg(playState, 1, eval=TRUE)
+                tmp.x <- callArg(playState, 1, eval = TRUE)
                 if (inherits(tmp.x, "formula")) {
                     ## if 1st arg is formula, 2nd is data if un-named (by convention)
                     if (is.null(tmp.data) &&

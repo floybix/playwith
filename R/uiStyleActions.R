@@ -9,7 +9,7 @@ createStyleActions <- function(playState, manager)
     ## add custom items to style submenus
     do.style_handler <- function(widget, theme) {
         playDevSet(playState)
-        eval(theme, list(playState = playState))
+        eval(theme, list(playState = playState), globalenv())
         playReplot(playState)
     }
     ## style shortcuts

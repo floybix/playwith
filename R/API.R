@@ -17,7 +17,7 @@ playDevSet <- function(playState)
 {
     stopifnot(inherits(playState, "playState"))
     StateEnv$.current <- playState
-    playState$old.dev <- dev.cur()
+    playState$tmp$old.dev <- dev.cur()
     dev.set(playState$dev)
 }
 
@@ -32,20 +32,20 @@ playDevOff <- function(playState = playDevCur())
 }
 
 playGetIDs <- function(playState = playDevCur(),
-                       type = c("ids", "linked"),
+                       type = c("ids", "brushed"),
                        labels = FALSE)
 {
     type <- match.arg(type, several.ok = TRUE)
-    ids.linked <- unlist(playState$linked$ids)
+    ids.brushed <- unlist(playState$linked$ids)
     ids.ids <- do.call(rbind, playState$ids)$subscripts
     ids <- NULL
     if ("ids" %in% type) ids <- ids.ids
-    if ("linked" %in% type) ids <- c(ids, ids.linked)
+    if ("brushd" %in% type) ids <- c(ids, ids.brushed)
     ids <- unique(sort(ids))
     if (labels) playState$labels[ids] else ids
 }
 
-playUnlink <- function(playState)
+playUnlink <- function(playState = playDevCur())
 {
     oldlinked <- playState$linked
     newlinked <- new.env(parent = baseenv())
@@ -132,16 +132,17 @@ callArg <- function(playState, arg, eval = TRUE, data = NULL)
     playState
 }
 
-mainCall <- function(playState) {
-    recursiveIndex(playState$call, playState$main.call.index)
+mainCall <- function(playState = playDevCur()) {
+    recursiveIndex(playState$call, playState$tmp$main.call.index)
 }
 
-"mainCall<-" <- function(playState, value) {
-    recursiveIndex(playState$call, playState$main.call.index) <- value
+"mainCall<-" <- function(playState = playDevCur(), value) {
+    recursiveIndex(playState$call, playState$tmp$main.call.index) <- value
     playState
 }
 
-updateMainCall <- function(playState) {
+updateMainCall <- function(playState = playDevCur()) {
+    ## sets tmp$main.call.index, accepts.arguments, callName
     ## find which component of the call takes arguments (xlim etc)
     main.function <- playState$main.function
     tmpCall <- playState$call
@@ -177,7 +178,7 @@ updateMainCall <- function(playState) {
     playState$accepts.arguments <- !is.null(main.call.index)
     ## set index to top-level even if looks invalid, so callArg() works
     if (is.null(main.call.index)) main.call.index <- NA ## top-level
-    playState$main.call.index <- main.call.index
+    playState$tmp$main.call.index <- main.call.index
     mainCall <- mainCall(playState)
     playState$callName <- toString(deparse(mainCall[[1]]))
     ## put call into canonical form, but with first argument un-named
@@ -507,6 +508,7 @@ playDo <- function(playState, expr, space = "plot",
     eval(expr, parent.frame(), playState$env)
 }
 
+## TODO: store value in playState
 isBasicDeviceMode <- function(playState)
 {
     if ((length(playState$call) == 1) &&

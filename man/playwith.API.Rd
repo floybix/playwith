@@ -1,5 +1,10 @@
 \name{playwith.API}
 \alias{playwith.API}
+\alias{playSourceCode}
+\alias{playUnlink}
+\alias{playPrompt}
+\alias{playFreezeGUI}
+\alias{playThawGUI}
 \title{The playwith API}
 \description{
   The \pkg{playwith} Application Programming Interface.
@@ -32,13 +37,13 @@
 	\section{Device management}{
 	  These are similar to \code{\link{dev.set}} etc.
 	  \describe{
-	    \item{\code{\link{playDevCur}()}{ returns the current or last
+	    \item{\code{\link{playDevCur}()}}{ returns the current or last
 		active \code{playState} -- which is not necessarily the active
 		graphics device. }
-	    \item{\code{\link{playDevList}()}{ lists all open \code{playState}s. }
-	    \item{\code{\link{playDevSet}(playState)}{ sets the
+	    \item{\code{\link{playDevList}()}}{ lists all open \code{playState}s. }
+	    \item{\code{\link{playDevSet}(playState)}}{ sets the
 		current \code{playState}, and sets the active graphics device. }
-	    \item{\code{\link{playDevOff}(playState)}{ closes the device and
+	    \item{\code{\link{playDevOff}(playState)}}{ closes the device and
 		window. }
 	  }
 	}
@@ -48,9 +53,9 @@
 	  \describe{
 	    \item{\code{\link{playGetIDs}(playState, type, labels)}}{ returns
 	      indices or labels of currently selected data points. }
-	    \item{\code{\link{playUnlink}(playState)}}{ removes links from the
+	    \item{\code{playUnlink(playState)}}{ removes links from the
 	      given plot to any other plots (for linked brushing). }
-	    \item{\code{\link{playSourceCode}(playState)}}{ returns (deparsed)
+	    \item{\code{playSourceCode(playState)}}{ returns (deparsed)
 	      R code to reproduce the current plot display. }
 	  }
 	}
@@ -70,10 +75,12 @@
 	      drag a line. }
 	    \item{\code{\link{playRectInput}(playState, prompt)}}{ prompt to
 	      drag a rectangular region. }
-	    \item{\code{\link{playPrompt}(playState, text)}}{ sets the
-	      statusbar text. }
-	    \item{\code{\link{playFreezeGUI}, playThawGUI}}{ disables or
-	      re-enables the GUI during interaction. }
+	    \item{\code{playPrompt(playState, text)}}{ sets the
+	      statusbar text. Pass \code{NULL} to reset. The GUI is
+	      frozen when the prompt is set and unfrozen when reset. }
+	    \item{\code{playFreezeGUI(playState)},
+	      \code{playThawGUI(playState)}}{
+	      disables or re-enables the GUI. }
 	  }
 	}
 
@@ -87,7 +94,7 @@
 	      gets or sets the x axis limits, in native coordinates of
 	      the given \dfn{space} (viewport).
 	    }
-	    \item{\code{\link{rawYLim}(playState, space)}}{
+	    \item{\code{rawYLim(playState, space)}}{
 	      same as \code{rawXLim}, for y axis limits.
 	    }
 	    \item{\code{\link{spaceCoordsToDataCoords}(playState, xy)}}{
@@ -95,7 +102,7 @@
 	      scale by applying an inverse log transformation if
 	      necessary. If there are no log scales this does nothing.
 	    }
-	    \item{\code{\link{dataCoordsToSpaceCoords}(playState, xy)}}{
+	    \item{\code{dataCoordsToSpaceCoords(playState, xy)}}{
 	      converts data coordinates to raw space (viewport)
 	      coordinates by applying a log transformation if
 	      necessary. If there are no log scales this does nothing.
@@ -163,8 +170,6 @@
 	  }
 	}
 
-      }
-
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
 \seealso{
@@ -176,6 +181,7 @@ if (interactive()) {
 
 demo(package = "playwith")
 
+}
 }
 \keyword{ programming }
 \keyword{ utilities }

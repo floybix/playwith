@@ -1,4 +1,5 @@
 
+importFrom(lattice, levelplot)
 import(RGtk2)
 import(gWidgets)
 import(gridBase)

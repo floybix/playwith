@@ -1940,7 +1940,7 @@ layer.col <-
     layerCol <- level.colors(x, at = do.breaks(range(x), 30))
     expr <- bquote(panel.xyplot(..., pch = .(pch), col = .(col),
                                 fill = layerCol[subscripts]))
-    do.call("layer", expr, data = list(layerCol = layerCol))
+    eval(call("layer", expr, data = list(layerCol = layerCol)))
 }
 
 .profLatticist <- function(n = 20000) {

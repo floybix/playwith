@@ -36,7 +36,7 @@ plotCoords(name, call, envir, ...)
   \item{\dots}{ ignored. }
 }
 \details{
-  ~~ If necessary, more details than the description above ~~
+  None yet...
 }
 \value{
   a list with components:

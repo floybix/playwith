@@ -130,9 +130,9 @@ latticeStyleGUI <-
     }
 
     ## list to keep the full user-defined theme
-    assign("trellis.par.theme", list(), envir = globalenv())
+    assign("trellis.par.theme", list(), globalenv())
     ## list keeping track of user changes
-    assign("trellis.par.log", list(), envir = globalenv())
+    assign("trellis.par.log", list(), globalenv())
 
     checkDemoDevice <- function() {
         if (demoDevice %in% dev.list()) {
@@ -143,7 +143,7 @@ latticeStyleGUI <-
             trellis.device(retain = TRUE)
             ## Note, retain = TRUE may not be enough because
             ## it may be a different device (eg Cairo vs X11)
-            trellis.par.set(trellis.par.theme)
+            trellis.par.set(get("trellis.par.theme", globalenv()))
             demoDevice <<- dev.cur()
         }
     }
@@ -154,7 +154,7 @@ latticeStyleGUI <-
             ## need to switch to it and update settings
             if (target.device %in% dev.list()) {
                 dev.set(target.device)
-                trellis.par.set(trellis.par.theme)
+                trellis.par.set(get("trellis.par.theme", globalenv()))
                 if (base.graphics)
                     latticeStyleToBasePar()
             } else {
@@ -171,17 +171,17 @@ latticeStyleGUI <-
 
     ## load a pre-defined theme
     setTheme <- function(h, ...) {
-        if (length(trellis.par.log) > 0) {
+        if (length(get("trellis.par.log", globalenv())) > 0) {
             msg <- "Loading a theme will discard your changes. Continue?"
             if (!isTRUE(gconfirm(msg, icon = "warning")))
                 return()
         }
-        trellis.par.log <<- list()
+        assign("trellis.par.log", list(), globalenv())
         checkDemoDevice()
         expr <- themeList[[ svalue(h$obj) ]]
         trellis.par.set(eval(expr))
         trellis.par.set(grid.pars = list(), strict = TRUE)
-        trellis.par.theme <<- trellis.par.get()
+        assign("trellis.par.theme", trellis.par.get(), globalenv())
         if (svalue(autoRedrawW)) doRedraw()
         updateFromSettings()
         updateTargetDeviceSettings()
@@ -214,10 +214,12 @@ latticeStyleGUI <-
         ## update settings and track changes
         checkDemoDevice()
         trellis.par.set(mods.ok)
-        trellis.par.theme <<- trellis.par.get()
-        trellis.par.log <<- modifyList(trellis.par.log, mods)
+        assign("trellis.par.theme", trellis.par.get(), globalenv())
+        tmplog <- get("trellis.par.log", globalenv())
+        tmplog <- modifyList(tmplog, mods)
         if (identical(val, expression(NULL)))
-            trellis.par.log <<- rapply(trellis.par.log, eval, how = "replace")
+            tmplog <- rapply(tmplog, eval, how = "replace")
+        assign("trellis.par.log", tmplog, globalenv())
         if (svalue(autoRedrawW)) doRedraw()
         updateTargetDeviceSettings()
     }
@@ -378,7 +380,7 @@ latticeStyleGUI <-
     trellis.device(new = FALSE, retain = TRUE) ## i.e. new device if needed
     ## set initial style from target device
     trellis.par.set(pars)
-    trellis.par.theme <<- trellis.par.get()
+    assign("trellis.par.theme", trellis.par.get(), globalenv())
     ## store device ID -- trellis.par.set is specific to this device!
     demoDevice <- dev.cur()
     devType <- unique(c(devType, .Device))
@@ -713,8 +715,9 @@ latticeStyleGUI <-
         checkDemoDevice()
         tmp <- list(regions = list(col = colval))
         trellis.par.set(tmp)
-        trellis.par.theme <<- trellis.par.get()
-        trellis.par.log <<- modifyList(trellis.par.log, tmp)
+        assign("trellis.par.theme", trellis.par.get(), globalenv())
+        G <- globalenv()
+        G$trellis.par.log <- modifyList(G$trellis.par.log, tmp)
         if (svalue(autoRedrawW)) doRedraw()
         updateTargetDeviceSettings()
     }
@@ -724,8 +727,9 @@ latticeStyleGUI <-
         colval <- rev(trellis.par.get("regions")$col)
         tmp <- list(regions = list(col = colval))
         trellis.par.set(tmp)
-        trellis.par.theme <<- trellis.par.get()
-        trellis.par.log <<- modifyList(trellis.par.log, tmp)
+        assign("trellis.par.theme", trellis.par.get(), globalenv())
+        G <- globalenv()
+        G$trellis.par.log <- modifyList(G$trellis.par.log, tmp)
         if (svalue(autoRedrawW)) doRedraw()
         updateTargetDeviceSettings()
     }

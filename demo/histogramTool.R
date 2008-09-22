@@ -1,6 +1,8 @@
 
 library(playwith)
 
+stop("Not working right now")
+
 ## 2. Select subset of data and show marginal histograms.
 ##    It stores state info in the local environment.
 

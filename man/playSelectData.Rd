@@ -2,7 +2,7 @@
 \alias{playSelectData}
 \title{Let playwith user select data points}
 \description{
-  Part of the \code{\link{playwith}} Application Programming Interface.
+  Part of the \pkg{playwith} Application Programming Interface.
 }
 \usage{
 playSelectData(playState = playDevCur(),
@@ -52,13 +52,16 @@ playSelectData(playState = playDevCur(),
 	}
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
-\seealso{ \code{\link{playRectInput}}, \code{\link{playwith.API}} }
+\seealso{
+  \code{\link{playRectInput}},
+  \link{playwith.API}
+}
 \examples{
 if (interactive()) {
 
 library(lattice)
 playwith(xyplot(Sepal.Width ~ Petal.Width | Species, data = iris))
-playSelectData(playDevCur())
+playSelectData()
 
 }
 }

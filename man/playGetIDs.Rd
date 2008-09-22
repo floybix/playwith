@@ -2,7 +2,7 @@
 \alias{playGetIDs}
 \title{Get IDs of identified points}
 \description{
-  Part of the \code{\link{playwith}} Application Programming Interface.
+  Part of the \pkg{playwith} Application Programming Interface.
 }
 \usage{
 playGetIDs(playState = playDevCur(),
@@ -23,7 +23,7 @@ playGetIDs(playState = playDevCur(),
   an integer vector, or if \code{labels = TRUE} a character vector.
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
-\seealso{ \code{\link{playwith.API}} }
+\seealso{ \link{playwith.API} }
 \examples{
 if (interactive()) {
 

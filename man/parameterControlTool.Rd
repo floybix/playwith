@@ -2,7 +2,7 @@
 \alias{parameterControlTool}
 \title{ Create playwith tools for controlling parameter values }
 \description{
-  Part of the \code{\link{playwith}} Application Programming Interface.
+  Part of the \pkg{playwith} Application Programming Interface.
 }
 \usage{
 ## Note: this is only to be called inside a tool constructor function.

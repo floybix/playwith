@@ -1,5 +1,11 @@
 \name{playwith.API}
 \alias{playwith.API}
+\alias{playDevCur}
+\alias{playDevSet}
+\alias{playDevList}
+\alias{playDevOff}
+\alias{playReplot}
+\alias{playNewPlot}
 \alias{playSourceCode}
 \alias{playUnlink}
 \alias{playPrompt}
@@ -37,14 +43,14 @@
 	\section{Device management}{
 	  These are similar to \code{\link{dev.set}} etc.
 	  \describe{
-	    \item{\code{\link{playDevCur}()}}{ returns the current or last
-		active \code{playState} -- which is not necessarily the active
+	    \item{\code{playDevCur()}}{ returns the current or last
+		active \code{playState} -- this is not necessarily the active
 		graphics device. }
-	    \item{\code{\link{playDevList}()}}{ lists all open \code{playState}s. }
-	    \item{\code{\link{playDevSet}(playState)}}{ sets the
+	    \item{\code{playDevList()}}{ lists all open \code{playState}s. }
+	    \item{\code{playDevSet(playState)}}{ sets the
 		current \code{playState}, and sets the active graphics device. }
-	    \item{\code{\link{playDevOff}(playState)}}{ closes the device and
-		window. }
+	    \item{\code{playDevOff(playState)}}{ closes the device and
+		window (\code{dev.off()} also works). }
 	  }
 	}
 
@@ -125,7 +131,7 @@
 	      guessing. This allows \code{callArg()} to work correctly;
 	      it should be called if \code{playState$call} is replaced.
 	    }
-	    \item{\code{\link{playReplot}(playState)}}{
+	    \item{\code{playReplot(playState)}}{
 	      redraws the plot by evaluating the plot call, and runs
 	      \dfn{update actions}.
 	      This should
@@ -136,12 +142,12 @@
 	      \code{playReplot} is triggered when zooming,
 	      editing plot settings, removing annotations, etc.
 	    }
-	    \item{\code{\link{playNewPlot}(playState)}}{
+	    \item{\code{playNewPlot(playState)}}{
 	      redraws the plot by evaluating the plot call,
 	      updates the main call, runs
 	      \dfn{init actions} (such as detecting whether zooming,
 	      identifying or brushing data points is possible),
-	      as well as \dfn{update actions} as with
+	      as well as running \dfn{update actions} as with
 	      \code{playReplot}.
 	      Note: \code{playNewPlot} is triggered when the call text
 	      is edited manually in the GUI.

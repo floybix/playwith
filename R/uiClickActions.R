@@ -5,11 +5,22 @@
 
 initClickActions <- function(playState)
 {
+    ## add click handler to device
     if (is.null(playState$widgets$buttonPressSignal)) {
         playState$widgets$buttonPressSignal <-
             gSignalConnect(playState$widgets$drawingArea,
                            "button-press-event",
                            device.click_handler, data=playState)
+    }
+    if (!is.null(playState$click.mode)) {
+        ## set initial click.mode
+        vals <- clickModeValues()
+        val <- vals[[playState$click.mode]]
+        if (!is.null(val)) {
+            aGroup <- playState$actionGroups[["PlotActions"]]
+            aGroup$getAction("Zoom")$setCurrentValue(val)
+        }
+        playState$click.mode <- NULL
     }
 }
 

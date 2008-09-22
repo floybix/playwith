@@ -75,16 +75,53 @@ playwith(expr,
       \item \code{logical}: creates a checkbox.
     }
   }
-  \item{tools}{ TODO
+  \item{tools}{ a list of tool specifications. These are technically
+    \code{\link[RGtk2]{GtkActionEntry}}s but should be specified as
+    lists with the following structure. Elements can be specified in
+    this order, or named (as with a function call).
+    \describe{
+      \item{\code{name}}{
+	The name of the action (used internally to control
+	the action state, or in a custom UI XML file). This item is
+	required and must be the first element. All other elements are
+	optional.
+      }
+      \item{\code{stock_id}}{
+	The stock icon ID, or the name of an icon from the
+	icon theme. See \code{unlist(gtkStockListIds())} for a list.
+      }
+      \item{\code{label}}{
+	The label for the action. If label is NULL, the default
+	label for the given stock.id is used.
+      }
+      \item{\code{accelerator}}{
+	The accelerator for the action, in the format
+	understood by \code{\link[RGtk2]{gtkAcceleratorParse}}. See
+	\link[RGtk2]{gdkKeySyms}.
+      }
+      \item{\code{tooltip}}{
+	The tooltip for the action.
+      }
+      \item{\code{callback}}{
+	The function to call when the action is activated.
+      }
+      \item{\code{is_active}}{
+	Only for toggle actions: sets the initial state (TRUE / FALSE).
+      }
+      \item{\code{update.action}, \code{init.action}}{
+	If present these items must be named. Their values are included
+	in the \code{update.actions} and \code{init.actions} lists.
+      }
+    }
   }
-  \item{update.actions}{ a list of objects to be run \emph{after} the plot is
-    drawn (and each time it is redrawn). These objects may be functions,
+  \item{update.actions}{ a list of actions to be run \emph{after} the plot is
+    drawn (and each time it is redrawn). These may be functions,
     or names of functions, or expressions. Functions are passed one
-    argument, which is the \code{\link{playState}}. Note, these objects
+    argument, which is the \code{\link{playState}}. Note, these
     are in addition to any given in
     \code{\link{playwith.options}("update.actions")}.
   }
-  \item{init.actions}{a list of objects to be run \emph{before} the plot is
+  \item{init.actions}{a list of actions to be run \emph{before} the plot is
     drawn, whenever the plot type changes or its data changes. These are
     not run when only simple arguments to the call change, but they are
     run whenever the plot call is edited manually. Same format
@@ -94,6 +131,11 @@ playwith(expr,
     These can then be accessed by tools. The default tools
     will recognise the following extra arguments:
     \describe{
+      \item{\code{click.mode}}{ sets the initial action when clicking
+	and dragging on the plot: one of \code{"Zoom"},
+	\code{"Identify"}, \code{"Brush"}, \code{"Annotation"}, or
+	\code{"Arrow"}.
+      }
       \item{\code{time.mode}}{ whether the plot is to start in "time mode",
 	with navigation along the x-axis. If \code{NA}, it will guess
 	whether to start in time.mode based on whether the current plot
@@ -175,7 +217,7 @@ playwith(expr,
     this is used instead of \code{expr}.
   }
   \item{main.function}{ the function (or its name) appearing in the call
-    which accepts typical plot arguments like \code{xlim} and
+    which accepts typical plot arguments like \code{xlim} or
     \code{ylab}. This will only be needed in unusual cases when the
     default guess fails.
   }
@@ -226,7 +268,8 @@ playwith(expr,
   If identification of data points is not required, passing
   \code{data.points = NA, labels = NA} may speed things up.
 
-  Some lattice functions require \code{subscripts = TRUE} in order to correctly
+  Some lattice functions need to be called with \code{subscripts = TRUE}
+  in order to correctly
   identify points in a multiple-panel layout. Otherwise the subscripts used will then
   refer to the data in each panel separately, rather than the original dataset.
   In this case a warning dialog box will be shown.
@@ -264,8 +307,8 @@ playwith(expr,
   time the plot is updated -- so random data as in \code{plot(rnorm(100))}
   will keep changing, with confusing consequences! You should therefore
   generate random data prior to the plot call. Changes to variables
-  in the workspace (if they are not stored locally) may also cause inconsistencies in previously generated
-  plots.
+  in the workspace (if they are not stored locally) may also cause
+  inconsistencies in previously generated plots.
 
   \emph{Warning:} the playwith device will tend to make itself the active
   device any time it is clicked on, so be careful if any other devices
@@ -278,9 +321,10 @@ playwith(expr,
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{
   \code{\link{playwith.options}},
-  \link{playwith.API},
   \code{\link{autoplay}},
-  \code{\link{latticist}} }
+  \code{\link{latticist}},
+  \link{playwith.API}
+}
 \examples{
 if (interactive()) {
 options(device.ask.default = FALSE)
@@ -307,7 +351,8 @@ playwith(plot(urbAss, panel.first = lines(lowess(urbAss)),
 ## and use the scrollbar to move along the x-axis.
 library(zoo)
 playwith(xyplot(sunspots ~ yearmon(time(sunspots)),
-                xlim = c(1900, 1930), type = "l"))
+                xlim = c(1900, 1930), type = "l"),
+         time.mode = TRUE)
 
 ## Time series plot (base graphics); similar.
 ## Custom labels are passed directly to playwith.
@@ -317,8 +362,7 @@ tt <- time(treering)
 treeyears <- paste(abs(tt) + (tt <= 0),
                   ifelse(tt > 0, "CE", "BCE"))
 playwith(plot(treering, xlim = c(1000, 1300)),
-   labels = treeyears, label.style = gpar(col="red",
-      fontfamily = "HersheySans", cex = 0.7))
+   labels = treeyears, time.mode = TRUE)
 
 ## Multi-panel Lattice plot.
 ## Need subscripts = TRUE to correctly identify points.
@@ -377,9 +421,6 @@ playwith( {
 playwith(cloud(-depth ~ long * lat, quakes,
     zlab = "altitude", screen = list()))
 
-## Brushing a multivariate scatterplot.
-playwith(splom(environmental))
-
 ## A ggplot example.
 ## NOTE: only qplot()-based calls will work.
 ## Labels are taken from rownames of the data.
@@ -408,18 +449,20 @@ playwith(myGridPlot(1:10, 11:20, pch = 17), viewport = "theData")
 ## Presenting the window as a modal dialog box.
 ## When the window is closed, ask user to confirm.
 ## Use only a subset of the default tools, and hide plot call.
-subTools <- list("identify", "clear", "zoom", "zoomout", "zoomfit")
 confirmClose <- function(playState) {
-	if (gWidgets::gconfirm("Close window and report IDs?")) {
+	if (gconfirm("Close window and report IDs?"),
+                     parent = playState$win) {
 		cat("Indices of identified data points:\n")
 		print(playGetIDs(playState))
 		return(FALSE) ## close
 	} else TRUE ## don't close
 }
-xy <- data.frame(x = 1:20, y = rnorm(20), row.names = letters[1:20])
-playwith(plot(xy), on.close = confirmClose, modal = TRUE,
-	width = 4, height = 3.5, show.call = FALSE,
-	top = NULL, left = subTools)
+xy <- data.frame(x = 1:20, y = rnorm(20),
+                 row.names = letters[1:20])
+playwith(xyplot(y ~ x, xy, main = "Select points, then close"),
+        width = 4, height = 3.5, show.toolbars = FALSE,
+        on.close = confirmClose, modal = TRUE,
+        click.mode = "Brush")
 
 ## Demonstrate cacheing of objects in local environment.
 ## By default, only local variables in the plot call are stored.
@@ -456,7 +499,7 @@ bigobj <- rpois(5000000, 1)
 object.size(bigobj) / 1048576 ## in MB
 gc()
 playwith(qqmath(~ bigobj, f.value = ppoints(500)),
-   data.points = NA, labels = NA, time.mode = FALSE)
+   data.points = NA, labels = NA)
 playDevOff()
 gc()
 ## or generate the trellis object first:

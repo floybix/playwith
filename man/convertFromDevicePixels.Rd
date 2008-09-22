@@ -6,7 +6,7 @@
 \alias{showGrobsBB}
 \title{ Utilities for working with grobs and viewports in device coordinates. }
 \description{
-  Utilities for working with grobs and viewports in device coordinates. }
+  Utilities for working with grobs and viewports in device coordinates.
 }
 \usage{
 convertFromDevicePixels(x.px, y.px, unitTo = "native", valueOnly = FALSE)

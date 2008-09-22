@@ -1,6 +1,8 @@
 
 library(playwith)
 
+stop("Not working right now")
+
 ## 4. A more complex toolbar item: a "spinbutton" to
 ##    group the data into `n` clusters (in plot or xyplot).
 

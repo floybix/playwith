@@ -60,6 +60,14 @@ plotActionGroup <- function(playState)
     aGroup
 }
 
+clickModeValues <- function() {
+    list("Zoom" = 0,
+         "Identify" = 1,
+         "Brush" = 2,
+         "Annotation" = 3,
+         "Arrow" = 4)
+}
+
 updatePlotActions <- function(playState)
 {
     aGroup <- playState$actionGroups[["PlotActions"]]

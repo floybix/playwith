@@ -4,7 +4,7 @@
 \alias{playRectInput}
 \title{Get point, line or rect input from playwith user}
 \description{
-  Part of the \code{\link{playwith}} Application Programming Interface.
+  Part of the \pkg{playwith} Application Programming Interface.
 }
 \usage{
 playPointInput(playState = playDevCur(), prompt)
@@ -63,14 +63,14 @@ playRectInput(playState = playDevCur(), prompt)
 	}
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
-\seealso{ \code{\link{playSelectData}}, \code{\link{playwith.API}} }
+\seealso{ \code{\link{playSelectData}}, \link{playwith.API} }
 \examples{
 if (interactive()) {
 
 library(lattice)
 playwith(xyplot(Sepal.Width ~ Petal.Width | Species, data = iris))
-playPointInput(playDevCur())
-playRectInput(playDevCur())
+playPointInput()
+playRectInput()
 
 }
 }

@@ -47,7 +47,7 @@ plotCoords(name, call, envir, ...)
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{ \code{\link{xyData}}, \code{\link{xy.coords}} }
 \examples{
-## Note, these are not to be called directly;
+## Note, these are not designed to be called directly;
 ## they are used internally in playwith().
 ## But for demonstration purposes:
 pargs <- trellis.panelArgs(qqmath(rnorm(20)), packet = 1)

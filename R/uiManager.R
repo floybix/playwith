@@ -3,7 +3,7 @@
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
-constructUIManager <- function(playState)
+constructUIManager <- function(playState, tools)
 {
     menuEntries <-
         list(
@@ -32,17 +32,25 @@ constructUIManager <- function(playState)
     manager$insertActionGroup(plotActionGroup(playState), 0)
     manager$insertActionGroup(globalActionGroup(playState), 0)
     ## user-defined actions:
-    uact <- eval(playwith.getOption("custom.tools"))
-    ## TODO: and the 'tools' argument?
-    if (is.character(uact)) uact <- get(uact)
-    if (is.function(uact)) uact <- uact(playState)
-    if (is.list(uact)) {
-        tmp <- gtkActionGroupNew("CustomActions")
-        tmp$addActions(uact)
-        uact <- tmp
+    ## (from playwith.options and the tools argument)
+    customGroup <- gtkActionGroupNew("CustomActions")
+    if (length(tools) > 0) {
+        ## action specifications must have 6 or 7 elements
+#        ok <- (sapply(tools, length) %in% 6:7)
+#        if (any(!ok)) {
+#            warning(paste(sum(!ok),
+#                          "tools had wrong number of elements"))
+#            tools <- tools[ok]
+#        }
+        ## toggle actions must have 7 elements or a name "is_active"
+        toggles <- ((sapply(tools, length) == 7) |
+                    sapply(tools, function(x) !is.null(x$is_active)))
+        if (any(toggles))
+            customGroup$addToggleActions(tools[toggles], playState)
+        if (any(!toggles))
+            customGroup$addActions(tools[!toggles], playState)
+        manager$insertActionGroup(customGroup, 1)
     }
-    if (!is.null(uact))
-        manager$insertActionGroup(uact, 1)
     ## the menus themselves
     manager$insertActionGroup(menuGroup, 0)
     window$addAccelGroup(manager$getAccelGroup())
@@ -53,11 +61,35 @@ constructUIManager <- function(playState)
             manager$addUiFromFile(uifile)
     }
     manager$ensureUpdate()
-    # manager$addUi(manager$newMergeId(), path, name, action = NULL, type, top)
-    # type = GtkUIManagerItemType["auto"]
-    # gtkActionGroup("foo")
-    # manager$insertActionGroup(...)
     createStyleActions(playState, manager)
+    ## construct UI for user-defined actions
+    ## (unless ui.custom.xml was specified)
+    if (is.null(playwith.getOption("ui.custom.xml"))) {
+        customTb <- playwith.getOption("custom.toolbar")
+        for (i in seq_along(tools)) {
+            actionName <- tools[[i]][[1]]
+            action <- customGroup$getAction(actionName)
+            tm <- manager$getWidget("/MenuBar/ToolsMenu")
+            tm$getSubmenu()$append(action$createMenuItem())
+            if (!is.null(customTb)) {
+                tb <- manager$getWidget(paste("/", customTb, sep = ""))
+                tb$insert(action$createToolItem(), -1)
+            }
+            ## TODO: (e.g. need for accelerators)
+#            manager$addUi(manager$newMergeId(),
+#                      path = "/ui/MenuBar/ToolsMenu",
+#                      name = actionName,
+#                      action = actionName,
+#                      type = GtkUIManagerItemType["auto"],
+#                      top = FALSE)
+#            manager$addUi(manager$newMergeId(),
+#                      path = paste("/ui/", customTb, sep = ""),
+#                      name = actionName,
+#                      action = actionName,
+#                      type = GtkUIManagerItemType["auto"],
+#                      top = FALSE)
+        }
+    }
     manager
 }
 

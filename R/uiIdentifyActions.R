@@ -238,6 +238,9 @@ identifyCore <- function(playState, foo, remove = FALSE)
         if (length(which) == 0) return()
         idMenu <- gtkMenu()
         idMenu$popup(button=0, activate.time=gtkGetCurrentEventTime())
+        item <- gtkMenuItem("Add label to plot:")
+        item["sensitive"] <- FALSE
+        idMenu$append(item)
         ## order by distance from click
         which <- which[order(pdists[which])]
         for (w in which) {

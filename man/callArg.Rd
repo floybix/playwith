@@ -6,7 +6,7 @@
 \alias{updateMainCall}
 \title{Work with plot call arguments}
 \description{
-  Part of the \code{\link{playwith}} Application Programming Interface.
+  Part of the \pkg{playwith} Application Programming Interface.
 }
 \usage{
 callArg(playState, arg, eval = TRUE, data = NULL)
@@ -20,14 +20,14 @@ updateMainCall(playState)
 \arguments{
   \item{playState}{ a \code{\link{playState}} object representing the plot, window and device. }
   \item{arg}{ the argument name or number in the main plot call.
-  	Argument numbers start from 1 (so 0 refers to the main function name).
   	This can also be a language object
 	(e.g. \code{quote(scales$log)}).
+  	Argument numbers start from 1 (so 0 refers to the main function name).
 	This is evaluated in the calling environment, so can
 	refer to local variables (e.g. \code{data[[myname]]}).
   }
   \item{eval}{ whether to evaluate the argument before returning it.
-    Otherwise, just return the quoted expression that appears in the
+    Otherwise, just return the argument as it appears in the
     call. }
   \item{data}{ a list or environment in which to evaluate the argument.
     Typically this will be the "data" argument to lattice or qplot functions. }
@@ -52,7 +52,7 @@ updateMainCall(playState)
 	evaluated in a local environment (\code{playState$env}).
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
-\seealso{ \code{\link{playwith.API}} }
+\seealso{ \link{playwith.API} }
 \examples{
 if (interactive()) {
 

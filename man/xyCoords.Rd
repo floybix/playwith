@@ -32,7 +32,7 @@ None yet.
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
 \seealso{
-  \code{\link{playwith.API}},
+  \link{playwith.API},
   \code{\link{plotCoords}}
 }
 \examples{

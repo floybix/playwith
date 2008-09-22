@@ -135,14 +135,40 @@ playwith <-
         gSignalConnect(myWin, "delete-event", gtkmainquit_handler,
                        data=playState)
         ## run user-defined close action
-        gSignalConnect(myWin, "delete-event",  window.close_handler,
+        gSignalConnect(myWin, "delete-event", window.close_handler,
                        data=playState)
     }
     if (!is.null(title)) myWin["title"] <- title
     myVBox <- gtkVBox()
     myWin$add(myVBox)
     playState$win <- myWin
-    uiManager <- constructUIManager(playState)
+    ## pass custom tools to UI manager
+    optTools <- eval(playwith.getOption("custom.tools"))
+    if (is.character(optTools)) optTools <- get(optTools)
+    if (is.function(optTools)) optTools <- optTools(playState)
+    cTools <- c(tools, optTools)
+    ## extract any update / init actions attached to tools
+    cTools <- lapply(cTools, function(x) {
+        if (!is.null(x$update.action)) {
+            update.actions <- c(update.actions, x$update.action)
+            x$update.action <- NULL
+        }
+        if (!is.null(x$init.action)) {
+            init.actions <- c(init.actions, x$init.action)
+            x$init.action <- NULL
+        }
+        x
+    })
+    #cUpdates <- lapply(cTools, attr, "update.action")
+    #cUpdates <- cUpdates[!sapply(cUpdates, is.null)]
+    #cInits <- lapply(cTools, attr, "init.action")
+    #cInits <- cInits[!sapply(cInits, is.null)]
+    #update.actions <- c(update.actions, cUpdates)
+    #init.actions <- c(init.actions, cInits)
+    ## now remove attributes from tools
+    cTools <- lapply(cTools, c)
+    ## UI manager
+    uiManager <- constructUIManager(playState, cTools)
     actionGroups <- uiManager$getActionGroups()
     names(actionGroups) <- sapply(actionGroups, gtkActionGroupGetName)
     ## construct menus
@@ -291,6 +317,7 @@ playwith <-
     playState$pages <- 1
     playState$is.lattice <- FALSE
     playState$is.ggplot <- FALSE
+    playState$click.mode <- playwith.getOption("click.mode")
     playState$time.mode <- playwith.getOption("time.mode")
     playState$show.tooltips <- playwith.getOption("show.tooltips")
     playState$show.toolbars <- playwith.getOption("show.toolbars")
@@ -497,7 +524,7 @@ doPlayNewPlot <- function(playState)
     {
         if (is.null(playState$trellis$panel.args[[1]]$subscripts)) {
                 gmessage("Call may need subscripts=TRUE to correctly identify points.",
-                         title="Warning", icon="warning")
+                         title="Warning", icon="warning", parent = playState$win)
         }
     }
     ## initialisation actions for a new plot (see uiManager.R)
@@ -699,7 +726,8 @@ pages_post.plot.action <- function(widget, playState)
 window.close_handler <- function(widget, event, playState)
 {
     if (isTRUE(playState$keep)) {
-        ans <- gconfirm("This plot is marked to keep open. Really close?")
+        ans <- gconfirm("This plot is marked to keep open. Really close?",
+                        parent = playState$win)
         if (!isTRUE(ans)) return(TRUE) ## do not close
     }
     if (!is.null(playState$on.close)) {

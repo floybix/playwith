@@ -48,7 +48,7 @@ updateClickActions <- function(playState)
     isLatt <- playState$is.lattice
     isSplom <- (playState$callName %in% c("splom"))
     isLatt3D <- isLatt && !is.null(playState$trellis$panel.args.common$scales.3d)
-    hasPanels <- isLatt && (length(trellis.currentLayout()) > 1)
+    hasPanels <- isLatt && (length(playState$tmp$currentLayout) > 1)
     isBase <- !isLatt && is.null(playState$viewport)
     isBaseMulti <- isBase && any(par("mfrow") > 1)
     canIdent <- playState$tmp$identify.ok
@@ -92,6 +92,7 @@ device.click_handler <- function(widget, event, playState)
     if (!isTRUE(playState$tmp$plot.ready)) return(FALSE)
     ## bail out if another tool is handling the click (this ok?)
     if (isTRUE(playState$tmp$now.interacting)) return(FALSE)
+    playDevSet(playState)
     if (playState$tmp$need.reconfig) generateSpaces(playState)
     x <- event$x
     y <- event$y
@@ -290,17 +291,17 @@ rotate3DCore <- function(playState, foo)
     ## drag down corresponds to a positive 'x' arg
     ## drag right corresponds to a positive 'y' arg
     ## drag anticlockwise (in corner) corresponds to a positive 'z' arg
-    pan.x <- rawXLim(playState)
-    pan.y <- rawYLim(playState)
+    pnl.x <- rawXLim(playState)
+    pnl.y <- rawYLim(playState)
     x <- foo$coords$x
     y <- foo$coords$y
     xdelta <- diff(x)
     ydelta <- diff(y)
     angle <- atan2(y[2], x[2]) - atan2(y[1], x[1])
-    dist <- c(max(abs(x/pan.x)[1], abs(y/pan.y)[1]),
-              max(abs(x/pan.x)[2], abs(y/pan.y)[2]))
+    dist <- c(max(abs(x/pnl.x)[1], abs(y/pnl.y)[1]),
+              max(abs(x/pnl.x)[2], abs(y/pnl.y)[2]))
     ## TODO: avoid threshold for changing behaviour -- should be gradual
-    if ((abs(angle) < pi/2) && all(dist > 0.7)) {
+    if ((abs(angle) < pi/2) && all(dist > 0.5)) {
         rot <- list(z = 180 * angle / (2*pi))
     } else {
         ## TODO: should normalise by panel limits?
@@ -325,14 +326,41 @@ contextCore <- function(playState, foo, event)
     cMenu$popup(button = event$button, activate.time = event$time)
     cMenu["visible"] <- FALSE
     ## fill in menu items
-    showGeneralStuff <- TRUE
-    if (foo$space != "page") {
+    space <- foo$space
+    if (space != "page") {
         foo$is.click <- TRUE
         foo <- playSelectData(playState, foo = foo)
         id <- foo$subscripts
+        pos <- foo$pos
         if (length(id) > 0) {
             ## clicked on a data point, don't show general stuff
-            showGeneralStuff <- FALSE
+            cMenu["visible"] <- TRUE
+            ## action to add label to plot (current label value only)
+            item <- gtkMenuItem("Add label to plot:")
+            item["sensitive"] <- FALSE
+            cMenu$append(item)
+            label <- toString(playState$labels[[id]])
+            item <- gtkMenuItem(label)
+            gSignalConnect(item, "activate",
+                           function(widget, ...) {
+                               ## store newly identified points in playState
+                               ids.new <- data.frame(subscripts = id, pos = pos)
+                               i <- length(playState$ids) + 1
+                               playState$ids[[i]] <- ids.new
+                               names(playState$ids)[i] <- space
+                               playState$undoStack <- c(playState$undoStack, "ids")
+                               ## draw them
+                               drawLabelsInSpace(playState, subscripts = id,
+                                                 space = space, pos = pos)
+                               ## update other tool states
+                               updateAnnotationActionStates(playState)
+                           })
+            cMenu$append(item)
+            ## "set labels to..."
+            cMenu$append(gtkSeparatorMenuItem())
+            aGroup <- playState$actionGroups[["PlotActions"]]
+            cMenu$append(aGroup$getAction("SetLabelsTo")$createMenuItem())
+            ## show values of x / y / other variables
             x <- toString(foo$x, width = 30)
             y <- toString(foo$y, width = 30)
             item <- gtkMenuItem(paste("x:", x))
@@ -343,8 +371,9 @@ contextCore <- function(playState, foo, event)
             cMenu$append(item)
             dat <- getDataArg(playState)
             if (!is.null(dat)) {
-                rn <- if (.row_names_info(dat) <= 0)
-                    NULL else row.names(dat)
+#                rn <- if (.row_names_info(dat) <= 0)
+#                    NULL else row.names(dat)
+                rn <- row.names(dat)
                 if (!is.null(rn)) {
                     txt <- toString(rn[id], width = 30)
                     item <- gtkMenuItem(paste("row:", txt))
@@ -361,15 +390,14 @@ contextCore <- function(playState, foo, event)
                 }
             }
             cMenu$append(gtkSeparatorMenuItem())
-            aGroup <- playState$actionGroups[["PlotActions"]]
-            cMenu$append(aGroup$getAction("SetLabelsTo")$createMenuItem())
+            cMenu$append(aGroup$getAction("SetLabelStyle")$createMenuItem())
+            while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
+            return()
         }
     }
-    if (showGeneralStuff) {
-        cMenu$destroy()
-        cMenu <- playState$uiManager$getWidget("/ContextMenu")
-        cMenu$popup(button = event$button, activate.time = event$time)
-    }
-    cMenu["visible"] <- TRUE
+    ## did not click on a point, so show general stuff
+    cMenu$destroy()
+    cMenu <- playState$uiManager$getWidget("/ContextMenu")
+    cMenu$popup(button = event$button, activate.time = event$time)
     while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
 }

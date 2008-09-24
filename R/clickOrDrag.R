@@ -29,10 +29,11 @@ playSelectData <-
         x <- coords$x[1]
         y <- coords$y[1]
         ppxy <- playDo(playState,
-                       list(lx=convertX(unit(x, "native"), "points", TRUE),
+                       quote(list(
+                            lx=convertX(unit(x, "native"), "points", TRUE),
                             ly=convertY(unit(y, "native"), "points", TRUE),
                             px=convertX(unit(data$x, "native"), "points", TRUE),
-                            py=convertY(unit(data$y, "native"), "points", TRUE)),
+                            py=convertY(unit(data$y, "native"), "points", TRUE))),
                        space=foo$space)
         pdists <- with(ppxy, sqrt((px - lx)^2 + (py - ly)^2))
         if (min(pdists, na.rm = TRUE) > 18)
@@ -90,7 +91,7 @@ playPointInput <-
     if (space != "page") {
         coords <-
             playDo(playState,
-                   convertFromDevicePixels(dc$x, dc$y, valueOnly = TRUE),
+                   quote(convertFromDevicePixels(dc$x, dc$y, valueOnly = TRUE)),
                    space = space)
     }
     list(coords=coords, space=space, dc=dc, ndc=ndc, modifiers=modifiers)
@@ -159,7 +160,7 @@ playClickOrDrag <-
     if (space != "page") {
         coords <-
             playDo(playState,
-                   convertFromDevicePixels(dc$x, dc$y, valueOnly = TRUE),
+                   quote(convertFromDevicePixels(dc$x, dc$y, valueOnly = TRUE)),
                    space = space)
     }
     foo$coords <- coords

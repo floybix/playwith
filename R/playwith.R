@@ -483,7 +483,7 @@ doPlayNewPlot <- function(playState)
     playFreezeGUI(playState)
     on.exit(playThawGUI(playState))
     ## hide scrollbars if they are not needed
-    if (playState$time.mode == FALSE) {
+    if (!isTRUE(playState$time.mode)) {
         hideWidgetNoRedraw(playState, playState$widgets$timeScrollBox,
                            horiz=TRUE)
     }
@@ -581,6 +581,8 @@ playPostPlot <- function(playState)
         playState$pages <- nPages
         ## plot trellis object (specified page only)
         plotOnePage(result, page = playState$page)
+        ## need to store this, it refers to last plot only!
+        playState$tmp$currentLayout <- trellis.currentLayout(which="packet")
         playState$trellis <- result
     }
     if (inherits(result, "ggplot")) {
@@ -643,7 +645,7 @@ generateSpaces <- function(playState)
         playState$spaces <- names(playState$viewport)
     } else if (playState$is.lattice) {
         ## lattice plot
-        packets <- trellis.currentLayout(which="packet")
+        packets <- playState$tmp$currentLayout
         playState$spaces <- paste("packet", packets[packets > 0])
     } else {
         ## base graphics plot

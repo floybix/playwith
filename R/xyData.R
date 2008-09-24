@@ -8,7 +8,7 @@ getDataArg <- function(playState = playDevCur(), eval = TRUE)
     if (!is.null(playState$data.points)) {
         ## data.points were supplied
         tmp.data <- if (eval) playState$data.points
-        else quote(playDevCur()$data.points)
+        else quote(playDevCur()$data.points) ## unusual
     } else {
         ## data.points missing; guess from call
         mainCall <- mainCall(playState)
@@ -74,7 +74,7 @@ xyData <- function(playState = playDevCur(), space="plot")
         if (space == "plot") {
             space <- packet.number()
             if (length(space) == 0) {
-                packets <- trellis.currentLayout(which="packet")
+                packets <- playState$tmp$currentLayout
                 if (sum(packets > 0) > 1) stop("space not well specified")
                 space <- packets[packets > 0][1]
             }
@@ -84,7 +84,7 @@ xyData <- function(playState = playDevCur(), space="plot")
         if (is.na(packet) ||
             (packet > length(playState$trellis$panel.args)))
             return(NULL)
-        foo <- trellis.panelArgs(playState$trellis, packet.number=packet)
+        foo <- trellis.panelArgs(playState$trellis, packet)
         ## look for plotCoords method and pass panel.args
         return(plotCoords(callName, call = mainCall(playState),
                           envir = playState$env,

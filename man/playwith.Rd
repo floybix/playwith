@@ -226,19 +226,18 @@ playwith(expr,
 }
 \details{
   This function opens a GTK+ window containing a plot device
-  (from the \pkg{cairoDevice} package) and several toolbars.
+  (from the \pkg{cairoDevice} package), a menubar and toolbars.
   There is a call toolbar (similar to the "address bar" of a web browser) at the top,
-  showing the current plot call, which can also be edited in-place.
+  showing the current plot call, which can be edited in-place.
   Then there are up to four toolbars, one on each side of the plot.
-  The tools to be placed in these four toolbars can be specified
-  if necessary.
+  The user interface is customisable: see \code{\link{playwith.options}}.
 
   With the \code{\link{autoplay}} facility, \code{playwith} can function
   like a default graphics device (although it is not technically a
   graphics device itself, it is a wrapper around one).
 
   See \link{playwith.API} for help on controlling the plot once open, as
-  well ase defining new tools.
+  well as defining new tools.
   For the special case of tools to control parameter values, it is possible
   to create the tools automatically using the \code{parameters} argument.
 
@@ -318,7 +317,8 @@ playwith(expr,
 }
 \value{
   \code{playwith} invisibly returns the \code{\link{playState}} object representing
-  the plot, window and device.
+  the plot, window and device. The result of the plot call is available
+  as component \code{$result}.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{
@@ -333,10 +333,12 @@ options(device.ask.default = FALSE)
 
 ## Scatterplot (Lattice graphics).
 ## Labels are taken from rownames of data.
-## Just click on the plot to identify points.
+## Right-click on the plot to identify points,
+## or switch to Identify mode and left-click.
 playwith(xyplot(Income ~ log(Population / Area),
    data = data.frame(state.x77), groups = state.region,
    type = c("p", "smooth"), span = 1, auto.key = TRUE,
+   xlab = "Population density, 1974 (log scale)",
    ylab = "Income per capita, 1974"))
 
 ## Scatterplot (base graphics); similar.
@@ -344,13 +346,13 @@ urbAss <- USArrests[,c("UrbanPop", "Assault")]
 playwith(plot(urbAss, panel.first = lines(lowess(urbAss)),
    col = "blue", main = "Assault vs urbanisation",
    xlab = "Percent urban population, 1973",
-   ylab = "Assault arrests (per 100,000), 1973"))
+   ylab = "Assault arrests per 100k, 1973"))
 
 ## Time series plot (Lattice).
 ## Date-time range can be entered directly in "time mode"
 ## (supports numeric, Date, POSIXct, yearmon and yearqtr).
-## Click and drag to zoom in; right-click to zoom out;
-## and use the scrollbar to move along the x-axis.
+## Click and drag to zoom in, holding Shift to constrain;
+## or use the scrollbar to move along the x-axis.
 library(zoo)
 playwith(xyplot(sunspots ~ yearmon(time(sunspots)),
                 xlim = c(1900, 1930), type = "l"),
@@ -358,8 +360,7 @@ playwith(xyplot(sunspots ~ yearmon(time(sunspots)),
 
 ## Time series plot (base graphics); similar.
 ## Custom labels are passed directly to playwith.
-## Label style can also be set with playwith.options(),
-## or from a menu item inside the window.
+## Note that label style can be set from a menu item.
 tt <- time(treering)
 treeyears <- paste(abs(tt) + (tt <= 0),
                   ifelse(tt > 0, "CE", "BCE"))
@@ -368,11 +369,20 @@ playwith(plot(treering, xlim = c(1000, 1300)),
 
 ## Multi-panel Lattice plot.
 ## Need subscripts = TRUE to correctly identify points.
-## Scales are "same" so zooming affects all panels.
+## Scales are "same" so zooming applies to all panels.
 Depth <- equal.count(quakes$depth, number = 3, overlap = 0.1)
 playwith(xyplot(lat ~ long | Depth, data = quakes,
       subscripts = TRUE, aspect = "iso", pch = ".", cex = 2),
    labels = paste("mag", quakes$mag))
+
+## Spin and zoom for a 3D Lattice plot.
+## Drag on the plot to rotate in 3D (can be confusing).
+## Brushing is linked to the previous xyplot (if still open).
+playwith(cloud(-depth ~ long * lat, quakes, zlab = "altitude"),
+   new = TRUE, link.to = playDevCur(), click.mode = "Brush")
+
+## Set brushed points according to a logical condition
+playSetIDs(value = which(quakes$mag >= 6))
 
 ## Interactive control of a parameter with a slider.
 xx <- rnorm(50)
@@ -386,7 +396,7 @@ xx <- rnorm(50)
 kernels <- c("gaussian", "epanechnikov", "rectangular",
    "triangular", "biweight", "cosine", "optcosine")
 playwith(plot(density(xx, bw = bandwidth, kern = kernel), lty = lty),
-	parameters = list(bandwidth = I(c(0.1, 5:100/100)),
+	parameters = list(bandwidth = I(c(0.1, 1:50/50)),
             kernel = kernels, lty = 1:6))
 
 ## More parameters (logical, numeric, text).
@@ -417,11 +427,6 @@ playwith( {
        lty = c(2, -1, 1), pch = c(-1, 3, 4),
        merge = TRUE, bg = 'gray90')
 }, data.points = pts, labels = labs)
-
-## Simple spin and zoom for a 3D Lattice plot.
-## Drag on the plot to rotate in 3D.
-playwith(cloud(-depth ~ long * lat, quakes,
-    zlab = "altitude", screen = list()))
 
 ## A ggplot example.
 ## NOTE: only qplot()-based calls will work.

@@ -44,7 +44,7 @@ initIdentifyActions <- function(playState)
     if (is.null(labels)) {
         tmp.data <- getDataArg(playState)
         if (!is.null(tmp.data) &&
-            !is.list(tmp.data) &&
+            !inherits(tmp.data, "list") &&
             !is.environment(tmp.data))
         {
             ## data arg, probably a data.frame
@@ -67,16 +67,6 @@ initIdentifyActions <- function(playState)
                 labels <- labelsOrFormat(tmp.x)
             }
         }
-                ## hard-coded exceptions...
-#                if (playState$callName == "qqplot") {
-#                    tmp.x <- callArg(playState, 1)
-#                    tmp.y <- callArg(playState, 2)
-#                    x.lab <- makeLabels(tmp.x, orSeq=T)
-#                    y.lab <- makeLabels(tmp.y, orSeq=T)
-#                    labels <- paste(sep="",
-#                                    x.lab[order(tmp.x)], ",",
-#                                    y.lab[order(tmp.y)])
-#                }
     }
     playState$labels <- labels
     playState$tmp$identify.ok <- TRUE
@@ -251,8 +241,6 @@ identifyCore <- function(playState, foo, remove = FALSE)
             ss <- data$subscripts[[w]]
             if (is.null(ss)) ss <- w
             label <- toString(playState$labels[[ss]])
-            label <- paste(label, " (x: ", format(signif(datx, 4)),
-                           ", y: ", format(signif(daty, 4)), ")", sep="")
             item <- gtkMenuItem(label)
             idMenu$append(item)
             gSignalConnect(item, "activate",
@@ -273,13 +261,9 @@ identifyCore <- function(playState, foo, remove = FALSE)
                            }, data = list(ss = ss, pos = pos))
         }
         idMenu$append(gtkSeparatorMenuItem())
-        item <- gtkMenuItem("Right-click for detail")
+        item <- gtkMenuItem("Right-click on point for detail")
         item["sensitive"] <- FALSE
         idMenu$append(item)
-        idMenu$append(gtkSeparatorMenuItem())
-        aGroup <- playState$actionGroups[["PlotActions"]]
-        idMenu$append(aGroup$getAction("SetLabelsTo")$createMenuItem())
-        idMenu$append(aGroup$getAction("SetLabelStyle")$createMenuItem())
         ## show the menu
         while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
     } else {

@@ -118,7 +118,7 @@ updatePlotActions <- function(playState)
     }
     aGroup$getAction("ZeroX")$setVisible(nonZeroX)
     ## Expand
-    hasPanels <- isLatt && (length(trellis.currentLayout()) > 1)
+    hasPanels <- isLatt && (length(playState$tmp$currentLayout) > 1)
     expandActive <- aGroup$getAction("Expand")$getActive()
     aGroup$getAction("Expand")$setVisible(expandActive || hasPanels)
 }

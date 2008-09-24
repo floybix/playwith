@@ -25,6 +25,8 @@ initOptionsActions <- function(playState)
         timeScrollbar["sensitive"] <- playState$time.mode
         timeEntry["sensitive"] <- playState$time.mode
     })
+    if (playState$time.mode)
+        time.mode_init(playState)
 }
 
 updateOptionsActions <- function(playState)
@@ -34,8 +36,14 @@ updateOptionsActions <- function(playState)
     ## Time Mode
     hasTimeVec <- !is.null(playState$time.vector)
     aGroup$getAction("TimeMode")$setSensitive(hasArgs || hasTimeVec)
+    needInit <- (aGroup$getAction("TimeMode")$getActive() !=
+                 playState$time.mode)
     aGroup$getAction("TimeMode")$setActive(isTRUE(playState$time.mode))
-    time.mode_postplot_action(playState = playState)
+    if (needInit) {
+        time.mode_init(playState)
+    } else {
+        time.mode_update(playState)
+    }
     ## global options
     aGroup <- playState$actionGroups[["GlobalActions"]]
     ## Annotations options
@@ -50,6 +58,11 @@ updateOptionsActions <- function(playState)
 time.mode_handler <- function(widget, playState)
 {
     playState$time.mode <- widget["active"]
+    time.mode_init(playState)
+}
+
+time.mode_init <- function(playState)
+{
     blockRedraws(with (playState$widgets, {
         timeScrollBox["visible"] <- TRUE
         timeScrollbar["sensitive"] <- playState$time.mode
@@ -64,10 +77,10 @@ time.mode_handler <- function(widget, playState)
         }
     }
     ## update scrollbar etc
-    time.mode_postplot_action(widget, playState)
+    time.mode_update(playState)
 }
 
-time.mode_postplot_action <- function(widget, playState)
+time.mode_update <- function(playState)
 {
     if (!isTRUE(playState$time.mode)) return()
     #if (widget["active"] == FALSE) {

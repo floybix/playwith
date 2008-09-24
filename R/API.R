@@ -389,7 +389,7 @@ rawXYLim <- function(playState, space="plot")
         ## if space does not specify a panel, just pick one
         space <- packet.number()
         if (length(space) == 0) {
-            packets <- trellis.currentLayout(which="packet")
+            packets <- playState$tmp$currentLayout
             space <- packets[packets > 0][1]
         }
         space <- paste("packet", space)
@@ -508,7 +508,7 @@ playDo <- function(playState, expr, space = "plot",
         }
         else if (playState$is.lattice) {
             ## lattice plot
-            packets <- trellis.currentLayout(which="packet")
+            packets <- playState$tmp$currentLayout
             if (space == "plot") {
                 space <- packet.number()
                 if (length(space) == 0) {

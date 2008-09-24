@@ -88,7 +88,9 @@ playwith(expr,
       }
       \item{\code{stock_id}}{
 	The stock icon ID, or the name of an icon from the
-	icon theme. See \code{unlist(gtkStockListIds())} for a list.
+	icon theme. See \code{unlist(gtkStockListIds())} or
+	\url{http://library.gnome.org/devel/gtk/unstable/gtk-Stock-Items.html}
+	for a list.
       }
       \item{\code{label}}{
 	The label for the action. If label is NULL, the default
@@ -450,8 +452,8 @@ playwith(myGridPlot(1:10, 11:20, pch = 17), viewport = "theData")
 ## When the window is closed, ask user to confirm.
 ## Use only a subset of the default tools, and hide plot call.
 confirmClose <- function(playState) {
-	if (gconfirm("Close window and report IDs?"),
-                     parent = playState$win) {
+	if (gconfirm("Close window and report IDs?",
+                     parent = playState$win)) {
 		cat("Indices of identified data points:\n")
 		print(playGetIDs(playState))
 		return(FALSE) ## close
@@ -504,7 +506,7 @@ playDevOff()
 gc()
 ## or generate the trellis object first:
 trel <- qqmath(~ bigobj, f.value = ppoints(500))
-playwith(update(trel))
+playwith(trel)
 rm(trel)
 ## in this case, better to compute the sample first:
 subobj <- quantile(foo, ppoints(500), na.rm = TRUE)

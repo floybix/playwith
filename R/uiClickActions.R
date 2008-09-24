@@ -347,13 +347,13 @@ contextCore <- function(playState, foo, event)
                     NULL else row.names(dat)
                 if (!is.null(rn)) {
                     txt <- toString(rn[id], width = 30)
-                    item <- gtkMenuItem(txt)
+                    item <- gtkMenuItem(paste("row:", txt))
                     item["sensitive"] <- FALSE
                     cMenu$append(item)
                 }
                 cn <- colnames(dat)
                 for (i in seq_along(cn)) {
-                    txt <- toString(paste(cn[id], dat[id, i]),
+                    txt <- toString(paste(cn[i], dat[id, i]),
                                     width = 30)
                     item <- gtkMenuItem(txt)
                     item["sensitive"] <- FALSE

@@ -273,9 +273,10 @@ identifyCore <- function(playState, foo, remove = FALSE)
                            }, data = list(ss = ss, pos = pos))
         }
         idMenu$append(gtkSeparatorMenuItem())
-        item <- gtkMenuItem("(Right-click for details)")
+        item <- gtkMenuItem("Right-click for detail")
         item["sensitive"] <- FALSE
         idMenu$append(item)
+        idMenu$append(gtkSeparatorMenuItem())
         aGroup <- playState$actionGroups[["PlotActions"]]
         idMenu$append(aGroup$getAction("SetLabelsTo")$createMenuItem())
         idMenu$append(aGroup$getAction("SetLabelStyle")$createMenuItem())
@@ -329,9 +330,9 @@ set.labels_handler <- function(widget, playState)
     }
     rnCode <- deparseOneLine(call("rownames", datArg))
     labcode <- c(labcode,
-                 "xyData(playDevCur())$x",
-                 "xyData(playDevCur())$y",
-                 'with(xyData(playDevCur()), paste(y, x, sep="@"))',
+                 "xyData()$x",
+                 "xyData()$y",
+                 'with(xyData(), paste(y, x, sep="@"))',
                  "NULL",
                  rnCode)
     labdesc <- c(labdesc,
@@ -349,6 +350,7 @@ set.labels_handler <- function(widget, playState)
     ## show dialog
     gbasicdialog("Set labels to...", widget = box,
                  handler = function(h, ...) {
+                     playDevSet(playState)
                      expr <- parse(text=svalue(labedit))
                      tmp <- tryCatch(
                              eval(expr, dat, playState$env),

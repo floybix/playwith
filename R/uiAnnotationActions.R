@@ -51,7 +51,6 @@ drawAnnotations <- function(playState, return.code = FALSE)
 
 clear_handler <- function(widget, playState)
 {
-    ## TODO: allow new tools to specify more items to clear
     types <- c(
                if (length(playState$ids) > 0) "ids",
                if (length(playState$annotations) > 0) "annotations",
@@ -68,22 +67,7 @@ clear_handler <- function(widget, playState)
         playState$win$present()
         if (!isTRUE(result)) return()
     }
-    for (x in clear.types) {
-        if (x == "ids") {
-            playState$ids <- list()
-        } else if (x == "annotations") {
-            playState$annotations <- list()
-        } else if (x == "brushed") {
-            playState$linked$ids <- list()
-        }
-    }
-    ## clear destroys the undo stack
-    playState$undoStack <- list()
-    ## redraw
-    playReplot(playState)
-    ## update linked plots
-    if ("brushed" %in% clear.types)
-        updateLinkedSubscribers(playState, redraw = TRUE)
+    playClear(playState, type = clear.types)
 }
 
 undo.annotation_handler <- function(widget, playState)
@@ -151,8 +135,8 @@ arrowCore <- function(playState, foo)
     myXY <- if (space == "page") foo$ndc else foo$coords
     myXY$x <- signif(myXY$x, 7)
     myXY$y <- signif(myXY$y, 7)
-    annot <- call("panel.arrows", myXY$x[1], myXY$y[1],
-                  myXY$x[2], myXY$y[2])
+    annot <- with(myXY, call("panel.arrows",
+                             x[1], y[1], x[2], y[2]))
     arrow <- playState$arrow
     ## each of these may be NULL
     annot$angle <- arrow$angle
@@ -161,21 +145,8 @@ arrowCore <- function(playState, foo)
     annot$type <- arrow$type
     annot$ends <- arrow$ends
     annot$code <- arrow$code
-    ## store it
-    if (isBasicDeviceMode(playState)) {
-        ## just store previous display so can 'undo'
-        playState$tmp$recorded.plot <- try(recordPlot())
-    } else {
-        ## normal mode
-        i <- length(playState$annotations) + 1
-        playState$annotations[[i]] <- as.expression(annot)
-        names(playState$annotations)[i] <- space
-        playState$undoStack <- c(playState$undoStack, "annotations")
-    }
-    ## draw it
-    playDo(playState, annot, space=space)
-    ## update other tool states
-    updateAnnotationActionStates(playState)
+    ## draw it and store it
+    playAnnotate(playState, annot, space = space)
 }
 
 annotateCore <- function(playState, foo)
@@ -417,21 +388,18 @@ annotateCore <- function(playState, foo)
             showingPreview <<- TRUE
             return()
         }
-        ## store it
+        ## draw it and store it
         if (isBasicDeviceMode(playState)) {
             ## just store previous display so can 'undo'
             playState$tmp$recorded.plot <- originalPlot
+            ## draw it
+            playDo(playState, annot, space=space)
+            ## update other tool states
+            updateAnnotationActionStates(playState)
         } else {
             ## normal mode
-            i <- length(playState$annotations) + 1
-            playState$annotations[[i]] <- as.expression(annot)
-            names(playState$annotations)[i] <- space
-            playState$undoStack <- c(playState$undoStack, "annotations")
+            playAnnotate(playState, annot, space = space)
         }
-        ## draw it
-        playDo(playState, annot, space=space)
-        ## update other tool states
-        updateAnnotationActionStates(playState)
 
         dispose(h$obj)
         playState$win$present()

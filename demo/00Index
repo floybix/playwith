@@ -1,4 +1,4 @@
 helloTool      A simple "Hello world" tool for playwith().
-histogramTool  Draw marginal distributions for interactively selected plot regions.
+lineEqTool     Draw a line and place its equation on the plot.
+varLinkTool    Create a linked plot of covariates.
 pointsTool     A tool to add and remove points from a plot.
-clusterTool    A spin-button to set desired number of clusters.

@@ -40,9 +40,51 @@ playGetIDs <- function(playState = playDevCur(),
     ids.ids <- do.call(rbind, playState$ids)$subscripts
     ids <- NULL
     if ("ids" %in% type) ids <- ids.ids
-    if ("brushd" %in% type) ids <- c(ids, ids.brushed)
+    if ("brushed" %in% type) ids <- c(ids, ids.brushed)
     ids <- unique(sort(ids))
     if (labels) playState$labels[ids] else ids
+}
+
+playSetIDs <- function(playState = playDevCur(),
+                       value,
+                       type = "brushed",
+                       space = "plot",
+                       redraw = NA)
+{
+    type <- match.arg(type, c("ids", "brushed"))
+    if (is.logical(value))
+        value <- which(value)
+    if (type == "brushed") {
+        if (length(playState$linked$ids)) ## need redraw
+            if (is.na(redraw)) redraw <- TRUE
+        playState$linked$ids <- list(value)
+        if (is.na(redraw)) {
+            ## draw without a full redraw
+            drawLinkedLocal(playState)
+            updateLinkedSubscribers(playState)
+        }
+    }
+    if (type == "ids") {
+        if (length(playState$ids)) ## need redraw
+            if (is.na(redraw)) redraw <- TRUE
+        ids.new <- data.frame(subscripts = value,
+                              pos = 1)
+        playState$ids <- list(ids.new)
+        names(playState$ids) <- space
+        if (is.na(redraw)) {
+            ## draw without a full redraw
+            drawLabels(playState)
+        }
+    }
+    ## this destroys the undo stack
+    playState$undoStack <- list()
+    ## redraw
+    if (isTRUE(redraw)) {
+        playReplot(playState)
+        ## update linked plots
+        if ("brushed" %in% type)
+            updateLinkedSubscribers(playState, redraw = TRUE)
+    }
 }
 
 playUnlink <- function(playState = playDevCur())
@@ -506,6 +548,49 @@ playDo <- function(playState, expr, space = "plot",
     ## do the stuff and return the result
     seekViewport(vpName)
     eval(expr, parent.frame(), playState$env)
+}
+
+playAnnotate <- function(playState, annot, space = "plot")
+{
+    if (isBasicDeviceMode(playState)) {
+        ## just store previous display so can 'undo'
+        playState$tmp$recorded.plot <- try(recordPlot())
+    } else {
+        ## normal mode
+        i <- length(playState$annotations) + 1
+        playState$annotations[[i]] <- as.expression(annot)
+        names(playState$annotations)[i] <- space
+        playState$undoStack <- c(playState$undoStack, "annotations")
+    }
+    ## draw it
+    playDo(playState, annot, space = space)
+    ## update other tool states
+    updateAnnotationActionStates(playState)
+}
+
+playClear <- function(playState = playDevCur(),
+                      type = c("annotations", "ids", "brushed"),
+                      redraw = TRUE)
+{
+    type <- match.arg(type, several.ok = TRUE)
+    for (x in type) {
+        if (x == "ids") {
+            playState$ids <- list()
+        } else if (x == "annotations") {
+            playState$annotations <- list()
+        } else if (x == "brushed") {
+            playState$linked$ids <- list()
+        }
+    }
+    ## clear destroys the undo stack
+    playState$undoStack <- list()
+    ## redraw
+    if (redraw) {
+        playReplot(playState)
+        ## update linked plots
+        if ("brushed" %in% type)
+            updateLinkedSubscribers(playState, redraw = TRUE)
+    }
 }
 
 ## TODO: store value in playState

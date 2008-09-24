@@ -24,7 +24,7 @@ points_handler <- function(widget, playState) {
         ## store in local environment
         playState$env$localxy <- xy
         if (playState$is.lattice) {
-            ## lattice plot: use `data` argument
+            ## lattice plot: use formula
             callArg(playState, 1) <- quote(y ~ x)
             callArg(playState, "data") <- quote(localxy)
         } else {

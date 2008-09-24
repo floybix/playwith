@@ -55,7 +55,8 @@ doMySub <- quote({
 playwith.options(styleShortcuts = list("mySub" = doMySub))
 
 ## try it:
-playwith(plot(1:10))
+if (interactive())
+  playwith(plot(1:10))
 
 ## reset
 playwith.options(oopt)

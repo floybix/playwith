@@ -8,6 +8,7 @@
 \alias{playNewPlot}
 \alias{playSourceCode}
 \alias{playUnlink}
+\alias{playAnnotate}
 \alias{playPrompt}
 \alias{playFreezeGUI}
 \alias{playThawGUI}
@@ -43,26 +44,50 @@
 	\section{Device management}{
 	  These are similar to \code{\link{dev.set}} etc.
 	  \describe{
-	    \item{\code{playDevCur()}}{ returns the current or last
-		active \code{playState} -- this is not necessarily the active
-		graphics device. }
-	    \item{\code{playDevList()}}{ lists all open \code{playState}s. }
-	    \item{\code{playDevSet(playState)}}{ sets the
-		current \code{playState}, and sets the active graphics device. }
-	    \item{\code{playDevOff(playState)}}{ closes the device and
-		window (\code{dev.off()} also works). }
+	    \item{\code{playDevCur()}}{
+	      returns the current or last
+	      active \code{playState} -- this is not necessarily the active
+	      graphics device.
+	    }
+	    \item{\code{playDevList()}}{
+	      lists all open \code{playState}s.
+	    }
+	    \item{\code{playDevSet(playState)}}{
+	      sets the current \code{playState}, and sets the active
+	      graphics device.
+	    }
+	    \item{\code{playDevOff(playState)}}{
+	      closes the device and window (\code{dev.off()} also
+	      works).
+	    }
 	  }
 	}
 
 	\section{Common user commands}{
 	  These functions are also available as menu items.
 	  \describe{
-	    \item{\code{\link{playGetIDs}(playState, type, labels)}}{ returns
-	      indices or labels of currently selected data points. }
+	    \item{\code{\link{playGetIDs}(playState, type, labels)}}{
+	      returns indices (or labels) of currently brushed or labelled
+	      data points.
+	    }
+	    \item{\code{\link{playSetIDs}(playState, value, type, space,
+		redraw)}}{
+	      sets which data points are brushed or
+	      labelled. \code{type} defaults to \code{"brushed"};
+	      \code{space} is ignored unless \code{type = "ids"}.
+	    }
+	    \item{\code{\link{playClear}(playState, type, redraw)}}{
+	      remove one or more of the \code{type}s
+	      \code{"annotations"}, \code{"ids"}, \code{"brushed"}. The
+	      latter will also apply to any linked plots. If
+	      \code{redraw = FALSE} the display will not be updated.
+	    }
 	    \item{\code{playUnlink(playState)}}{ removes links from the
-	      given plot to any other plots (for linked brushing). }
+	      given plot to any other plots (for linked brushing).
+	    }
 	    \item{\code{playSourceCode(playState)}}{ returns (deparsed)
-	      R code to reproduce the current plot display. }
+	      R code to reproduce the current plot display.
+	    }
 	  }
 	}
 
@@ -95,7 +120,14 @@
 	    \item{\code{\link{playDo}(playState, expr, space, clip.off,
 		return.code)}}{ evalutes the given expression in the
 	      given plot \dfn{space}, i.e. after moving to the
-	      corresponding grid viewport. }
+	      corresponding grid viewport.
+	    }
+	    \item{\code{playAnnotate(playState, annot, space)}}{
+	      adds the annotation (a call or expression to draw on the
+	      plot) to the list of persistent annotations, and draws
+	      them. These will always be drawn after plotting (unless they
+	      are removed by the user).
+	    }
 	    \item{\code{\link{rawXLim}(playState, space)}}{
 	      gets or sets the x axis limits, in native coordinates of
 	      the given \dfn{space} (viewport).

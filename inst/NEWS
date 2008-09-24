@@ -1,7 +1,7 @@
 
 Changes in Version 0.9-20
 
-  o GUI overhaul! Menus, new tools, new infrastructure, etc.
+  o Package overhaul! Menus, new tools, new infrastructure, etc.
     Note that playwith() arguments and playwith.options have changed.
 
   o Plot Settings overhaul, allows scales and axes to be customised.

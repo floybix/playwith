@@ -8,6 +8,9 @@ import(grDevices)
 importFrom(graphics, par, plot)
 import(utils)
 
+## temporary
+export(marginal.plot)
+
 # the main function
 export(playwith,
        autoplay,

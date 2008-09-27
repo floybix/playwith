@@ -75,9 +75,11 @@ options(device.ask.default = FALSE)
 ##      uptake ~ conc | Type, groups = Treatment
 latticist(CO2)
 
+## environmental dataset: see ?environmental
+## Daily measurements related to ozone pollution in NYC 1973.
 ## Specify initial display:
-latticist(plot = quote(xyplot(uptake ~ conc, CO2)))
-## Now press Enter in one of the text fields to recompose.
+readline("Hit Enter for 'environmental' example...")
+latticist(plot = quote(parallel(environmental, col = 1)))
 
 ## National Health and Nutrition Examination Survey.
 ## Try: ~ Smoke, groups = Sex

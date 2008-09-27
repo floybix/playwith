@@ -1,4 +1,12 @@
 
+Changes in Version 0.9-21
+
+  o Fixed style shortcuts setting region$col palette.
+
+  o Fixed element 'update.action' in tool specification lists.
+
+  o Latticist: dodge bug in latticeExtra::marginal.plot().
+
 Changes in Version 0.9-20
 
   o Package overhaul! Menus, new tools, new infrastructure, etc.

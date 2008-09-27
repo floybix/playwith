@@ -148,25 +148,18 @@ playwith <-
     if (is.function(optTools)) optTools <- optTools(playState)
     cTools <- c(tools, optTools)
     ## extract any update / init actions attached to tools
-    cTools <- lapply(cTools, function(x) {
-        if (!is.null(x$update.action)) {
-            update.actions <- c(update.actions, x$update.action)
-            x$update.action <- NULL
+    for (i in seq_along(cTools)) {
+        xUpd <- cTools[[i]]$update.action
+        xIni <- cTools[[i]]$init.action
+        if (!is.null(xUpd)) {
+            update.actions <- c(update.actions, xUpd)
+            cTools[[i]]$update.action <- NULL
         }
-        if (!is.null(x$init.action)) {
-            init.actions <- c(init.actions, x$init.action)
-            x$init.action <- NULL
+        if (!is.null(xIni)) {
+            init.actions <- c(init.actions, xIni)
+            cTools[[i]]$init.action <- NULL
         }
-        x
-    })
-    #cUpdates <- lapply(cTools, attr, "update.action")
-    #cUpdates <- cUpdates[!sapply(cUpdates, is.null)]
-    #cInits <- lapply(cTools, attr, "init.action")
-    #cInits <- cInits[!sapply(cInits, is.null)]
-    #update.actions <- c(update.actions, cUpdates)
-    #init.actions <- c(init.actions, cInits)
-    ## now remove attributes from tools
-    cTools <- lapply(cTools, c)
+    }
     ## UI manager
     uiManager <- constructUIManager(playState, cTools)
     actionGroups <- uiManager$getActionGroups()

@@ -35,13 +35,6 @@ constructUIManager <- function(playState, tools)
     ## (from playwith.options and the tools argument)
     customGroup <- gtkActionGroupNew("CustomActions")
     if (length(tools) > 0) {
-        ## action specifications must have 6 or 7 elements
-#        ok <- (sapply(tools, length) %in% 6:7)
-#        if (any(!ok)) {
-#            warning(paste(sum(!ok),
-#                          "tools had wrong number of elements"))
-#            tools <- tools[ok]
-#        }
         ## toggle actions must have 7 elements or a name "is_active"
         toggles <- ((sapply(tools, length) == 7) |
                     sapply(tools, function(x) !is.null(x$is_active)))

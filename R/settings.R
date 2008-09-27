@@ -37,17 +37,17 @@
          trellis.par.set(list(strip.background = list(col = grey(7:1/8)),
                               strip.shingle = list(col = grey(6:0/8)))),
          "Grey color ramp" =
-         trellis.par.set(list(regions = colorRampPalette(brewer.pal(9, "Greys"))(100))),
+         trellis.par.set(list(regions = list(col = colorRampPalette(brewer.pal(9, "Greys"))(100)))),
          "Spectral color ramp" =
-         trellis.par.set(list(regions = colorRampPalette(brewer.pal(11, "Spectral"))(100))),
+         trellis.par.set(list(regions = list(col = colorRampPalette(brewer.pal(11, "Spectral"))(100)))),
          "Red vs blue via white" =
-         trellis.par.set(list(regions = colorRampPalette(brewer.pal(11, "RdBu"))(100))),
+         trellis.par.set(list(regions = list(col = colorRampPalette(brewer.pal(11, "RdBu"))(100)))),
          "Dry vs wet (BrBG)" =
-         trellis.par.set(list(regions = colorRampPalette(brewer.pal(11, "BrBG"))(100))),
+         trellis.par.set(list(regions = list(col = colorRampPalette(brewer.pal(11, "BrBG"))(100)))),
          "Yl - Gn - Bu" =
-         trellis.par.set(list(regions = colorRampPalette(brewer.pal(9, "YlGnBu"))(100))),
+         trellis.par.set(list(regions = list(col = colorRampPalette(brewer.pal(9, "YlGnBu"))(100)))),
          "Yl - Or - Rd" =
-         trellis.par.set(list(regions = colorRampPalette(brewer.pal(9, "YlOrRd"))(100))),
+         trellis.par.set(list(regions = list(col = colorRampPalette(brewer.pal(9, "YlOrRd"))(100)))),
          "Layout as table" =
          lattice.options(default.args = list(as.table = TRUE))
          ),

@@ -382,6 +382,7 @@ playwith(cloud(-depth ~ long * lat, quakes, zlab = "altitude"),
    new = TRUE, link.to = playDevCur(), click.mode = "Brush")
 
 ## Set brushed points according to a logical condition
+## (needs recent version of lattice)
 playSetIDs(value = which(quakes$mag >= 6))
 
 ## Interactive control of a parameter with a slider.

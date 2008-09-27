@@ -193,6 +193,7 @@ plotCoords.qqmath <- function(name, call, envir, panel.args, ...)
 
 plotCoords.cloud <- function(name, call, envir, panel.args, ...)
 {
+    if (!exists("panel.identify.cloud")) return(NULL)
     idcall <- call("panel.identify.cloud", panel.args = panel.args)
     for (x in c("screen", "R.mat", "perspective", "distance", "aspect")) {
         val <- call[[x]]

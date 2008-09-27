@@ -336,26 +336,29 @@ contextCore <- function(playState, foo, event)
             ## clicked on a data point, don't show general stuff
             cMenu["visible"] <- TRUE
             ## action to add label to plot (current label value only)
-            item <- gtkMenuItem("Add label to plot:")
-            item["sensitive"] <- FALSE
-            cMenu$append(item)
-            label <- toString(playState$labels[[id]])
-            item <- gtkMenuItem(label)
-            gSignalConnect(item, "activate",
-                           function(widget, ...) {
-                               ## store newly identified points in playState
-                               ids.new <- data.frame(subscripts = id, pos = pos)
-                               i <- length(playState$ids) + 1
-                               playState$ids[[i]] <- ids.new
-                               names(playState$ids)[i] <- space
-                               playState$undoStack <- c(playState$undoStack, "ids")
-                               ## draw them
-                               drawLabelsInSpace(playState, subscripts = id,
-                                                 space = space, pos = pos)
-                               ## update other tool states
-                               updateAnnotationActionStates(playState)
-                           })
-            cMenu$append(item)
+            if (length(playState$labels) > id[1]) {
+                item <- gtkMenuItem("Add label to plot:")
+                item["sensitive"] <- FALSE
+                cMenu$append(item)
+                label <-
+                    label <- toString(playState$labels[[id]])
+                item <- gtkMenuItem(label)
+                gSignalConnect(item, "activate",
+                               function(widget, ...) {
+                                   ## store newly identified points in playState
+                                   ids.new <- data.frame(subscripts = id, pos = pos)
+                                   i <- length(playState$ids) + 1
+                                   playState$ids[[i]] <- ids.new
+                                   names(playState$ids)[i] <- space
+                                   playState$undoStack <- c(playState$undoStack, "ids")
+                                   ## draw them
+                                   drawLabelsInSpace(playState, subscripts = id,
+                                                     space = space, pos = pos)
+                                   ## update other tool states
+                                   updateAnnotationActionStates(playState)
+                               })
+                cMenu$append(item)
+            }
             ## "set labels to..."
             cMenu$append(gtkSeparatorMenuItem())
             aGroup <- playState$actionGroups[["PlotActions"]]

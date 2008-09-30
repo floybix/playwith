@@ -125,7 +125,6 @@ playwith <-
         myWin["default-width"] <- width * 96
         myWin["default-height"] <- height * 96
         myWin["modal"] <- modal
-        #myWin$show()
         ## switch to GTK event loop while the window is in focus (for tooltips)
         myWin$addEvents(GdkEventMask["focus-change-mask"])
         gSignalConnect(myWin, "focus-in-event", gtkmain_handler,
@@ -244,9 +243,14 @@ playwith <-
                    + GdkEventMask["button-release-mask"]
                    + GdkEventMask["exposure-mask"])
     myHBox$packStart(myDA)
-    ## note, this constraint is removed below
-    myDA$setSizeRequest(width * 96, height * 96)
+    myWin$show()
     asCairoDevice(myDA, pointsize = pointsize)
+    ## note, this constraint is removed below
+    dpi <- dev.size("px") / dev.size("in")
+    myDA$setSizeRequest(width * dpi[1], height * dpi[2])
+    ## try to force redraw
+    gdkWindowProcessAllUpdates()
+    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
     ## need to regenerate coord spaces after resize
     gSignalConnect(myDA, "configure-event", configure_handler,
                    data=playState)
@@ -303,7 +307,6 @@ playwith <-
     myHBox["resize-mode"] <- GtkResizeMode["queue"] ## does nothing?
     ## after resize, remove minimum size constraint from device
     myDA$setSizeRequest(-1, -1)
-    myWin$show()
     ## store the state of this plot window in a new environment
     ## set per-window options -- can be replaced by explicit arguments
     playState$page <- 1

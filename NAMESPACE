@@ -8,7 +8,7 @@ import(grDevices)
 importFrom(graphics, par, plot)
 import(utils)
 
-## temporary
+## temporary (TODO)
 export(marginal.plot)
 
 # the main function

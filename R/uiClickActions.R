@@ -239,7 +239,10 @@ zoomCore <- function(playState, foo)
 zoomoutCore <- function(playState, foo)
 {
     nav.x <- !isTRUE(foo$yOnly)
-    nav.y <- !isTRUE(foo$xOnly)
+    #nav.y <- !isTRUE(foo$xOnly)
+    ## in time.mode, only zoom along x-axis
+    nav.y <- (!isTRUE(playState$time.mode) &&
+              is.null(playState$time.vector))
     ## find existing scales
     xlim <- rawXLim(playState, space=foo$space)
     ylim <- rawYLim(playState, space=foo$space)
@@ -364,12 +367,14 @@ contextCore <- function(playState, foo, event)
             aGroup <- playState$actionGroups[["PlotActions"]]
             cMenu$append(aGroup$getAction("SetLabelsTo")$createMenuItem())
             ## show values of x / y / other variables
-            x <- toString(foo$x, width = 30)
-            y <- toString(foo$y, width = 30)
-            item <- gtkMenuItem(paste("x:", x))
+            x <- foo$x
+            y <- foo$y
+            if (is.numeric(x)) x <- round(x, 7)
+            if (is.numeric(y)) y <- round(y, 7)
+            item <- gtkMenuItem(paste("x:", toString(x, width = 30)))
             item["sensitive"] <- FALSE
             cMenu$append(item)
-            item <- gtkMenuItem(paste("y:", y))
+            item <- gtkMenuItem(paste("y:", toString(y, width = 30)))
             item["sensitive"] <- FALSE
             cMenu$append(item)
             dat <- getDataArg(playState)

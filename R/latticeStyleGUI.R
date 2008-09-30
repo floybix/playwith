@@ -823,10 +823,11 @@ latticeStyleGUI <-
 
     ## USER.TEXT
     addtextg <- gframe("Annotations (user.text)", horizontal = FALSE,
-                       spacing = 1, container = extrag)
-    tmp1g <- ggroupThin(container = addtextg)
-    tmp2g <- ggroupThin(container = addtextg)
-    tmp3g <- ggroupThin(container = addtextg)
+                       container = extrag)
+    svalue(addtextg) <- 1
+    tmp1g <- ggroupThin(spacing = 0, container = addtextg)
+    tmp2g <- ggroupThin(spacing = 0, container = addtextg)
+    tmp3g <- ggroupThin(spacing = 0, container = addtextg)
     glabel("Color: ", container = tmp1g)
     wid.user.text.col <- gdroplist(colList, selected = 0, container = tmp1g,
                                   editable = TRUE, handler = setPar,
@@ -857,7 +858,7 @@ latticeStyleGUI <-
 
     ## ADD.LINE
     addlineg <- gframe("Annotations (add.line)", horizontal = FALSE,
-                       container = extrag)
+                       spacing = 0, container = extrag)
     tmp1g <- ggroupThin(container = addlineg)
     tmp2g <- ggroupThin(container = addlineg)
     glabel("Color:", container = tmp1g)

@@ -3,7 +3,7 @@
 \alias{plotOnePage}
 \title{An interactive plot GUI}
 \description{
-  A graphical user interface for viewing and interacting with \R plots.
+  A GTK+ graphical user interface for exploring and editing \R plots.
 }
 \usage{
 playwith(expr,
@@ -333,8 +333,7 @@ options(device.ask.default = FALSE)
 
 ## Scatterplot (Lattice graphics).
 ## Labels are taken from rownames of data.
-## Right-click on the plot to identify points,
-## or switch to Identify mode and left-click.
+## Right-click on the plot to identify points.
 playwith(xyplot(Income ~ log(Population / Area),
    data = data.frame(state.x77), groups = state.region,
    type = c("p", "smooth"), span = 1, auto.key = TRUE,
@@ -342,6 +341,7 @@ playwith(xyplot(Income ~ log(Population / Area),
    ylab = "Income per capita, 1974"))
 
 ## Scatterplot (base graphics); similar.
+## Note that label style can be set from a menu item.
 urbAss <- USArrests[,c("UrbanPop", "Assault")]
 playwith(plot(urbAss, panel.first = lines(lowess(urbAss)),
    col = "blue", main = "Assault vs urbanisation",
@@ -360,7 +360,6 @@ playwith(xyplot(sunspots ~ yearmon(time(sunspots)),
 
 ## Time series plot (base graphics); similar.
 ## Custom labels are passed directly to playwith.
-## Note that label style can be set from a menu item.
 tt <- time(treering)
 treeyears <- paste(abs(tt) + (tt <= 0),
                   ifelse(tt > 0, "CE", "BCE"))
@@ -370,6 +369,8 @@ playwith(plot(treering, xlim = c(1000, 1300)),
 ## Multi-panel Lattice plot.
 ## Need subscripts = TRUE to correctly identify points.
 ## Scales are "same" so zooming applies to all panels.
+## Use the 'Panel' tool to expand a single panel, then use
+## the vertical scrollbar to change pages.
 Depth <- equal.count(quakes$depth, number = 3, overlap = 0.1)
 playwith(xyplot(lat ~ long | Depth, data = quakes,
       subscripts = TRUE, aspect = "iso", pch = ".", cex = 2),
@@ -378,11 +379,11 @@ playwith(xyplot(lat ~ long | Depth, data = quakes,
 ## Spin and zoom for a 3D Lattice plot.
 ## Drag on the plot to rotate in 3D (can be confusing).
 ## Brushing is linked to the previous xyplot (if still open).
+## Note, brushing 'cloud' requires a recent version of Lattice.
 playwith(cloud(-depth ~ long * lat, quakes, zlab = "altitude"),
    new = TRUE, link.to = playDevCur(), click.mode = "Brush")
 
-## Set brushed points according to a logical condition
-## (needs recent version of lattice)
+## Set brushed points according to a logical condition.
 playSetIDs(value = which(quakes$mag >= 6))
 
 ## Interactive control of a parameter with a slider.
@@ -456,7 +457,6 @@ playwith(myGridPlot(1:10, 11:20, pch = 17), viewport = "theData")
 
 ## Presenting the window as a modal dialog box.
 ## When the window is closed, ask user to confirm.
-## Use only a subset of the default tools, and hide plot call.
 confirmClose <- function(playState) {
 	if (gconfirm("Close window and report IDs?",
                      parent = playState$win)) {
@@ -488,13 +488,13 @@ doLocalStuff <- function(...) {
 }
 doLocalStuff(title = "locals only") ## eval.args = NA is default
 ## List objects that have been copied and stored:
-sapply(playDevCur()$env, object.size)
-## i.e. if you rm(x_global) now, redraws will fail.
+## Note: if you rm(x_global) now, redraws will fail.
+ls(playDevCur()$env)
 ## Next: store all data objects (in a new window):
 doLocalStuff(title = "all stored", eval.args = TRUE, new = TRUE)
-sapply(playDevCur()$env, object.size)
+ls(playDevCur()$env)
 ## Now there are two devices open:
-playDevList()
+str(playDevList())
 playDevCur()
 playDevOff()
 playDevCur()

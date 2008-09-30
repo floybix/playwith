@@ -39,11 +39,10 @@ updateOptionsActions <- function(playState)
     needInit <- (aGroup$getAction("TimeMode")$getActive() !=
                  playState$time.mode)
     aGroup$getAction("TimeMode")$setActive(isTRUE(playState$time.mode))
-    if (needInit) {
+    if (needInit)
         time.mode_init(playState)
-    } else {
-        time.mode_update(playState)
-    }
+    ## update scrollbar etc
+    time.mode_update(playState)
     ## global options
     aGroup <- playState$actionGroups[["GlobalActions"]]
     ## Annotations options
@@ -59,6 +58,8 @@ time.mode_handler <- function(widget, playState)
 {
     playState$time.mode <- widget["active"]
     time.mode_init(playState)
+    ## update scrollbar etc
+    time.mode_update(playState)
 }
 
 time.mode_init <- function(playState)
@@ -72,12 +73,10 @@ time.mode_init <- function(playState)
     if (playState$time.mode) {
         if (is.null(playState$time.vector)) {
             xy <- xyData(playState, space="page")
-            playState$time.mode.x.range <- range(as.numeric(xy$x))
-            playState$time.mode.x.attr <- attributes(xy$x)
+            playState$tmp$time.mode.x.range <- range(as.numeric(xy$x))
+            playState$tmp$time.mode.x.attr <- attributes(xy$x)
         }
     }
-    ## update scrollbar etc
-    time.mode_update(playState)
 }
 
 time.mode_update <- function(playState)
@@ -104,7 +103,7 @@ time.mode_update <- function(playState)
             widg$timeScrollbar$setValue(x.pos) ## need this (bug?)
             return()
         }
-        x.range <- playState$time.mode.x.range
+        x.range <- playState$tmp$time.mode.x.range
         x.lim <- rawXLim(playState)
         x.page <- abs(diff(x.lim))
         x.page <- min(x.page, abs(diff(x.range)))
@@ -113,16 +112,15 @@ time.mode_update <- function(playState)
         x.pos <- min(x.pos, max(x.range))
         ## format x limits for text box
         xlim <- signif(x.lim, 6)
-        class(x.lim) <- playState$time.mode.x.attr$class
+        class(x.lim) <- playState$tmp$time.mode.x.attr$class
         if ("yearmon" %in% class(x.lim))
             x.lim <- as.yearmon(x.lim) ## to round correctly
         if ("yearqtr" %in% class(x.lim))
             x.lim <- as.yearmon(x.lim) ## to format as "%b %Y"
         if ("POSIXt" %in% class(x.lim))
-            attr(x.lim, "tzone") <- playState$time.mode.x.attr$tzone
+            attr(x.lim, "tzone") <- playState$tmp$time.mode.x.attr$tzone
         if ("factor" %in% class(x.lim))
-            attr(x.lim, "levels") <- playState$time.mode.x.attr$levels
-                                        #mostattributes(x.lim) <- playState$time.mode.x.attr
+            attr(x.lim, "levels") <- playState$tmp$time.mode.x.attr$levels
         widg$timeEntry["text"] <- paste(format(x.lim), collapse=" to ")
         ## set up scrollbar
         widg$timeScrollbar["adjustment"] <-
@@ -147,7 +145,7 @@ time.mode_scrollbar_handler <- function(widget, playState)
     if (widget["adjustment"]["page-size"] == 0) return() ## sanitycheck
                                         #oldLim <- rawXLim(playState)
                                         #if (min(oldLim) == min(newLim)) return()
-    newLim <- signif(newLim, 8)
+    newLim <- round(newLim, 7)
     rawXLim(playState) <- newLim
     playReplot(playState)
 }
@@ -187,7 +185,7 @@ time.mode_entry_handler <- function(widget, playState)
         gmessage.error("Give bounds in form \"LOWER to UPPER\".")
         return()
     }
-    x.attr <- playState$time.mode.x.attr
+    x.attr <- playState$tmp$time.mode.x.attr
     cls <- x.attr$class
     if ("POSIXt" %in% cls) newLim <- as.POSIXct(newLim)
     else if ("Date" %in% cls) newLim <- as.Date(newLim)

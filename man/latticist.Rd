@@ -1,6 +1,7 @@
 \name{latticist}
 \alias{latticist}
 \alias{try.prepanel.loess}
+\alias{marginal.plot}
 \title{ A Lattice GUI }
 \description{
   Interactively explore a data set using \link[lattice]{Lattice} displays.

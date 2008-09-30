@@ -121,8 +121,11 @@ makeLatticist <- function(dat)
     MAXPANELS <- 16
     INIT.NLEVELS <- 4
 
+    ## this is the init.action
     function(playState)
     {
+        ## check that it is a sensible call
+        if (!isTRUE(playState$accepts.arguments)) return()
         ## create list to store some settings
         if (length(playState$latticist) == 0)
             playState$latticist <- list()

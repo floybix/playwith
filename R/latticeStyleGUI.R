@@ -87,11 +87,11 @@ latticeStyleGUI <-
     brewerQualList <- rownames(subset(brewer.pal.info, category=="qual"))
     brewerSeqList <- rownames(subset(brewer.pal.info, category=="seq"))
     brewerDivList <- rownames(subset(brewer.pal.info, category=="div"))
-    familyList <- c("serif", "sans", "mono", "symbol",
+    familyList <- c("serif", "sans", "mono",
                     "HersheySerif", "HersheySans", "HersheyScript",
                     "HersheyGothicEnglish", "HersheyGothicGerman", "HersheyGothicItalian",
                     "HersheySymbol", "HersheySansSymbol")
-    faceList <- c("plain", "bold", "italic", "bold.italic",
+    faceList <- c("plain", "bold", "italic", "bold.italic", "symbol",
                   "cyrillic", "cyrillic.oblique", "EUC")
     pchList <-
         list(`open circle` = 1,

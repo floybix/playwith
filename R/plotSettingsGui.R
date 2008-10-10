@@ -20,6 +20,8 @@ latticeSettingsGUI <- function(playState)
     wid <- list()
 
     origCall <- playState$call
+    makeScalesArgAList(playState)
+
     trell <- playState$trellis
     isLatt3D <- !is.null(trell$panel.args.common$scales.3d)
     isMulti <- (prod(dim(trell)) > 1)
@@ -27,7 +29,8 @@ latticeSettingsGUI <- function(playState)
     if (isLatt3D) scaleNames <- c("x", "y", "z")
     relations <- c("same", "free", "sliced")
     aspects <- c('"fill"', '"iso"', '"xy"', '0.5', '1', '2')
-    indexConds <- c("function(x, y) median(x, na.rm=TRUE)",
+    indexConds <- c("",
+                    "function(x, y) median(x, na.rm=TRUE)",
                     "function(x, y) median(y, na.rm=TRUE)",
                     "function(x, y) mean(x, na.rm=TRUE)",
                     "function(x, y) mean(y, na.rm=TRUE)",
@@ -81,13 +84,108 @@ latticeSettingsGUI <- function(playState)
         callArg(playState, target) <- val
     }
 
+    setAxisLabels <- function(h, ...) {
+        w <- h$action
+        ## get this from playState again; might have changed
+        trell <- playState$trellis
+        if (isLatt3D) {
+            w.scales <- trell$panel.args.common$scales.3d
+            w.scales <- w.scales[[paste(w, ".scales", sep = "")]]
+        } else {
+            w.scales <- trell[[paste(w, ".scales", sep = "")]]
+        }
+        w.limits <- trell[[paste(w, ".limits", sep="")]]
+        isFactorScale <-
+            if (is.list(w.limits)) {
+                is.character(w.limits[[1]]) || is.expression(w.limits[[1]])
+            } else {
+                is.character(w.limits) || is.expression(w.limits)
+            }
+        ## callTxt will be source code to set objects 'labels' and
+        ## optionally 'at', for the corresponding entries in 'scales'
+        callTxt <- character()
+        if (isFactorScale) {
+            ## factor scale, only need 'labels'
+            origVal <- w.limits
+            curVal <- w.scales$labels
+            if (is.logical(curVal)) {
+                curVal <- origVal
+            }
+            callTxt <- c("## Default axis labels: ",
+                         paste("#",
+                               deparse(call("<-", quote(labels), origVal)) ),
+                         "## Custom axis labels: ",
+                         deparse(call("<-", quote(labels), curVal)) )
+        } else {
+            ## numeric scale, need 'at' and optionally 'labels'
+            curAt <- w.scales$at
+            curLabs <- w.scales$labels
+            prettyInside <- function(x, n) {
+                p <- pretty(x, n)
+                p[(min(x) <= p) & (p <= max(x))]
+            }
+            if (is.list(w.limits)) {
+                origAt <- lapply(w.limits, prettyInside, n = w.scales$tick.number)
+                origLabs <- lapply(origAt, as.character)
+            } else {
+                origAt <- prettyInside(w.limits, n = w.scales$tick.number)
+                origLabs <- as.character(origAt)
+            }
+            if (is.logical(curAt)) {
+                curAt <- origAt
+                origAt <- NULL
+            }
+            if (!is.null(origAt))
+                callTxt <- c("## Default axis tick/label locations: ",
+                             paste("#",
+                                   deparse(call("<-", quote(at), origAt)) ))
+            callTxt <- c(callTxt,
+                         "## Custom axis tick/label locations: ",
+                         deparse(call("<-", quote(at), curAt)) )
+            if (!is.logical(curLabs)) {
+                callTxt <- c(callTxt,
+                             deparse(call("<-", quote(labels), curLabs)))
+            } else {
+                callTxt <- c(callTxt,
+                             "## Corresponding labels, optional:",
+                             paste("#",
+                                   deparse(call("<-", quote(labels), origLabs)) ))
+            }
+        }
+        callTxt <- paste(callTxt, collapse = "\n")
+        repeat {
+            newTxt <- guiTextInput(callTxt, title = "Edit axis labels",
+                                   prompt = "To reset: delete everything and press OK",
+                                   accepts.tab = FALSE)
+            if (is.null(newTxt)) break
+            callTxt <- newTxt
+            tmp <- tryCatch(parse(text = callTxt), error = error_handler)
+            ## check whether there was a syntax error
+            if (!inherits(tmp, "error")) {
+                ## if more than one call, wrap them in braces
+                tmpEnv <- new.env()
+                result <- tryCatch(eval(tmp, tmpEnv), error = error_handler)
+                if (!inherits(result, "error")) {
+                    atTarget <- substitute(scales$w$at, list(w = as.symbol(w)))
+                    labTarget <- substitute(scales$w$labels, list(w = as.symbol(w)))
+                    callArg(playState, atTarget) <- tmpEnv[["at"]]
+                    callArg(playState, labTarget) <- tmpEnv[["labels"]]
+                    ## redraw (preview)
+                    playReplot(playState)
+                    showingPreview <<- TRUE
+                    break
+                }
+            }
+        }
+    }
+
     ## (NEW TAB)
     basicsTab <- ggroup(horizontal=FALSE, container = tabs,
                         label = "Basic settings")
 
     ## TITLES
     labgroup <- gframe("Titles", horizontal=FALSE, container=basicsTab)
-    lay <- glayout(spacing = 1, container=labgroup)
+    lay <- glayout(spacing = 2, container=labgroup)
     rownum <- 1
     isComplexTitle <- list()
     titleNames <- c("main", "sub", "xlab", "ylab")
@@ -159,14 +257,14 @@ latticeSettingsGUI <- function(playState)
 
     ## LAYOUT
     if (isMulti) {
-        layoutgroup <- gframe("Layout", horizontal=FALSE, container=basicsTab)
-        tmp <- ggroup(horizontal=TRUE, container = layoutgroup)
+        layoutgroup <- gframe("Layout", horizontal = FALSE, container = basicsTab)
+        tmp <- ggroup(horizontal = TRUE, container = layoutgroup)
         val <- if (!is.null(trell$layout)) trell$layout else c(1, 1, 1)
         glabel("Layout per page: ", container = tmp)
         wid$layout.cols <- gspinbutton(from = 0, to = 16, value = val[1],
                                        handler = setArgLayout, container = tmp)
         glabel("columns, ", container = tmp)
-        wid$layout.rows <- gspinbutton(from = 0, to = 16, value = val[2],
+        wid$layout.rows <- gspinbutton(from = 1, to = 16, value = val[2],
                                        handler = setArgLayout, container = tmp)
         glabel("rows. ", container = tmp)
         wid$as.table <-
@@ -185,13 +283,8 @@ latticeSettingsGUI <- function(playState)
             svalue(wid$index.cond) <- deparseOneLine(val)
     }
 
-
-    ## (NEW TAB)
-    scalesTab <- ggroup(horizontal=FALSE, container = tabs,
-                        label="Scales")
-
     ## ASPECT
-    aspectgroup <- gframe("Aspect ratio", horizontal = FALSE, container = scalesTab)
+    aspectgroup <- gframe("Aspect ratio", horizontal = FALSE, container = basicsTab)
     tmp <- ggroup(horizontal=TRUE, container = aspectgroup)
     glabel("Panel aspect ratio y/x: ", container = tmp)
     val <- callArg(playState, "aspect")
@@ -206,24 +299,43 @@ latticeSettingsGUI <- function(playState)
     svalue(wid$aspect) <- deparse(val)
     ## TODO: aspect 3D?
 
+
+    ## (NEW TAB)
+    scalesTab <- ggroup(horizontal=FALSE, container = tabs,
+                        label="Scales")
+
     ## SCALES
+    isFactorScale <- list()
+    isFactorScale$x <-
+        if (is.list(trell$x.limits)) {
+            is.character(trell$x.limits[[1]])
+        } else {
+            is.character(trell$x.limits)
+        }
+    isFactorScale$y <-
+        if (is.list(trell$y.limits)) {
+            is.character(trell$y.limits[[1]])
+        } else {
+            is.character(trell$y.limits)
+        }
+    isFactorScale$z <- FALSE
     lay <- glayout(spacing = 1, container = scalesTab)
     col <- 2
-    init <- TRUE
+    firstCol <- TRUE
     for (w in scaleNames) {
         wid[[w]] <- list()
         if (isLatt3D) {
             w.scales <- trell$panel.args.common$scales.3d
-            w.scales <- w.scales[[paste(w, "scales", sep=".")]]
+            w.scales <- w.scales[[paste(w, ".scales", sep = "")]]
         } else {
-            w.scales <- trell[[paste(w, "scales", sep=".")]]
+            w.scales <- trell[[paste(w, ".scales", sep = "")]]
         }
         row <- 1
         lay[1, col] <- glabel(paste("<b>", w, "-axis</b>", sep=""),
                               markup = TRUE, container = lay)
         if (isMulti) {
             row <- row + 1
-            if (init) lay[row, 1] <- "relation:"
+            if (firstCol) lay[row, 1] <- "relation:"
             lay[row, col] <- wid[[w]]$relation <-
                 gdroplist(relations, container = lay,
                           selected = which(w.scales$relation == relations),
@@ -240,7 +352,7 @@ latticeSettingsGUI <- function(playState)
             row <- row + 1
             lay[row, col] <- wid[[w]]$arrows <-
                 gcheckbox("arrows only", container = lay,
-                          checked = w.scales$arrows,
+                          checked = isTRUE(w.scales$arrows),
                           handler = setArg,
                           action = paste("scales", w, "arrows", sep="$"))
         }
@@ -261,13 +373,14 @@ latticeSettingsGUI <- function(playState)
                       },
                       action = paste("scales", w, "axs", sep="$"))
         row <- row + 1
-        if (init) lay[row, 1] <- "~num. ticks:"
+        if (firstCol) lay[row, 1] <- "~ num. ticks: "
         lay[row, col] <- wid[[w]]$tick.number <-
             gedit(toString(w.scales$tick.number), width = 4, container = lay,
                   handler = setArg, coerce.with = as.numeric,
                   action = paste("scales", w, "tick.number", sep="$"))
+        enabled(wid[[w]]$tick.number) <- !isFactorScale[[w]]
         row <- row + 1
-        if (init) lay[row, 1] <- "tick length:"
+        if (firstCol) lay[row, 1] <- "tick length: "
         lay[row, col] <- wid[[w]]$tck <-
             gedit(toString(w.scales$tck[1]), width = 4, container = lay,
                   handler = setArgTck, coerce.with = as.numeric,
@@ -275,13 +388,13 @@ latticeSettingsGUI <- function(playState)
         if (!isLatt3D) {
             row <- row + 1
             lay[row, col] <- wid[[w]]$ticks.opp <-
-                gcheckbox("on opp. side", container = lay,
+                gcheckbox("ticks on opp. side", container = lay,
                           checked = (w.scales$tck[2] != 0),
                           handler = setArgTck,
                           action = w)
         }
         row <- row + 1
-        if (init) lay[row, 1] <- "label side:"
+        if (firstCol) lay[row, 1] <- "label side:"
         alternList <- list(none = 0, standard = 1, opposite = 2,
                            alternating = c(1, 2), both = 3)
         whichAltern <- which(sapply(alternList, identical, w.scales$alternating))
@@ -293,7 +406,7 @@ latticeSettingsGUI <- function(playState)
                       coerce.with = function(nm) alternList[[nm]],
                       action = paste("scales", w, "alternating", sep="$"))
         row <- row + 1
-        if (init) lay[row, 1] <- "rotation:"
+        if (firstCol) lay[row, 1] <- "rotation:"
         lay[row, col] <- wid[[w]]$rot <-
             gedit(as.numeric(w.scales$rot[1]), width = 4, container = lay,
                   handler = setArg, coerce.with = as.numeric,
@@ -304,12 +417,17 @@ latticeSettingsGUI <- function(playState)
                       checked = w.scales$abbreviate,
                       handler = setArg,
                       action = paste("scales", w, "abbreviate", sep="$"))
-        ## TODO: specify labels...
+        row <- row + 1
+        ## specify axis labels...
+        lay[row, col] <- wid[[w]]$axis.labels <-
+            gbutton("set labels...", container = lay,
+                      handler = setAxisLabels, action = w)
+
         ## TODO: custom axis components?
 
         ## next column
         col <- col + 1
-        init <- FALSE
+        firstCol <- FALSE
     }
     visible(lay) <- TRUE
 
@@ -498,7 +616,7 @@ basePlotSettingsGUI <- function(playState)
     ## SCALES
     lay <- glayout(spacing = 1, container = scalesTab)
     col <- 2
-    init <- TRUE
+    firstCol <- TRUE
     for (w in c("x", "y")) {
         wid[[w]] <- list()
         row <- 1
@@ -529,19 +647,19 @@ basePlotSettingsGUI <- function(playState)
                           callArg(playState, h$action) <- val
                       }, action = w.axs)
         row <- row + 1
-        if (init) lay[row, 1] <- "~num. ticks:"
+        if (firstCol) lay[row, 1] <- "~num. ticks:"
         lay[row, col] <- wid[[w]]$tick.number <-
             gedit(toString(par("lab")[1]), width = 4, container = lay,
                   handler = setLab, coerce.with = as.numeric)
         row <- row + 1
-        if (init) lay[row, 1] <- "tick length:"
+        if (firstCol) lay[row, 1] <- "tick length:"
         lay[row, col] <- wid[[w]]$tck <-
             gedit(toString(par("tcl")), width = 4, container = lay,
                   handler = setArg, coerce.with = as.numeric,
                   action = "tcl")
         ## next column
         col <- col + 1
-        init <- FALSE
+        firstCol <- FALSE
     }
     visible(lay) <- TRUE
 

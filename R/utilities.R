@@ -1,4 +1,52 @@
 
+shrinkrange <- function(r, f = 0.1)
+{
+  stopifnot(length(r) == 2)
+  orig.d <- diff(r) / (1 + 2*f)
+  orig.r <- r - c(-f, f) * orig.d
+  orig.r
+}
+
+is.somesortoftime <- function(x) {
+  inherits(x, "Date") ||
+  inherits(x, "POSIXt") ||
+  inherits(x, "yearmon") ||
+  inherits(x, "yearqtr")
+}
+
+gmessage.error <- function(message, title="Error", icon="error", ...)
+    gmessage(message, title=title, icon=icon, ...)
+
+Filters <- matrix(c(
+                    "R or S files (*.R,*.q,*.ssc,*.S)", "*.R;*.q;*.ssc;*.S",
+                    "Postscript files (*.ps)",          "*.ps",
+                    "Encapsulated Postscript (*.eps)",  "*.eps",
+                    "PDF files (*.pdf)",                "*.pdf",
+                    "Png files (*.png)",                "*.png",
+                    "Jpeg files (*.jpeg,*.jpg)",        "*.jpeg;*.jpg",
+                    "Text files (*.txt)",               "*.txt",
+                    "R images (*.RData,*.rda)",         "*.RData;*.rda",
+                    "Zip files (*.zip)",                "*.zip",
+                    "SVG files (*.svg)",                "*.svg",
+                    "Windows Metafiles (*.wmf,*.emf)",  "*.wmf;*.emf",
+                    "xfig files (*.fig)",               "*.fig",
+                    "All files (*.*)",                  "*.*"), ncol=2, byrow=T,
+                  dimnames=list(c('R','ps','eps','pdf','png','jpeg','txt',
+                  'RData','zip','svg','wmf','fig','All'),NULL))
+
+get.extension <- function(path)
+{
+    ## Extract and return the extension part of a filename
+
+    parts <- strsplit(path, "\\.")[[1]]
+    if (length(parts) > 1)
+        last <- parts[length(parts)]
+    else
+        last <- ""
+    last
+}
+
+## RGtk2 helpers
 
 guiTextView <-
     function(text, title = "Text View",

@@ -132,7 +132,7 @@ time.mode_update <- function(playState)
 
 time.mode_scrollbar_handler <- function(widget, playState)
 {
-    if (!playState$tmp$plot.ready) return()
+    if (!isTRUE(playState$tmp$plot.ready)) return()
     newLim <- widget$getValue()
     if (!is.null(playState$time.vector)) {
         newLim <- round(newLim)
@@ -152,7 +152,7 @@ time.mode_scrollbar_handler <- function(widget, playState)
 
 time.mode_entry_handler <- function(widget, playState)
 {
-    if (!playState$tmp$plot.ready) return()
+    if (!isTRUE(playState$tmp$plot.ready)) return()
     if (!is.null(playState$time.vector)) {
         newLim <- widget["text"]
         time.vector <- playState$time.vector

@@ -137,7 +137,7 @@ save_handler <- function(widget, playState)
     h.in <- dev.size("in")[2]
     ## use same pointsize as embedded device
     ps <- playState$pointsize
-    if (ext == "eps") setEPS()
+    #if (ext == "eps") setEPS()
     devName <-
         switch(ext,
                pdf = "pdf",
@@ -151,7 +151,8 @@ save_handler <- function(widget, playState)
            {gmessage.error("Unrecognised filename extension")
             stop("Unrecognised filename extension")})
     devFun <- get(devName, mode = "function")
-    devCall <- call("dev.copy", devFun, file = filename,
+    callNm <- if (ext == "eps") "dev.copy2eps" else "dev.copy"
+    devCall <- call(callNm, device = devFun, file = filename,
                     width = w.in, height = h.in, pointsize = ps)
     if (!is.null(formals(devFun)$units))
         devCall$units <- "in"

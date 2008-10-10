@@ -12,7 +12,6 @@ latticist <-
              labels = rownames(dat),
              time.mode = FALSE)
 {
-    isDefaultPlotCall <- missing(plot.call)
     datArg <- quote(unknown)
     if (missing(dat)) {
         if (missing(plot.call))
@@ -677,12 +676,13 @@ makeLatticist <- function(dat)
                 if (opt == "marginals") {
                     callArg(playState, 0) <- quote(marginal.plot)
                     callArg(playState, 1) <- dat.expr
-                    callArg(playState, "data") <- NULL
+                    callArg(playState, "reorder") <- FALSE
 
                 } else if (opt == "splom") {
                     callArg(playState, 0) <- quote(splom)
                     callArg(playState, 1) <- dat.form
                     callArg(playState, "cex") <- 0.5
+                    callArg(playState, "varname.cex") <- 0.7
                     callArg(playState, "pscales") <- 0
 
                 } else if (opt == "parallel") {
@@ -1173,6 +1173,10 @@ makeLatticist <- function(dat)
                 if (all(c("p", "l") %in% typeVal)) {
                     typeVal <- c(setdiff(typeVal, c("p", "l")), "o")
                 }
+                if (is.call.to(mainCall(playState), "marginal.plot"))
+                    typeVal <- c("p", "l")
+                if (is.call.to(mainCall(playState), "parallel"))
+                    typeVal <- "l"
                 ## all type values other than "p" and "g" imply lines
                 if (any(typeVal %in% c("p", "g") == FALSE)) {
                     auto.key$lines <- TRUE
@@ -1183,8 +1187,8 @@ makeLatticist <- function(dat)
                 }
                 ## get group levels that will appear in key
                 levs <- levelsOK(groupsVal)
-                ## if groups are discretised, need a title
-                if (do.gdisc) {
+                ## if groups are discretised, or hypervar, need a title
+                if (do.gdisc || (is.null(xvar) && is.null(yvar))) {
                     auto.key$title <- groupsOrigStr
                     auto.key$cex.title <- 1
                 }
@@ -1226,7 +1230,7 @@ makeLatticist <- function(dat)
 
             ## sub-title
             Rvers <- paste("R ", R.version$major, ".",
-                           R.version$minor, sep="")
+                           R.version$minor, R.version$status, sep="")
             subt <- if (nPoints > 0)
                 paste("N = ", nPoints, ", ", sep="") else ""
             subt <- paste(subt, toString(Sys.Date()), ", ",
@@ -1266,8 +1270,8 @@ makeLatticist <- function(dat)
         }
 
         handler.flip <- function(widget, event, playState) {
-                                        #if (!isTRUE(playState$tmp$plot.ready)) {alarm(); return(FALSE)}
             playState$tmp$plot.ready <- FALSE
+            on.exit(playState$tmp$plot.ready <- TRUE)
             xvarActive <- xvarW["active"]
             yvarActive <- yvarW["active"]
             xdisc <- xdiscW["active"]
@@ -1286,6 +1290,7 @@ makeLatticist <- function(dat)
         }
         handler.hexbin <- function(widget, event, playState) {
             playState$tmp$plot.ready <- FALSE
+            on.exit(playState$tmp$plot.ready <- TRUE)
             xdiscW["active"] <- TRUE
             ydiscW["active"] <- TRUE
             playState$tmp$plot.ready <- TRUE
@@ -1294,6 +1299,7 @@ makeLatticist <- function(dat)
         }
         handler.unbin <- function(widget, event, playState) {
             playState$tmp$plot.ready <- FALSE
+            on.exit(playState$tmp$plot.ready <- TRUE)
             xdiscW["active"] <- FALSE
             ydiscW["active"] <- FALSE
             playState$tmp$plot.ready <- TRUE
@@ -1302,6 +1308,7 @@ makeLatticist <- function(dat)
         }
         handler.superpose <- function(widget, event, playState) {
             playState$tmp$plot.ready <- FALSE
+            on.exit(playState$tmp$plot.ready <- TRUE)
             c1Active <- c1W["active"]
             c2Active <- c2W["active"]
             if (c1Active <= 1) return(FALSE)
@@ -1319,6 +1326,7 @@ makeLatticist <- function(dat)
         }
         handler.explode <- function(widget, event, playState) {
             playState$tmp$plot.ready <- FALSE
+            on.exit(playState$tmp$plot.ready <- TRUE)
             grActive <- groupsW["active"]
             if (grActive <= 1) return(FALSE)
             c1Active <- c1W["active"]
@@ -1336,6 +1344,7 @@ makeLatticist <- function(dat)
         handler.go3D <- function(widget, event, playState) {
             playState$latticist$do3DTable <- TRUE
             playState$tmp$plot.ready <- FALSE
+            on.exit(playState$tmp$plot.ready <- TRUE)
             grActive <- groupsW["active"]
             if (grActive <= 1) return(FALSE)
             zvarW["active"] <- grActive
@@ -1348,6 +1357,7 @@ makeLatticist <- function(dat)
         handler.squash <- function(widget, event, playState) {
             playState$latticist$do3DTable <- FALSE
             playState$tmp$plot.ready <- FALSE
+            on.exit(playState$tmp$plot.ready <- TRUE)
             zActive <- zvarW["active"]
             if (zActive <= 1) return(FALSE)
             groupsW["active"] <- zActive
@@ -1361,6 +1371,7 @@ makeLatticist <- function(dat)
             playState$latticist$defaultPlotType <- opt
             ## reset
             playState$tmp$plot.ready <- FALSE
+            on.exit(playState$tmp$plot.ready <- TRUE)
             xvarW["active"] <- 0
             yvarW["active"] <- 0
             playState$tmp$plot.ready <- TRUE
@@ -1479,8 +1490,8 @@ makeLatticist <- function(dat)
         titleBox$packStart(titleW, expand = TRUE)
         setBox$packStart(titleBox, expand=FALSE)
         ## (prompt)
-        promptxt <- paste('<span foreground="#666666">',
-                          "Select variables to begin --&gt;",
+        promptxt <- paste('<span foreground="#cc2222">',
+                          "Select variables --&gt;",
                           '</span>', sep = "")
         promptW <- gtkLabel("")
         promptW$setMarkup(promptxt)
@@ -1532,7 +1543,7 @@ makeLatticist <- function(dat)
         hyperBox <- gtkHBox()
         marginalsW <- gtkButton("marginals")
         marginalsW["tooltip-text"] <- "Show marginal distributions"
-        splomW <- gtkButton("splom (pairs)")
+        splomW <- gtkButton("splom")
         splomW["tooltip-text"] <- "Show a scatterplot matrix with all pairs of variables"
         parallelW <- gtkButton("parallel")
         parallelW["tooltip-text"] <- "Show a parallel coordinates plot"
@@ -1560,6 +1571,8 @@ makeLatticist <- function(dat)
             (!is.null(xvar) && !is.null(yvar) && is.null(zvar) &&
              xcat && ycat)
         labtxt <- " Variables / expressions on axes: "
+        if (!is.null(xvar) || !is.null(yvar))
+            labtxt <- " Variables on axes: "
         xyLabelW <- gtkLabel(labtxt)
         xyLabelW$setMarkup(paste("<b>", labtxt, "</b>", sep=""))
         xyBox$packStart(xyLabelW, expand=FALSE)
@@ -1739,7 +1752,6 @@ makeLatticist <- function(dat)
         gBox <- gtkHBox()
         groupsW <- gtkComboBoxEntryNewText()
         groupsW$show()
-        groupsW["sensitive"] <- (playState$callName != "marginal.plot")
         groupsW["width-request"] <- 100
         for (item in varexprs) groupsW$appendText(item)
         index <- match(deparseOneLine(groups), varexprs)
@@ -1938,14 +1950,24 @@ levelplot.table <-
     levelplot(as.formula(form), data, ...)
 }
 
-layer.col <-
-    function(x, pch = 21, col = "transparent",
+n.level.colors <-
+    function(x, n.col = 30,
+             at = do.breaks(range(x, finite = TRUE), n.col),
              ...)
 {
-    layerCol <- level.colors(x, at = do.breaks(range(x), 30))
-    expr <- bquote(panel.xyplot(..., pch = .(pch), col = .(col),
-                                fill = layerCol[subscripts]))
-    eval(call("layer", expr, data = list(layerCol = layerCol)))
+    level.colors(x, at = at, ...)
+}
+
+simpleColkey <-
+    function(x, n.col = 30,
+             at = do.breaks(range(x, finite = TRUE), n.col),
+             ..., space = "right")
+{
+    foo <- list(space =
+                list(fun = "draw.colorkey",
+                     args = list(at = at, ...)))
+    names(foo) <- space
+    foo
 }
 
 .profLatticist <- function(n = 20000) {
@@ -1959,89 +1981,3 @@ layer.col <-
     unlink(tmp)
 }
 
-
-
-### copied from SVN of latticeExtra, for now
-
-marginal.plot <-
-    function(data,
-             reorder = TRUE,
-             plot.points = FALSE,
-             ref = TRUE,
-             origin = 0,
-             levels.fos = NULL,
-             xlab = NULL, ylab = NULL,
-             cex = 0.5,
-             ...,
-             subset = TRUE,
-             as.table = TRUE,
-             subscripts = TRUE,
-             default.scales = list(
-               x=list(relation="free", abbreviate=TRUE,
-                 rot=60, cex=0.5, tick.number=3),
-               y=list(relation="free", draw=FALSE)))
-{
-    if (!is.data.frame(data))
-        data <- as.data.frame(data)
-    nvar <- ncol(data)
-    iscat <- sapply(data, is.categorical)
-    ## apply subset
-    ## evaluate in context of data, or if that fails just eval as usual
-    ## (because latticist uses: subset = complete.cases(dat))
-    tmp <- try(eval(substitute(subset), data), silent = TRUE)
-    if (!inherits(tmp, "try-error")) subset <- tmp
-    if (!isTRUE(subset)) data <- data[subset,]
-    ## reorder factor levels
-    if (reorder) {
-        for (nm in names(data)[iscat]) {
-            val <- data[[nm]]
-            if (is.character(val))
-                data[[nm]] <- factor(val)
-            if (!is.ordered(val) &&
-                !is.shingle(val) &&
-                nlevels(val) > 1)
-            {
-                data[[nm]] <- reorder(val, val, function(z) -length(z))
-            }
-        }
-    }
-    if (any(iscat)) {
-        facdat <- lapply(data[iscat], function(Value)
-                         as.data.frame(table(Value)) )
-        facdat <- do.call(make.groups, facdat)
-        ## order packets by number of levels, same effect as index.cond
-        facdat$which <- with(facdat, reorder(which, which, length))
-        ## make trellis object for factors
-        factobj <-
-            dotplot(Freq ~ Value | which, data = facdat, subscripts = TRUE,
-                    ...,
-                    type = c("p","h"), cex = cex,
-                    levels.fos = levels.fos,
-                    origin = origin,
-                    as.table = as.table,
-                    default.scales = default.scales,
-                    xlab = xlab, ylab = ylab)
-        factobj$call <- match.call()
-        if (all(iscat)) return(factobj)
-    }
-    if (any(!iscat)) {
-        numdat <- do.call(make.groups, data[!iscat])
-        ## order packets by mean, same effect as index.cond
-        numdat$which <- with(numdat, reorder(which, data, mean, na.rm = TRUE))
-        ## make trellis object for numerics
-        numobj <-
-            densityplot(~ data | which, data = numdat, subscripts = TRUE,
-                        ...,
-                        plot.points = plot.points, ref = ref,
-                        as.table = as.table,
-                        default.scales = default.scales,
-                        xlab = xlab, ylab = ylab)
-        numobj$call <- match.call()
-        if (all(!iscat)) return(numobj)
-    }
-    ## if there are both categoricals and numerics,
-    ## merge the trellis objects
-    obj <- c(factobj, numobj)
-    obj$call <- match.call()
-    obj
-}

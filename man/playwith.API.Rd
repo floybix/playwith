@@ -212,6 +212,7 @@
 \author{ Felix Andrews \email{felix@nfrac.org}  }
 \seealso{
   \code{\link{playwith}},
+  \code{\link{playState}},
   \code{\link{convertFromDevicePixels}}
 }
 \examples{

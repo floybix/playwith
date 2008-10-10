@@ -8,9 +8,6 @@ import(grDevices)
 importFrom(graphics, par, plot)
 import(utils)
 
-## temporary (TODO)
-export(marginal.plot)
-
 # the main function
 export(playwith,
        autoplay,
@@ -21,7 +18,9 @@ S3method(print, playState)
 export(latticist,
        reorderByFreq,
        cutEq,
-       try.prepanel.loess)
+       try.prepanel.loess,
+       n.level.colors,
+       simpleColkey)
 S3method(levelplot, table)
 
 ## latticeStyleGUI

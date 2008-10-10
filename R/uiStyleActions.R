@@ -114,7 +114,7 @@ set.label.style_handler <- function(widget, playState)
     playFreezeGUI(playState)
     on.exit(playThawGUI(playState))
     ## constants
-    faceList <- c("plain", "bold", "italic", "bold.italic")
+    faceList <- c("plain", "bold", "italic", "bold.italic", "symbol")
     faceName <- function(x) {
         if (is.numeric(x)) x <- faceList[x]
         x

@@ -3,6 +3,8 @@ Changes in Version 0.9-22
 
   o Fixed initial window size.
 
+  o "Set axis labels..." button in Plot Settings (Lattice only).
+
   o Zoom out applies to x-axis only in "time mode".
 
 Changes in Version 0.9-21

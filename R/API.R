@@ -164,8 +164,8 @@ callArg <- function(playState, arg, eval = TRUE, data = NULL)
     ## this is required for e.g. lattice's scales$x$at <- quote(qnorm(...))
     ## easiest way is just to deparse without showAttributes and then parse
     if (is.language(arg)) {
-        tmp <- try( parse(text=deparseOneLine(mainCall,
-                           control=playwith.getOption("deparse.options")
+        tmp <- try( parse(text = deparse(mainCall,
+                           control = playwith.getOption("deparse.options")
                            ))[[1]] )
         if (!inherits(tmp, "try-error"))
             mainCall <- tmp
@@ -181,6 +181,32 @@ mainCall <- function(playState = playDevCur()) {
 "mainCall<-" <- function(playState = playDevCur(), value) {
     recursiveIndex(playState$call, playState$tmp$main.call.index) <- value
     playState
+}
+
+## used only by mainCall
+recursiveIndex <- function(call, index) {
+    ## if index is simple...
+    if (length(index) == 1) {
+        ## if index is NA, use original call object
+        if (is.na(index)) return(call)
+        return(call[[index]])
+    }
+    getx <- paste("[[", index, "]]", sep="", collapse="")
+    eval(parse(text=paste("call", getx, sep="")))
+}
+
+## used only by "mainCall<-"
+"recursiveIndex<-" <- function(call, index, value) {
+    ## if index is simple...
+    if (length(index) == 1) {
+        ## if index is NA, use original call object
+        if (is.na(index)) return(value)
+        call[[index]] <- value
+        return(call)
+    }
+    getx <- paste("[[", index, "]]", sep="", collapse="")
+    eval(parse(text=paste("call", getx, " <- value", sep="")))
+    call
 }
 
 updateMainCall <- function(playState = playDevCur()) {
@@ -206,7 +232,8 @@ updateMainCall <- function(playState = playDevCur()) {
                 }
         return(NULL)
     }
-    main.call.index <- okCallPath(tmpCall, main.function)
+    main.call.index <-
+        suppressWarnings(okCallPath(tmpCall, main.function))
     if (is.null(main.function)) {
         ## look for a call to "plot"
         main.call.index.plot <- okCallPath(tmpCall, plot)
@@ -417,14 +444,15 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
     playDevSet(playState)
     x.or.y <- match.arg(x.or.y)
      if (playState$is.lattice) {
+         makeScalesArgAList(playState)
         ## TODO: packet 1 may not exist?
         x.panel <- xyData(playState, space="packet 1")[[x.or.y]]
         ## set factor labels explicitly, otherwise they are coerced to numeric
         if (is.factor(x.panel)) {
-            scales.labels <- substitute(scales[[x.or.y]]$labels,
-                                        list(x.or.y=x.or.y))
-            scales.at <- substitute(scales[[x.or.y]]$at,
-                                        list(x.or.y=x.or.y))
+            scales.labels <- substitute(scales$s$labels,
+                                        list(w = as.symbol(x.or.y)))
+            scales.at <- substitute(scales$w$at,
+                                        list(w = as.symbol(x.or.y)))
             if (is.null(callArg(playState, scales.labels))) {
                 callArg(playState, scales.labels) <- levels(x.panel)
                 callArg(playState, scales.at) <- 1:nlevels(x.panel)
@@ -474,19 +502,24 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
     if (x.or.y == "y") callArg(playState, "ylim") <- x
 }
 
-shrinkrange <- function(r, f = 0.1)
+makeScalesArgAList <- function(playState)
 {
-  stopifnot(length(r) == 2)
-  orig.d <- diff(r) / (1 + 2*f)
-  orig.r <- r - c(-f, f) * orig.d
-  orig.r
-}
-
-is.somesortoftime <- function(x) {
-  inherits(x, "Date") ||
-  inherits(x, "POSIXt") ||
-  inherits(x, "yearmon") ||
-  inherits(x, "yearqtr")
+    if (!isTRUE(playState$is.lattice)) return()
+    scales <- callArg(playState, "scales")
+    if (is.null(scales)) return()
+    if (is.character(scales)) {
+        callArg(playState, "scales") <-
+            list(relation = scales)
+        return()
+    }
+    if (is.character(scales$x)) {
+        callArg(playState, quote(scales$x)) <-
+            list(relation = scales$x)
+    }
+    if (is.character(scales$y)) {
+        callArg(playState, quote(scales$y)) <-
+            list(relation = scales$y)
+    }
 }
 
 playDo <- function(playState, expr, space = "plot",
@@ -603,37 +636,5 @@ isBasicDeviceMode <- function(playState)
         return(TRUE)
     }
     FALSE
-}
-
-gmessage.error <- function(message, title="Error", icon="error", ...)
-    gmessage(message, title=title, icon=icon, ...)
-
-Filters <- matrix(c(
-                    "R or S files (*.R,*.q,*.ssc,*.S)", "*.R;*.q;*.ssc;*.S",
-                    "Postscript files (*.ps)",          "*.ps",
-                    "Encapsulated Postscript (*.eps)",  "*.eps",
-                    "PDF files (*.pdf)",                "*.pdf",
-                    "Png files (*.png)",                "*.png",
-                    "Jpeg files (*.jpeg,*.jpg)",        "*.jpeg;*.jpg",
-                    "Text files (*.txt)",               "*.txt",
-                    "R images (*.RData,*.rda)",         "*.RData;*.rda",
-                    "Zip files (*.zip)",                "*.zip",
-                    "SVG files (*.svg)",                "*.svg",
-                    "Windows Metafiles (*.wmf,*.emf)",  "*.wmf;*.emf",
-                    "xfig files (*.fig)",               "*.fig",
-                    "All files (*.*)",                  "*.*"), ncol=2, byrow=T,
-                  dimnames=list(c('R','ps','eps','pdf','png','jpeg','txt',
-                  'RData','zip','svg','wmf','fig','All'),NULL))
-
-get.extension <- function(path)
-{
-    ## Extract and return the extension part of a filename
-
-    parts <- strsplit(path, "\\.")[[1]]
-    if (length(parts) > 1)
-        last <- parts[length(parts)]
-    else
-        last <- ""
-    last
 }
 

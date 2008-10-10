@@ -376,7 +376,7 @@ playwith(xyplot(lat ~ long | Depth, data = quakes,
       subscripts = TRUE, aspect = "iso", pch = ".", cex = 2),
    labels = paste("mag", quakes$mag))
 
-## Spin and zoom for a 3D Lattice plot.
+## Spin and brush for a 3D Lattice plot.
 ## Drag on the plot to rotate in 3D (can be confusing).
 ## Brushing is linked to the previous xyplot (if still open).
 ## Note, brushing 'cloud' requires a recent version of Lattice.

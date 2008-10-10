@@ -27,31 +27,32 @@ playSelectData(playState = playDevCur(),
 \value{
   \code{playSelectData} returns \code{NULL} if the user cancelled (e.g. by right-clicking).
   Otherwise a list with:
-  \item{\code{space}}{
-    character, specifies the plot space in which data points were selected.
-    See the \code{space} argument to \code{\link{playDo}}.
-  }
-  \item{\code{which}}{
-    indices of the data points selected. This relies on the data being guessed
-    correctly from the plot call, unless \code{data.points} was specified explicitly.
-    Note that for lattice plots, these are indices into the packet/panel data,
-    not indices into the original data set, so not the same as \code{subscripts}.
-  }
-  \item{\code{x, y}}{
-    native coordinates of the selected data points.
-  }
-  \item{\code{is.click}}{
-    logical, whether it was a click (otherwise a drag).
-  }
-  \item{\code{pos}}{
-    position of click relative to the closest point,
-    as in the \code{pos} argument to \code{\link{text}}.
-    If \code{is.click} is false, this is \code{NULL}.
-  }
-  \item{\dots}{
-    as well as all the other elements returned by
-    \code{\link{playRectInput}}.
-  }
+
+    \item{\code{space}}{
+      character, specifies the plot space in which data points were selected.
+      See the \code{space} argument to \code{\link{playDo}}.
+    }
+    \item{\code{which}}{
+      indices of the data points selected. This relies on the data being guessed
+      correctly from the plot call, unless \code{data.points} was specified explicitly.
+      Note that for lattice plots, these are indices into the packet/panel data,
+      not indices into the original data set, so not the same as \code{subscripts}.
+    }
+    \item{\code{x, y}}{
+      native coordinates of the selected data points.
+    }
+    \item{\code{is.click}}{
+      logical, whether it was a click (otherwise a drag).
+    }
+    \item{\code{pos}}{
+      position of click relative to the closest point,
+      as in the \code{pos} argument to \code{\link{text}}.
+      If \code{is.click} is false, this is \code{NULL}.
+    }
+    \item{\dots}{
+      as well as all the other elements returned by
+      \code{\link{playRectInput}}.
+    }
 }
 \author{ Felix Andrews \email{felix@nfrac.org}  }
 \seealso{

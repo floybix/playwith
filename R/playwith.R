@@ -266,7 +266,7 @@ playwith <-
     pageEntry["width-chars"] <- 2
     gSignalConnect(pageEntry, "activate",
                    function(widget, playState) {
-                       if (!playState$tmp$plot.ready) return()
+                       if (!isTRUE(playState$tmp$plot.ready)) return()
                        newPage <- round(as.numeric(widget["text"]))
                        if (newPage == playState$page) return()
                        playState$page <- newPage
@@ -281,7 +281,7 @@ playwith <-
     pageScrollbar["update-policy"] <- GtkUpdateType["delayed"]
     gSignalConnect(pageScrollbar, "value-changed",
                    function(widget, playState) {
-                       if (!playState$tmp$plot.ready) return()
+                       if (!isTRUE(playState$tmp$plot.ready)) return()
                        newPage <- round(widget$getValue())
                        if (newPage == playState$page) return()
                        playState$page <- newPage
@@ -808,21 +808,8 @@ deparseOneLine <-
     tmp <- gsub(";\\{", " \\{", tmp)
     ## update: need this for long inline vectors:
     tmp <- gsub(";,", ",", tmp)
+    tmp <- gsub(",;", ",", tmp)
     tmp
-}
-
-plotCoords.default <-
-    function(the.call, envir=parent.frame(), log=NULL, recycle=TRUE)
-{
-    stopifnot(is.call(the.call))
-    ## put call into canonical form
-    the.call <- match.call(eval(the.call[[1]], envir=envir), the.call)
-    tmp.x <- eval(the.call$x, envir)
-    tmp.y <- if ('y' %in% names(the.call)) eval(the.call$y, envir)
-    if (inherits(tmp.x, "zoo") && is.null(tmp.y))
-        return(xy.coords(stats::time(tmp.x), as.vector(tmp.x),
-                         log = log, recycle = recycle))
-    xy.coords(tmp.x, tmp.y, log = log, recycle = recycle)
 }
 
 copyLocalArgs <-
@@ -905,37 +892,6 @@ copyLocalArgs <-
     }
 }
 
-recursiveIndex <- function(call, index) {
-    ## if index is simple...
-    if (length(index) == 1) {
-        ## if index is NA, use original call object
-        if (is.na(index)) return(call)
-        return(call[[index]])
-    }
-    getx <- paste("[[", index, "]]", sep="", collapse="")
-    eval(parse(text=paste("call", getx, sep="")))
-}
-
-"recursiveIndex<-" <- function(call, index, value) {
-    ## if index is simple...
-    if (length(index) == 1) {
-        ## if index is NA, use original call object
-        if (is.na(index)) return(value)
-        call[[index]] <- value
-        return(call)
-    }
-    getx <- paste("[[", index, "]]", sep="", collapse="")
-    eval(parse(text=paste("call", getx, " <- value", sep="")))
-    call
-}
-
-recursive.as.list.call <- function(x) {
-    stopifnot(is.call(x))
-    x <- as.list(x)
-    lapply(x, function(z) if (is.call(z))
-           recursive.as.list.call(z) else z)
-}
-
 plotOnePage <- function(x, page, ...)
 {
     n <- page
@@ -945,4 +901,12 @@ plotOnePage <- function(x, page, ...)
     packet.panel.pageN <- function(..., page)
         packet.panel.default(..., page = page + n - 1)
     plot(x, packet.panel = packet.panel.pageN, ...)
+}
+
+## unused
+recursive.as.list.call <- function(x) {
+    stopifnot(is.call(x))
+    x <- as.list(x)
+    lapply(x, function(z) if (is.call(z))
+           recursive.as.list.call(z) else z)
 }

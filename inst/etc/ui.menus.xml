@@ -30,9 +30,10 @@
     </menu>
     <menu action='StyleMenu'>
       <menuitem action='StyleSettings'/>
+      <menuitem action='SetPointLineStyle'/>
+      <menuitem action='SetBrushStyle'/>
       <menuitem action='SetLabelStyle'/>
       <menuitem action='SetArrowStyle'/>
-      <menuitem action='SetBrushStyle'/>
       <separator/>
       <menuitem action='StyleSolidPoints'/>
       <menuitem action='StyleTransPoints'/>
@@ -60,12 +61,17 @@
       <menuitem action='Clear'/>
       <separator/>
       <menuitem action='Zoom'/>
+      <menuitem action='Pan'/>
       <menuitem action='Identify'/>
       <menuitem action='Brush'/>
       <menuitem action='Annotation'/>
       <menuitem action='Arrow'/>
+      <menuitem action='Line'/>
+      <menuitem action='Rect'/>
       <separator/>
       <menuitem action='Expand'/>
+      <menuitem action='Zoomin'/>
+      <menuitem action='Zoomout'/>
       <menuitem action='Zoomfit'/>
       <menuitem action='ZeroY'/>
       <menuitem action='ZeroX'/>
@@ -101,10 +107,13 @@
   </menubar>
   <popup name='ContextMenu'>
       <menuitem action='Zoom'/>
+      <menuitem action='Pan'/>
       <menuitem action='Identify'/>
       <menuitem action='Brush'/>
       <menuitem action='Annotation'/>
       <menuitem action='Arrow'/>
+      <menuitem action='Line'/>
+      <menuitem action='Rect'/>
       <separator/>
       <menuitem action='PlotSettings'/>
       <menuitem action='StyleSettings'/>

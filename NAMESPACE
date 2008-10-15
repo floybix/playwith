@@ -68,16 +68,35 @@ export(playNewPlot,
 export(getDataArg,
        xyCoords,
        xyData,
-       plotCoords,
        spaceCoordsToDataCoords,
        dataCoordsToSpaceCoords)
+
+## plotCoords
+export(plotCoords,
+       plotCoords.plot,
+       plotCoords.biplot)
 S3method(plotCoords, default)
 S3method(plotCoords, qqnorm)
 S3method(plotCoords, qqplot)
+S3method(plotCoords.plot, default)
+S3method(plotCoords.plot, dendrogram)
+S3method(plotCoords.plot, mca)
+S3method(plotCoords.biplot, default)
+S3method(plotCoords.biplot, prcomp)
+S3method(plotCoords.biplot, princomp)
 S3method(plotCoords, qqmath)
 S3method(plotCoords, cloud)
-S3method(labels, ts)
-S3method(labels, zoo)
+S3method(plotCoords, parallel)
+S3method(plotCoords, splom)
+S3method(case.names, dendrogram)
+S3method(case.names, prcomp)
+S3method(case.names, princomp)
+S3method(case.names, mca)
+S3method(case.names, zoo)
+S3method(case.names, Date)
+S3method(case.names, POSIXt)
+S3method(case.names, yearmon)
+S3method(case.names, yearqtr)
 
 ## clickOrDrag
 export(playSelectData,

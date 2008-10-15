@@ -709,7 +709,8 @@ makeLatticist <- function(dat)
                         callArg(playState, "groups") <- !is.null(groups)
                         xform <- as.formula(paste("~", xterms))
                         tabcall <-
-                            call("xtabs", xform, quote(dat), subset=subset)
+                            call("xtabs", xform, quote(dat))
+                        tabcall$subset <- if (!isTRUE(subset)) subset
                         if (doYProp) {
                             tabcall <- call("prop.table", tabcall, margin = 1)
                         }
@@ -747,7 +748,8 @@ makeLatticist <- function(dat)
                             callArg(playState, "groups") <- !is.null(groups)
                             xform <- as.formula(paste("~", xterms))
                             tabcall <-
-                                call("xtabs", xform, quote(dat), subset=subset)
+                                call("xtabs", xform, quote(dat))
+                            tabcall$subset <- if (!isTRUE(subset)) subset
                             if (doXProp) {
                                 tabcall <- call("prop.table", tabcall, margin = 1)
                             }
@@ -866,7 +868,8 @@ makeLatticist <- function(dat)
                                           if (!is.null(groups)) deparseOneLine(groups)),
                                         collapse=" + ")
                         xform <- as.formula(paste("~", xterms))
-                        tabcall <- call("xtabs", xform, quote(dat), subset=subset)
+                        tabcall <- call("xtabs", xform, quote(dat))
+                        tabcall$subset <- if (!isTRUE(subset)) subset
                         if (doXProp || doYProp) {
                             mgn <- c(if (doXProp) 1, if (doYProp) 2)
                             tabcall <- call("prop.table", tabcall, margin = mgn)
@@ -952,6 +955,8 @@ makeLatticist <- function(dat)
                     if (is.numeric(groupsVal) || do.gdisc) {
                         if (doTile) {
                             callArg(playState, 0) <- quote(tileplot)
+                            if (require("tripack", quietly = TRUE))
+                                callArg(playState, "use.tripack") <- TRUE
                         } else {
                             callArg(playState, 0) <- quote(levelplot)
                             callArg(playState, "panel") <- quote(panel.levelplot.points)

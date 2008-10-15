@@ -18,28 +18,15 @@ initIdentifyActions <- function(playState)
         if (isBaseMulti) return()
         ## lattice package:
         if (playState$callName %in%
-            c("splom", "contourplot",
-              "histogram", "densityplot", "barchart")) return()
+            c("histogram", "densityplot", "barchart")) return()
         if (playState$callName %in% "marginal.plot") return()
-        ## what about parallel?
         ## from graphics package:
         if (playState$callName %in%
             c("hist", "barplot", "spineplot", "mosaic",
               "assocplot", "fourfoldplot",
-              "coplot", "persp", "pie", "pairs")) return()
+              "coplot", "persp", "pie")) return()
     }
     labels <- playState$.args$labels
-    labelsOrFormat <- function(object, ...) {
-        if (is.somesortoftime(object))
-            return(format(object))
-        #if (is.factor(object))
-        #    return(format(object))
-        result <- labels(object, ...)
-        ## labels() may return a list; item 1 is the rownames
-        if (is.list(result))
-            result <- result[[1]]
-        result
-    }
     ## try to guess labels if they were not given
     if (is.null(labels)) {
         tmp.data <- getDataArg(playState)
@@ -48,7 +35,7 @@ initIdentifyActions <- function(playState)
             !is.environment(tmp.data))
         {
             ## data arg, probably a data.frame
-            labels <- labelsOrFormat(tmp.data)
+            labels <- case.names(tmp.data)
         } else {
             ## no useful data arg; take arg 1 instead
             tmp.x <- callArg(playState, 1)
@@ -60,11 +47,10 @@ initIdentifyActions <- function(playState)
                        c("|", "*", "+"))
                     xObj <- xObj[[2]]
                 xObj <- eval(xObj, tmp.data, playState$env)
-                                        #else eval(xObj, environment(tmp.x), playState$env)
-                labels <- labelsOrFormat(xObj)
+                labels <- case.names(xObj)
             } else {
                 ## first arg is an object, not a formula
-                labels <- labelsOrFormat(tmp.x)
+                labels <- case.names(tmp.x)
             }
         }
     }
@@ -123,7 +109,7 @@ drawLabelsInSpace <- function(playState, subscripts, space = "plot",
         ## so need to find which ones match the label subscripts
         #which <- findInterval(subscripts, data$subscripts)
         which <- match(subscripts, data$subscripts, 0)
-        x <- data$x[which]
+        x <- data$x[which] ## TODO -- matrix case!
         y <- data$y[which]
     } else {
         ## 'data' (x and y) is the whole dataset
@@ -162,14 +148,14 @@ drawLinkedLocal <- function(playState, return.code = FALSE)
             ## 'data' is a subset given by data$subscripts,
             ## so need to find which ones match the label subscripts
             which <- match(subscripts, data$subscripts, 0)
-            x <- data$x[which]
-            y <- data$y[which]
         } else {
             ## 'data' (x and y) is the whole dataset
-            x <- data$x[subscripts]
-            y <- data$y[subscripts]
+            which <- subscripts
         }
+        x <- if (is.matrix(data$x)) data$x[,which] else data$x[which]
+        y <- if (is.matrix(data$y)) data$y[,which] else data$y[which]
         if (length(x) == 0) next
+        ## TODO: parallel -- lines
         annot <- call("panel.brushpoints", x, y)
         expr <- playDo(playState, annot, space = space,
                        return.code = return.code)
@@ -226,13 +212,18 @@ identifyCore <- function(playState, foo, remove = FALSE)
         ## all data points within 11 points
         which <- which(pdists < 11)
         if (length(which) == 0) return()
+        ## order by distance from click
+        which <- which[order(pdists[which])]
+        ## account for multiple points (matrix values of data$x, data$y)
+        n <- NROW(data$x)
+        which <- unique(which %% n)
+        which[which == 0] <- n
+
         idMenu <- gtkMenu()
         idMenu$popup(button=0, activate.time=gtkGetCurrentEventTime())
         item <- gtkMenuItem("Add label to plot:")
         item["sensitive"] <- FALSE
         idMenu$append(item)
-        ## order by distance from click
-        which <- which[order(pdists[which])]
         for (w in which) {
             datx <- data$x[[w]]
             daty <- data$y[[w]]

@@ -37,10 +37,11 @@ updateClickActions <- function(playState)
         playState$tmp$click.mode <- "Zoom"
     curs <- switch(playState$tmp$click.mode,
                    Zoom = "crosshair",
+                   Pan = "fleur",
                    Identify = "hand1",
                    Brush = "circle",
                    Annotation = "xterm",
-                   Arrow = "left_ptr")
+                   "left_ptr") ## (otherwise)
     cursor <- gdkCursorNew(GdkCursorType[curs])
     playState$widgets$drawingArea$getWindow()$setCursor(cursor)
     ## work out which actions are possible on current plot
@@ -59,28 +60,33 @@ updateClickActions <- function(playState)
     playState$tmp$ok.actions <- actions
     ## set default statusbar message
     modeOK <- playState$tmp$click.mode
-    if ((modeOK == "Zoom") && actions$nav3D)
-        modeOK <- "Nav3D"
-    if ((modeOK == "Zoom") && !actions$nav2D)
+    if ((modeOK == "Pan") && actions$nav3D)
+        modeOK <- "Rotate"
+    if ((modeOK %in% c("Zoom", "Pan")) &&
+        (actions$nav2D == FALSE))
         modeOK <- "Coords"
-    if ((modeOK == "Identify") && !actions$ident)
+    if ((modeOK %in% c("Identify", "Brush")) &&
+        (actions$ident == FALSE))
         modeOK <- "Coords"
     msg <- switch(modeOK,
-                  Zoom = paste("Click for coordinates",
-                  "Drag to zoom (hold Shift to constrain)", sep = ", "),
-                  Nav3D = "Drag to rotate (hold Shift to constrain)",
+                  Zoom = paste("Drag to zoom (hold Shift to constrain)",
+                  "Click for coordinates", sep = ", "),
+                  Pan = paste("Drag to scroll (hold Shift to constrain)",
+                  "Click for coordinates", sep = ", "),
+                  Rotate = "Drag to rotate (hold Shift to constrain)",
                   Identify = "Click or drag to identify points",
                   Brush = paste("Click or drag to brush points",
                   "(hold Shift to constrain)"),
                   Annotation = "Click or drag to place text",
-                  Arrow = paste("Drag to draw an arrow",
-                  "(hold Shift to constrain)"),
+                  Arrow = "Drag to draw an arrow (hold Shift to constrain)",
+                  Line = "Drag to draw a line (hold Shift to constrain)",
+                  Rect = "Drag to draw a rectangle",
                   Coords = "Click for coordinates") ## fallback
     ## Zoom actions are always accessible, if possible:
     if (actions$nav2D || actions$nav3D) {
         if (modeOK != "Zoom")
-            msg <- paste(msg, "Alt-drag to zoom", sep = ", ")
-        msg <- paste(msg, "Alt-click to zoom out", sep = ", ")
+            msg <- paste(msg, "Ctrl-drag to zoom", sep = ", ")
+        msg <- paste(msg, "Ctrl-click to zoom out", sep = ", ")
     }
     msg <- paste(msg, "Right-click for more", sep = ", ")
     playState$widgets$statusbar$pop(1)
@@ -99,24 +105,27 @@ device.click_handler <- function(widget, event, playState)
     ## work out which actions are relevant to the plot
     actions <- playState$tmp$ok.actions
     modeOK <- playState$tmp$click.mode
-    if ((modeOK == "Zoom") && !actions$nav2D && !actions$nav3D)
+    if ((modeOK == "Pan") && actions$nav3D)
+        modeOK <- "Rotate"
+    if ((modeOK %in% c("Zoom", "Pan")) &&
+        (actions$nav2D == FALSE))
         modeOK <- "Coords"
-    if ((modeOK == "Identify") && !actions$ident)
+    if ((modeOK %in% c("Identify", "Brush")) &&
+        (actions$ident == FALSE))
         modeOK <- "Coords"
-    pageOK <- (modeOK %in% c("Annotation", "Arrow"))
+    pageOK <- (modeOK %in% c("Annotation", "Arrow", "Line", "Rect"))
     isCtrlClick <- (as.flag(event$state) & GdkModifierType["control-mask"])
     isAltClick <- ((as.flag(event$state) & GdkModifierType["mod1-mask"]) ||
                    (as.flag(event$state) & GdkModifierType["mod2-mask"]))
     isShiftClick <- (as.flag(event$state) & GdkModifierType["shift-mask"])
     isPlainClick <- !isCtrlClick && !isAltClick && !isShiftClick
     ## take actions
-    if ((event$button == 1) && !isCtrlClick) {
+    ## Alt-click is treated as a right-click, intended for MacOS (untested)
+    if ((event$button == 1) && !isAltClick) {
         ## standard (left) mouse button
         dragShape <- "rect"
         if (!isAltClick) {
-            if ((modeOK == "Zoom") && actions$nav3D)
-                dragShape <- "line"
-            if (modeOK == "Arrow")
+            if (modeOK %in% c("Pan", "Rotate", "Arrow", "Line"))
                 dragShape <- "line"
         }
         ## handle click or drag
@@ -137,8 +146,8 @@ device.click_handler <- function(widget, event, playState)
         } else {
             coordsCore(playState, NULL)
         }
-        ## standard alt-click actions
-        if (isAltClick) {
+        ## standard Ctrl-click actions
+        if (isCtrlClick) {
             if (actions$nav2D) {
                 ## 2D Zoom
                 if (foo$is.click) {
@@ -160,15 +169,15 @@ device.click_handler <- function(widget, event, playState)
         } else {
             ## plain click: normal actions
             if (modeOK == "Zoom") {
-                if (actions$nav3D) {
-                    ## Nav3D
-                    if (!foo$is.click)
-                        rotate3DCore(playState, foo)
-                } else {
-                    ## Zoom (2D)
-                    if (!foo$is.click)
-                        zoomCore(playState, foo)
-                }
+                if (!foo$is.click)
+                    zoomCore(playState, foo)
+            }
+            if (modeOK == "Pan") {
+                panCore(playState, foo)
+            }
+            if (modeOK == "Rotate") {
+                if (!foo$is.click)
+                    rotate3DCore(playState, foo)
             }
             if (modeOK == "Identify") {
                 identifyCore(playState, foo, remove = isShiftClick)
@@ -182,6 +191,12 @@ device.click_handler <- function(widget, event, playState)
             if (modeOK == "Arrow") {
                 arrowCore(playState, foo)
             }
+            if (modeOK == "Line") {
+                lineCore(playState, foo)
+            }
+            if (modeOK == "Rect") {
+                rectCore(playState, foo)
+            }
         }
     } else {
         coordsCore(playState, NULL)
@@ -191,8 +206,8 @@ device.click_handler <- function(widget, event, playState)
         if (actions$nav2D || actions$nav3D)
             zoomfit_handler(NULL, playState)
     }
-    if ((event$button == 3) || isCtrlClick) {
-        ## right mouse button or control-click
+    if ((event$button == 3) || isAltClick) {
+        ## right mouse button or alt-click
         foo <- playClickOrDrag(playState, x0=x, y0=y,
                                shape="rect")
         if (is.null(foo))
@@ -218,11 +233,27 @@ coordsCore <- function(playState, foo) {
     }
 }
 
+panCore <- function(playState, foo)
+{
+    xdiff <- diff(foo$coords$x)
+    ydiff <- diff(foo$coords$y)
+    ## update axis scales
+    if (!foo$yOnly) {
+        xlim <- rawXLim(playState, space=foo$space)
+        rawXLim(playState) <- xlim - xdiff
+    }
+    if (!foo$xOnly) {
+        ylim <- rawYLim(playState, space=foo$space)
+        rawYLim(playState) <- ylim - ydiff
+    }
+    playReplot(playState)
+}
+
 zoomCore <- function(playState, foo)
 {
     xlim <- range(foo$coords$x)
     ylim <- range(foo$coords$y)
-    ## reverse axis scales if needed
+    ## update axis scales, reverse if needed
     if (!foo$yOnly) {
         if (is.unsorted(rawXLim(playState, space=foo$space)))
             xlim <- rev(xlim)
@@ -343,8 +374,7 @@ contextCore <- function(playState, foo, event)
                 item <- gtkMenuItem("Add label to plot:")
                 item["sensitive"] <- FALSE
                 cMenu$append(item)
-                label <-
-                    label <- toString(playState$labels[[id]])
+                label <- toString(playState$labels[[id]])
                 item <- gtkMenuItem(label)
                 gSignalConnect(item, "activate",
                                function(widget, ...) {

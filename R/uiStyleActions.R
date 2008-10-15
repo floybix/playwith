@@ -109,6 +109,11 @@ style.thick.lines_handler <- function(widget, playState)
     playReplot(playState)
 }
 
+set.point.line.style_handler <- function(widget, playState)
+{
+    gmessage("not yet implemented")
+}
+
 set.label.style_handler <- function(widget, playState)
 {
     playFreezeGUI(playState)

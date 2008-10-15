@@ -10,6 +10,7 @@
     <toolitem action='StayOnTop'/>
     <separator/>
     <toolitem action='Zoom'/>
+    <toolitem action='Pan'/>
     <toolitem action='Identify'/>
     <toolitem action='Brush'/>
     <toolitem action='Annotation'/>

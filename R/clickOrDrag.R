@@ -54,10 +54,16 @@ playSelectData <-
             ok <- ok & (min(coords$y) <= data$y) & (data$y <= max(coords$y))
         which <- which(ok)
     }
+    ## account for multiple points (matrix values of data$x, data$y)
+    n <- NROW(data$x)
+    which <- unique(which %% n)
+    which[which == 0] <- n
+    x <- if (is.matrix(data$x)) data$x[which,] else data$x[which]
+    y <- if (is.matrix(data$y)) data$y[which,] else data$y[which]
     subscripts <- data$subscripts[which]
     if (is.null(subscripts)) subscripts <- which
     c(list(subscripts = subscripts, which = which,
-           x = data$x[which], y = data$y[which],
+           x = x, y = y,
            pos = pos, is.click = foo$is.click),
       foo)
 }

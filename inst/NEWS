@@ -1,7 +1,15 @@
 
 Changes in Version 0.9-22
 
+  o Support for more plot types via plotCoords() methods.
+
+  o New tools "Pan" (scroll), "Line", "Rect".
+
+  o Changed some click actions and keyboard shortcuts.
+
   o Fixed initial window size.
+
+  o Fixed occasional freeze-up of latticist.
 
   o "Set axis labels..." button in Plot Settings (Lattice only).
 

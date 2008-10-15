@@ -13,7 +13,7 @@ globalActionGroup <- function(playState)
              list("Copy", "gtk-copy", "_Copy", "<Ctrl><Shift>C", "Copy current plot as an image", copy_handler),
              list("Print", "gtk-print", "_Print", "<Ctrl>P", "Print current plot", print_handler),
              list("Close", "gtk-close", "Close", "<Ctrl>W", "Close window and device", close_handler),
-             list("SetSize", NULL, "Set device _size...", "<Ctrl>0", NULL, set.size_handler),
+             list("SetSize", NULL, "Set device _size...", "<Ctrl>M", NULL, set.size_handler),
              list("IncrFont", NULL, "_Increase font size", "<Ctrl>plus", NULL, incr.font_handler),
              list("DecrFont", NULL, "De_crease font size", "<Ctrl>minus", NULL, decr.font_handler),
              list("StyleSettings", "gtk-select-color", "_Style settings", "<Ctrl>slash", NULL, style.settings_handler),

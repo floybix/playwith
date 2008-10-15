@@ -124,6 +124,40 @@ edit.annotations_handler <- function(widget, playState)
     playState$win$present()
 }
 
+rectCore <- function(playState, foo)
+{
+    pageAnnotation <- isTRUE(playState$page.annotation)
+    if (is.null(foo)) return()
+    if (is.null(foo$coords)) pageAnnotation <- TRUE
+    if (foo$is.click) return()
+    space <- foo$space
+    if (pageAnnotation) space <- "page"
+    myXY <- if (space == "page") foo$ndc else foo$coords
+    myXY$x <- signif(myXY$x, 7)
+    myXY$y <- signif(myXY$y, 7)
+    annot <- with(myXY, call("panel.rect",
+                             min(x), min(y), max(x), max(y)))
+    ## draw it and store it
+    playAnnotate(playState, annot, space = space)
+}
+
+lineCore <- function(playState, foo)
+{
+    pageAnnotation <- isTRUE(playState$page.annotation)
+    if (is.null(foo)) return()
+    if (is.null(foo$coords)) pageAnnotation <- TRUE
+    if (foo$is.click) return()
+    space <- foo$space
+    if (pageAnnotation) space <- "page"
+    myXY <- if (space == "page") foo$ndc else foo$coords
+    myXY$x <- signif(myXY$x, 7)
+    myXY$y <- signif(myXY$y, 7)
+    annot <- with(myXY, call("panel.segments",
+                             x[1], y[1], x[2], y[2]))
+    ## draw it and store it
+    playAnnotate(playState, annot, space = space)
+}
+
 arrowCore <- function(playState, foo)
 {
     pageAnnotation <- isTRUE(playState$page.annotation)

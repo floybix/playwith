@@ -7,14 +7,16 @@ plotActionGroup <- function(playState)
 {
     entries <-
         list( ## : name, stock icon, label, accelerator, tooltip, callback
-             list("PlotSettings", "gtk-preferences", "Plot _settings", "<Ctrl>O", "Change the plot type and settings", plot.settings_handler),
-             list("Zoomfit", "gtk-zoom-fit", "_Reset scales", "<Ctrl>space", "Revert to default plot region", zoomfit_handler),
+             list("PlotSettings", "gtk-preferences", "Plot _settings", "<Ctrl>semicolon", "Change the plot type and settings", plot.settings_handler),
+             list("Zoomin", "gtk-zoom-in", "Zoom _in", "<Ctrl>bracketright", "Show half the scale of x and y", zoomin_handler),
+             list("Zoomout", "gtk-zoom-out", "Zoom _out", "<Ctrl>bracketleft", "Show twice the scale of x and y", zoomout_handler),
+             list("Zoomfit", "gtk-zoom-fit", "_Reset scales", "<Ctrl>0", "Revert to default plot region", zoomfit_handler),
              list("ZeroY", "gtk-goto-bottom", "Full y scale", "<Ctrl>Return", "Show the full y (response) scale starting from zero", zero.y_handler),
              list("ZeroX", "gtk-goto-first", "Full x scale", "<Ctrl>BackSpace", "Show the full x (domain) scale starting from zero", zero.x_handler),
              ## identify (uiIdentifyActions.R)
              list("SetLabelsTo", "gtk-index", "Set _labels to...", "<Ctrl>L", NULL, set.labels_handler),
              list("FindLabels", "gtk-find", "_Find...", "<Ctrl>F", "Find points with labels matching...", id.find_handler),
-             list("IdTable", "gtk-index", "Select from _table...", NULL, "Select points from a table", id.table_handler),
+             list("IdTable", "gtk-index", "Select from _table...", "<Ctrl>J", "Select points from a table", id.table_handler),
              list("SaveIDs", NULL, "_Save IDs...", NULL, "_Save current IDs to an object", save.ids_handler),
              ## annotations (uiAnnotationActions.R)
              list("Legend", "gtk-sort-ascending", "Legend", NULL, "Place a legend", legend_handler),
@@ -22,9 +24,10 @@ plotActionGroup <- function(playState)
              list("UndoAnnotation", "gtk-undo", "Undo annot.", "<Ctrl>Z", "Remove last annotation", undo.annotation_handler),
              list("Clear", "gtk-clear", "Clear", "<Shift>Delete", "Remove labels and annotations", clear_handler),
              ## style (uiStyleActions.R)
-             list("SetLabelStyle", NULL, "Set _label style...", NULL, NULL, set.label.style_handler),
-             list("SetArrowStyle", NULL, "Set _arrow style...", NULL, NULL, set.arrow.style_handler),
-             list("SetBrushStyle", NULL, "Set _brush style...", NULL, NULL, set.brush.style_handler),
+             list("SetPointLineStyle", NULL, "Set _point/line style...", "<Alt>1", NULL, set.point.line.style_handler),
+             list("SetBrushStyle", NULL, "Set _brush style...", "<Alt>2", NULL, set.brush.style_handler),
+             list("SetLabelStyle", NULL, "Set _label style...", "<Alt>3", NULL, set.label.style_handler),
+             list("SetArrowStyle", NULL, "Set _arrow style...", "<Alt>4", NULL, set.arrow.style_handler),
              ## grobs (uiGrobActions.R)
              list("GrobInspector", "gtk-properties", "_Grob inspector", NULL, NULL, grob.inspector_handler)
              )
@@ -43,11 +46,14 @@ plotActionGroup <- function(playState)
     ## see uiClickActions.R
     clickModeEntries <-
         list( ## : name, stock icon, label, accelerator, tooltip, value
-             list("Zoom", "gtk-zoom-in", "_Navigate", "<Ctrl>M", "Zoom in and out or rotate (3D)", 0),
-             list("Identify", "gtk-info", "_Identify", "<Ctrl>I", "Identify data points (add labels)", 1),
-             list("Brush", "gtk-media-record", "_Brush", "<Ctrl>B", "Brush (highlight) data points", 2),
-             list("Annotation", "gtk-italic", "_Annotate", "<Ctrl>A", "Add text to the plot", 3),
-             list("Arrow", "gtk-connect", "Arro_w", "<Ctrl><Shift>A", "Add arrows to the plot", 4)
+             list("Zoom", "gtk-zoom-in", "_Navigate", "<Ctrl>space", "Zoom in and out or rotate (3D)", 0),
+             list("Pan", "gtk-jump-to", "_Pan", "<Alt>space", "Pan (move the plot area)", 1),
+             list("Identify", "gtk-info", "_Identify", "<Ctrl>I", "Identify data points (add labels)", 2),
+             list("Brush", "gtk-media-record", "_Brush", "<Ctrl>B", "Brush (highlight) data points", 3),
+             list("Annotation", "gtk-italic", "_Annotate", "<Ctrl>apostrophe", "Add text to the plot", 4),
+             list("Arrow", "gtk-connect", "Arro_w", "<Ctrl>bar", "Add arrows to the plot", 5),
+             list("Line", NULL, "_Line", "<Alt>bar", "Add lines to the plot", 6),
+             list("Rect", NULL, "_Rect", "<Alt>apostrophe", "Add rectangles to the plot", 7)
              )
 
     ## construct action group with playState passed to callbacks
@@ -62,10 +68,13 @@ plotActionGroup <- function(playState)
 
 clickModeValues <- function() {
     list("Zoom" = 0,
-         "Identify" = 1,
-         "Brush" = 2,
-         "Annotation" = 3,
-         "Arrow" = 4)
+         "Pan" = 1,
+         "Identify" = 2,
+         "Brush" = 3,
+         "Annotation" = 4,
+         "Arrow" = 5,
+         "Line" = 6,
+         "Rect" = 7)
 }
 
 updatePlotActions <- function(playState)
@@ -87,6 +96,7 @@ updatePlotActions <- function(playState)
                              !is.null(callArg(playState, "zoom")) ||
                              !is.null(callArg(playState, "screen")) ||
                              !is.null(callArg(playState, "R.mat")))
+    aGroup$getAction("Zoomfit")$setSensitive(nonFit)
     aGroup$getAction("Zoomfit")$setVisible(nonFit)
     ## ZeroY
     eps <- .Machine$double.eps * 2
@@ -102,6 +112,7 @@ updatePlotActions <- function(playState)
             ylim <- playState$trellis$panel.args.common$zlim
         nonZeroY <- (min(ylim) > eps) || (max(ylim) < -eps)
     }
+    aGroup$getAction("ZeroY")$setSensitive(nonZeroY)
     aGroup$getAction("ZeroY")$setVisible(nonZeroY)
     ## ZeroX
     nonZeroX <- FALSE
@@ -116,11 +127,66 @@ updatePlotActions <- function(playState)
             xlim <- playState$trellis$panel.args.common$xlim
         nonZeroX <- (min(xlim) > eps) || (max(xlim) < -eps)
     }
+    aGroup$getAction("ZeroX")$setSensitive(nonZeroX)
     aGroup$getAction("ZeroX")$setVisible(nonZeroX)
     ## Expand
     hasPanels <- isLatt && (length(playState$tmp$currentLayout) > 1)
     expandActive <- aGroup$getAction("Expand")$getActive()
     aGroup$getAction("Expand")$setVisible(expandActive || hasPanels)
+}
+
+zoomout_handler <- function(widget, playState)
+{
+    isLatt <- playState$is.lattice
+    isLatt3D <- isLatt && !is.null(playState$trellis$panel.args.common$scales.3d)
+    if (isLatt3D) {
+        zoom <- callArg(playState, "zoom")
+        if (is.null(zoom)) zoom <- 0.8
+        callArg(playState, "zoom") <- signif(zoom / 1.25, 3)
+        playReplot(playState)
+        return()
+    }
+    nav.x <- TRUE
+    ## in time.mode, only zoom along x-axis
+    nav.y <- (!isTRUE(playState$time.mode) &&
+              is.null(playState$time.vector))
+    ## find existing scales
+    xlim <- rawXLim(playState)
+    ylim <- rawYLim(playState)
+    ## zoom out: make range twice the size
+    if (nav.x) xlim <- xlim + diff(xlim) * c(-0.5, 0.5)
+    if (nav.y) ylim <- ylim + diff(ylim) * c(-0.5, 0.5)
+    ## this converts from raw numeric to original format (including unlog)
+    if (nav.x) rawXLim(playState) <- xlim
+    if (nav.y) rawYLim(playState) <- ylim
+    playReplot(playState)
+}
+
+zoomin_handler <- function(widget, playState)
+{
+    isLatt <- playState$is.lattice
+    isLatt3D <- isLatt && !is.null(playState$trellis$panel.args.common$scales.3d)
+    if (isLatt3D) {
+        zoom <- callArg(playState, "zoom")
+        if (is.null(zoom)) zoom <- 0.8
+        callArg(playState, "zoom") <- signif(zoom * 1.25, 3)
+        playReplot(playState)
+        return()
+    }
+    nav.x <- TRUE
+    ## in time.mode, only zoom along x-axis
+    nav.y <- (!isTRUE(playState$time.mode) &&
+              is.null(playState$time.vector))
+    ## find existing scales
+    xlim <- rawXLim(playState)
+    ylim <- rawYLim(playState)
+    ## zoom in: make range half the size
+    if (nav.x) xlim <- xlim + diff(xlim) * c(0.25, -0.25)
+    if (nav.y) ylim <- ylim + diff(ylim) * c(0.25, -0.25)
+    ## this converts from raw numeric to original format (including unlog)
+    if (nav.x) rawXLim(playState) <- xlim
+    if (nav.y) rawYLim(playState) <- ylim
+    playReplot(playState)
 }
 
 zoomfit_handler <- function(widget, playState)

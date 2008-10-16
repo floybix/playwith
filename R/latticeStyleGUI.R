@@ -32,19 +32,57 @@ panel.usertext <-
                fontface = fontface, adj = adj, pos = pos, offset = offset, ...)
 }
 
-## TODO: how should this be managed?
 brush.symbol.default <-
-    list(pch = 21, col = "black", fill = "yellow", alpha = 1, cex = 1)
+    list(pch = 21, col = "black", fill = "red",
+         alpha = 1, cex = 1)
+
+brush.line.default <-
+    list(col = "red", alpha = 1, lwd = 2, lty = 1)
+
+current.brush.symbol <- function() {
+    brush.symbol <- trellis.par.get("brush.symbol")
+    if (is.null(eval(brush.symbol)))
+        brush.symbol <- brush.symbol.default
+    brush.symbol
+}
+
+current.brush.line <- function() {
+    brush.line <- trellis.par.get("brush.line")
+    if (is.null(eval(brush.line))) {
+        brush.line <- brush.line.default
+        ## take default 'col', 'alpha' from brush.symbol
+        brush.symbol <- current.brush.symbol()
+        brush.line$col <- brush.symbol$col
+        brush.line$alpha <- brush.symbol$alpha
+        ## if the brush symbol is a filled symbol
+        ## take 'fill' rather than 'col'...
+        if (is.numeric(brush.symbol$pch) &&
+            (brush.symbol$pch >= 21)) {
+            ## ...except if 'fill' is transparent
+            if (col2rgb(brush.symbol$fill, alpha = TRUE)[4] > 0)
+                brush.line$col <- brush.symbol$fill
+        }
+    }
+    brush.line
+}
 
 panel.brushpoints <-
     function(x, y = NULL, col = brush.symbol$col, pch = brush.symbol$pch,
     alpha = brush.symbol$alpha, fill = brush.symbol$fill, cex = brush.symbol$cex, ...)
 {
-    brush.symbol <- trellis.par.get("brush.symbol")
-    if (is.null(eval(brush.symbol)))
-        brush.symbol <- brush.symbol.default
+    brush.symbol <- current.brush.symbol()
     panel.points(x, y, col = col, pch = pch, alpha = alpha,
                  fill = fill, cex = cex, ...)
+}
+
+panel.brushlines <-
+    function(x0, y0, type = "l", col = brush.line$col,
+             alpha = brush.line$alpha, lty = brush.line$lty,
+             lwd = brush.line$lwd, ...)
+{
+    brush.line <- current.brush.line()
+    panel.lines(x0, y0, type = type, col = col, alpha = alpha,
+                   lty = lty, lwd = lwd, ...)
 }
 
 latticeStyleGUI <-

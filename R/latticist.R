@@ -684,6 +684,10 @@ makeLatticist <- function(dat)
                     callArg(playState, "cex") <- 0.5
                     callArg(playState, "varname.cex") <- 0.7
                     callArg(playState, "pscales") <- 0
+                    if (doLines)
+                        callArg(playState, "lower.panel") <-
+                            function(..., type)
+                                panel.xyplot(..., type = "smooth")
 
                 } else if (opt == "parallel") {
                     callArg(playState, 0) <- quote(parallel)

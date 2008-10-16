@@ -14,15 +14,22 @@ playSelectData <-
     if (is.null(foo)) return(NULL)
     if (is.null(foo$coords)) return(NULL)
     coords <- foo$coords
-    data <- xyCoords(playState, space = foo$space)
-    ## convert to log scale if necessary
-    data <- dataCoordsToSpaceCoords(playState, data)
-
+    data <- xyData(playState, space = foo$space)
     if (length(data$x) == 0) {
         gmessage.error(paste("Sorry, can not guess the data point coordinates.",
                              "Please contact the maintainer with suggestions."))
         return(NULL)
     }
+    ## convert to numeric (same as xyCoords())
+    numdata <- data
+    ## assume if not numeric, then not a matrix
+    if (!is.numeric(data$x))
+        numdata$x <- as.numeric(data$x)
+    if (!is.numeric(data$y))
+        numdata$y <- as.numeric(data$y)
+    ## convert to log scale if necessary
+    numdata <- dataCoordsToSpaceCoords(playState, numdata)
+
     which <- NULL
     pos <- NULL
     if (foo$is.click) {
@@ -32,12 +39,11 @@ playSelectData <-
                        quote(list(
                             lx=convertX(unit(x, "native"), "points", TRUE),
                             ly=convertY(unit(y, "native"), "points", TRUE),
-                            px=convertX(unit(data$x, "native"), "points", TRUE),
-                            py=convertY(unit(data$y, "native"), "points", TRUE))),
+                            px=convertX(unit(numdata$x, "native"), "points", TRUE),
+                            py=convertY(unit(numdata$y, "native"), "points", TRUE))),
                        space=foo$space)
         pdists <- with(ppxy, sqrt((px - lx)^2 + (py - ly)^2))
         if (min(pdists, na.rm = TRUE) > 18)
-            ##warning("no observations within ", 18, " points")
             which <- integer(0)
         else {
             which <- which.min(pdists)
@@ -49,13 +55,13 @@ playSelectData <-
         ## drag
         ok <- TRUE
         if (!foo$yOnly)
-            ok <- (min(coords$x) <= data$x) & (data$x <= max(coords$x))
+            ok <- (min(coords$x) <= numdata$x) & (numdata$x <= max(coords$x))
         if (!foo$xOnly)
-            ok <- ok & (min(coords$y) <= data$y) & (data$y <= max(coords$y))
+            ok <- ok & (min(coords$y) <= numdata$y) & (numdata$y <= max(coords$y))
         which <- which(ok)
     }
     ## account for multiple points (matrix values of data$x, data$y)
-    n <- NROW(data$x)
+    n <- min(NROW(data$x), NROW(data$y))
     which <- unique(which %% n)
     which[which == 0] <- n
     x <- if (is.matrix(data$x)) data$x[which,] else data$x[which]

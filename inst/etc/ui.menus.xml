@@ -46,8 +46,8 @@
       <menuitem action='SetLabelsTo'/>
       <separator/>
       <menuitem action='Identify'/>
-      <menuitem action='FindLabels'/>
       <menuitem action='IdTable'/>
+      <menuitem action='FindLabels'/>
       <separator/>
       <menuitem action='SaveIDs'/>
       <separator/>

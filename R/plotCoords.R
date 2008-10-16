@@ -274,10 +274,12 @@ plotCoords.parallel <- function(name, object, call, envir, panel.args, ...)
             upper <- rep(upper, length = n.r)
             dif <- upper - lower
             if (n.r == 0) return(NULL)
-            zz <- as.matrix(as.numeric(z[subscripts, ]))
+            zz <- data.matrix(z[subscripts, ])
             zz <- scale(zz, center = lower, scale = dif)
-            ii <- matrix(seq_len(n.r), byrow = TRUE,
-                         ncol = n.r, nrow = n.c)
+            ii <- rep(factor(colnames(z), levels = colnames(z)),
+                      each = n.c)
+            #ii <- matrix(seq_len(n.r), byrow = TRUE,
+            #             ncol = n.r, nrow = n.c)
             if (horizontal.axis) {
                 list(x = zz, y = ii, subscripts = subscripts)
             } else {
@@ -307,7 +309,7 @@ plotCoords.splom <- function(name, object, call, envir, panel.args, packet, ...)
     nvars <- length(pargs$z)
     ## data
     subscripts <- pargs$subscripts
-    z <- lapply(pargs$z[subscripts, ], as.numeric)
+    z <- data.matrix(pargs$z[subscripts, ])
     coords <- list()
     coords$x <- matrix(0, ncol = nvars * (nvars - 1),
                        nrow = length(subscripts))
@@ -324,17 +326,17 @@ plotCoords.splom <- function(name, object, call, envir, panel.args, packet, ...)
             if (row != column) {
                 subpanel.name <- paste("subpanel", column, row, sep = ".")
                 depth <- downViewport(subpanel.name)
-                xlim <- convertX(unit(0:1, "npc"), "native")
-                ylim <- convertY(unit(0:1, "npc"), "native")
+                xlim <- convertX(unit(0:1, "npc"), "native", TRUE)
+                ylim <- convertY(unit(0:1, "npc"), "native", TRUE)
                 upViewport(depth)
                 x <- z[, column]
                 y <- z[, row]
                 ## convert to "npc" in the subpanel
                 x <- (x - xlim[1]) / (xlim[2] - xlim[1])
                 y <- (y - ylim[1]) / (ylim[2] - ylim[1])
-                ## convert to "npc" in the superpanel (same as native)
-                x <- (x + column - 1) / nvars
-                y <- (y + row - 1) / nvars
+                ## convert to superpanel coordinates
+                x <- (x + column - 1) + 0.5
+                y <- (y + row - 1) + 0.5
                 #i <- (row - 1) * nvars + column
                 coords$x[,i] <- x
                 coords$y[,i] <- y

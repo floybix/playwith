@@ -449,7 +449,7 @@ setRawXYLim <- function(playState, x, x.or.y=c("x", "y"))
         x.panel <- xyData(playState, space="packet 1")[[x.or.y]]
         ## set factor labels explicitly, otherwise they are coerced to numeric
         if (is.factor(x.panel)) {
-            scales.labels <- substitute(scales$s$labels,
+            scales.labels <- substitute(scales$w$labels,
                                         list(w = as.symbol(x.or.y)))
             scales.at <- substitute(scales$w$at,
                                         list(w = as.symbol(x.or.y)))

@@ -44,8 +44,25 @@ getDataArg <- function(playState = playDevCur(), eval = TRUE)
 xyCoords <- function(playState = playDevCur(), space="plot")
 {
     foo <- xyData(playState, space=space)
-    foo$x <- as.numeric(foo$x)
-    foo$y <- as.numeric(foo$y)
+    ## factor data can't be stored as a matrix;
+    ## if either is a matrix, convert
+    ## both x and y to same matrix form.
+    nvar <- max(NCOL(foo$x), NCOL(foo$y))
+    ## if 'subscripts' exists, that can also
+    ## define the number of cases
+    if (length(foo$subscripts) > 1) {
+        nvar <- min(nvar, length(foo$subscripts))
+    }
+    if (!is.numeric(foo$x)) {
+        foo$x <- as.numeric(foo$x)
+        if (nvar > 1)
+            foo$x <- matrix(foo$x, ncol = nvar)
+    }
+    if (!is.numeric(foo$y)) {
+        foo$y <- as.numeric(foo$y)
+        if (nvar > 1)
+            foo$y <- matrix(foo$y, ncol = nvar)
+    }
     foo
 }
 

@@ -1,7 +1,7 @@
 
 Changes in Version 0.9-22
 
-  o Support for more plot types via plotCoords() methods.
+  o Support for more plots via plotCoords and case.names methods.
 
   o New tools "Pan" (scroll), "Line", "Rect".
 

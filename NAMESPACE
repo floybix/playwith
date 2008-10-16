@@ -28,6 +28,7 @@ export(latticeStyleGUI,
        latticeStyleToBasePar,
        panel.usertext,
        panel.brushpoints,
+       panel.brushlines,
        latticeStyleDemo,
        custom.theme.2,
        custom.theme.black)

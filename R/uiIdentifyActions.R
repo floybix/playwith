@@ -19,8 +19,9 @@ initIdentifyActions <- function(playState)
         ## lattice package:
         if (playState$callName %in%
             c("histogram", "densityplot", "barchart")) return()
+        ## latticeExtra package:
         if (playState$callName %in% "marginal.plot") return()
-        ## from graphics package:
+        ## graphics package:
         if (playState$callName %in%
             c("hist", "barplot", "spineplot", "mosaic",
               "assocplot", "fourfoldplot",
@@ -107,17 +108,17 @@ drawLabelsInSpace <- function(playState, subscripts, space = "plot",
     if (!is.null(data$subscripts)) {
         ## 'data' is a subset given by data$subscripts,
         ## so need to find which ones match the label subscripts
-        #which <- findInterval(subscripts, data$subscripts)
         which <- match(subscripts, data$subscripts, 0)
-        x <- data$x[which] ## TODO -- matrix case!
-        y <- data$y[which]
     } else {
         ## 'data' (x and y) is the whole dataset
-        x <- data$x[subscripts]
-        y <- data$y[subscripts]
+        which <- subscripts
     }
+    x <- if (is.matrix(data$x)) data$x[which,] else data$x[which]
+    y <- if (is.matrix(data$y)) data$y[which,] else data$y[which]
     labels <- playState$labels[subscripts]
-    pos <- rep(pos, length=length(labels))
+    ## if each data point has multiple locations, replicate labels
+    labels <- rep(labels, each = max(NCOL(x), NCOL(y)))
+    pos <- rep(pos, length = length(labels))
     offset <- as.numeric(playState$label.offset)
     annots <- expression()
     for (i in seq_along(labels)) {
@@ -152,11 +153,17 @@ drawLinkedLocal <- function(playState, return.code = FALSE)
             ## 'data' (x and y) is the whole dataset
             which <- subscripts
         }
-        x <- if (is.matrix(data$x)) data$x[,which] else data$x[which]
-        y <- if (is.matrix(data$y)) data$y[,which] else data$y[which]
+        x <- if (is.matrix(data$x)) data$x[which,] else data$x[which]
+        y <- if (is.matrix(data$y)) data$y[which,] else data$y[which]
         if (length(x) == 0) next
-        ## TODO: parallel -- lines
         annot <- call("panel.brushpoints", x, y)
+        ## special case: parallel -- draw lines not points
+        if (playState$callName == "parallel") {
+            ## use NAs to achieve breaks in lines
+            x <- t(cbind(x, NA))
+            y <- t(cbind(y, NA))
+            annot <- call("panel.brushlines", x, y)
+        }
         expr <- playDo(playState, annot, space = space,
                        return.code = return.code)
         if (return.code)

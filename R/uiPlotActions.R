@@ -15,8 +15,8 @@ plotActionGroup <- function(playState)
              list("ZeroX", "gtk-goto-first", "Full x scale", "<Ctrl>BackSpace", "Show the full x (domain) scale starting from zero", zero.x_handler),
              ## identify (uiIdentifyActions.R)
              list("SetLabelsTo", "gtk-index", "Set _labels to...", "<Ctrl>L", NULL, set.labels_handler),
-             list("FindLabels", "gtk-find", "_Find...", "<Ctrl>F", "Find points with labels matching...", id.find_handler),
              list("IdTable", "gtk-index", "Select from _table...", "<Ctrl>J", "Select points from a table", id.table_handler),
+             list("FindLabels", "gtk-find", "_Find...", "<Ctrl>F", "Find points with labels matching...", id.find_handler),
              list("SaveIDs", NULL, "_Save IDs...", NULL, "_Save current IDs to an object", save.ids_handler),
              ## annotations (uiAnnotationActions.R)
              list("Legend", "gtk-sort-ascending", "Legend", NULL, "Place a legend", legend_handler),
@@ -86,8 +86,9 @@ updatePlotActions <- function(playState)
     isLatt3D <- isLatt && !is.null(playState$trellis$panel.args.common$scales.3d)
     ## PlotSettings
     aGroup$getAction("PlotSettings")$setSensitive(hasArgs)
-    ## Zoom
+    ## Zoom / Pan
     aGroup$getAction("Zoom")$setSensitive(hasArgs && !isSplom)
+    aGroup$getAction("Pan")$setSensitive(hasArgs && !isSplom)
     ## Zoomfit
     nonFit <- hasArgs && (!is.null(callArg(playState, "xlim")) ||
                           !is.null(callArg(playState, "ylim")))

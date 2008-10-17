@@ -14,7 +14,7 @@ updateAnnotationActionStates <- function(playState)
 {
     aGroup <- playState$actionGroups[["PlotActions"]]
     ## UndoAnnotation
-    showUndo <- (length(playState$undoStack) > 0)
+    showUndo <- (length(playState$tmp$undoStack) > 0)
     if (isBasicDeviceMode(playState))
         showUndo <- !is.null(playState$tmp$recorded.plot)
     aGroup$getAction("UndoAnnotation")$setSensitive(showUndo)
@@ -71,32 +71,7 @@ clear_handler <- function(widget, playState)
 }
 
 undo.annotation_handler <- function(widget, playState)
-{
-    if (isBasicDeviceMode(playState)) {
-        ## basic device mode: only one stored display
-        redoPlot <- recordPlot()
-        try(replayPlot(playState$tmp$recorded.plot))
-        generateSpaces(playState)
-        playState$tmp$recorded.plot <- redoPlot
-    } else {
-        ## normal mode
-        i <- length(playState$undoStack)
-        if (i == 0) return()
-        type <- playState$undoStack[[i]]
-        length(playState$undoStack) <- (i - 1)
-        if (type == "ids") {
-            length(playState$ids) <- length(playState$ids) - 1
-        } else if (type == "annotations") {
-            length(playState$annotations) <- length(playState$annotations) - 1
-        } else if (type == "linked") {
-            length(playState$linked$ids) <- length(playState$linked$ids) - 1
-        }
-        ## redraw
-        playReplot(playState)
-        if (type == "linked")
-            updateLinkedSubscribers(playState, redraw = TRUE)
-    }
-}
+    playUndo(playState)
 
 edit.annotations_handler <- function(widget, playState)
 {
@@ -118,6 +93,7 @@ edit.annotations_handler <- function(widget, playState)
         } else {
             playState$annotations <- tmp
             playReplot(playState)
+            playStoreUndo(playState)
             break
         }
     }
@@ -423,17 +399,7 @@ annotateCore <- function(playState, foo)
             return()
         }
         ## draw it and store it
-        if (isBasicDeviceMode(playState)) {
-            ## just store previous display so can 'undo'
-            playState$tmp$recorded.plot <- originalPlot
-            ## draw it
-            playDo(playState, annot, space=space)
-            ## update other tool states
-            updateAnnotationActionStates(playState)
-        } else {
-            ## normal mode
-            playAnnotate(playState, annot, space = space)
-        }
+        playAnnotate(playState, annot, space = space)
 
         dispose(h$obj)
         playState$win$present()

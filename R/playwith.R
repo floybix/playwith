@@ -375,7 +375,7 @@ playwith <-
         playState$linked$ids <- list()
         playState$linked$subscribers <- list(playState)
     }
-    playState$undoStack <- list()
+    playState$tmp$undoStack <- list()
     ## graphical user interface
     playState$uiManager <- uiManager
     playState$actionGroups <- actionGroups

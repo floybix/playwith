@@ -67,6 +67,7 @@
          show.menubar = TRUE,
          show.statusbar = TRUE,
          show.tooltips = FALSE,
+         undo.levels = 4,
          catch.errors = TRUE,
          deparse.options = c()
          )

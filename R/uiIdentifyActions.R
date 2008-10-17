@@ -115,10 +115,12 @@ drawLabelsInSpace <- function(playState, subscripts, space = "plot",
     }
     x <- if (is.matrix(data$x)) data$x[which,] else data$x[which]
     y <- if (is.matrix(data$y)) data$y[which,] else data$y[which]
+    nvar <- max(NCOL(data$x), NCOL(data$y))
     labels <- playState$labels[subscripts]
-    ## if each data point has multiple locations, replicate labels
-    labels <- rep(labels, each = max(NCOL(x), NCOL(y)))
     pos <- rep(pos, length = length(labels))
+    ## if each data point has multiple locations, replicate labels
+    labels <- rep(labels, each = nvar)
+    labels <- rep(pos, each = nvar)
     offset <- as.numeric(playState$label.offset)
     annots <- expression()
     for (i in seq_along(labels)) {
@@ -193,9 +195,8 @@ updateLinkedSubscribers <- function(playState, redraw = FALSE)
             playState$linked$subscribers[-whichDead]
 }
 
-identifyCore <- function(playState, foo, remove = FALSE)
+identifyCore <- function(playState, foo)
 {
-    ## TODO: if (remove)
     if (!isTRUE(playState$tmp$identify.ok)) return()
     if (is.null(playState$labels)) return()
     if (is.null(foo$coords)) return()
@@ -250,12 +251,13 @@ identifyCore <- function(playState, foo, remove = FALSE)
                                i <- length(playState$ids) + 1
                                playState$ids[[i]] <- ids.new
                                names(playState$ids)[i] <- space
-                               playState$undoStack <- c(playState$undoStack, "ids")
                                ## draw them
                                drawLabelsInSpace(playState, subscripts = ss,
                                                  space = space, pos = pos)
                                ## update other tool states
                                updateAnnotationActionStates(playState)
+                               ## store state
+                               playStoreUndo(playState)
                            }, data = list(ss = ss, pos = pos))
         }
         idMenu$append(gtkSeparatorMenuItem())
@@ -276,10 +278,11 @@ identifyCore <- function(playState, foo, remove = FALSE)
             i <- length(playState$ids) + 1
             playState$ids[[i]] <- ids.new
             names(playState$ids)[i] <- space
-            playState$undoStack <- c(playState$undoStack, "ids")
             ## draw them
             drawLabelsInSpace(playState, subscripts = subscripts,
                               space = space, pos = pos)
+            ## store state
+            playStoreUndo(playState)
         })
         ## update other tool states
         updateAnnotationActionStates(playState)
@@ -361,18 +364,22 @@ save.ids_handler <- function(widget, playState) {
     assign(name, playGetIDs(playState), globalenv())
 }
 
-brushCore <- function(playState, foo, remove = FALSE)
+brushCore <- function(playState, foo, add = TRUE)
 {
     foo <- playSelectData(playState, foo = foo)
     if (is.null(foo)) return()
     if (length(foo$which) == 0) return()
     ids <- foo$subscripts
-    ## TODO: if (remove)
+    if ((add == FALSE) &&
+        (length(playGetIDs(playState, type = "brushed")) > 0))
+    {
+        playClear(playState, type = "brushed")
+    }
     i <- length(playState$linked$ids) + 1
     playState$linked$ids[[i]] <- ids
-    playState$undoStack <- c(playState$undoStack, "linked")
     updateAnnotationActionStates(playState)
     drawLinkedLocal(playState)
     updateLinkedSubscribers(playState)
+    playStoreUndo(playState)
 }
 

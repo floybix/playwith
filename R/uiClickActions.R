@@ -76,7 +76,7 @@ updateClickActions <- function(playState)
                   Rotate = "Drag to rotate (hold Shift to constrain)",
                   Identify = "Click or drag to identify points",
                   Brush = paste("Click or drag to brush points",
-                  "(hold Shift to constrain)"),
+                  "(hold Shift to add, not replace)"),
                   Annotation = "Click or drag to place text",
                   Arrow = "Drag to draw an arrow (hold Shift to constrain)",
                   Line = "Drag to draw a line (hold Shift to constrain)",
@@ -128,9 +128,12 @@ device.click_handler <- function(widget, event, playState)
             if (modeOK %in% c("Pan", "Rotate", "Arrow", "Line"))
                 dragShape <- "line"
         }
+        scales <- "dynamic"
+        if (modeOK %in% c("Identify", "Brush"))
+            scales <- c("x", "y")
         ## handle click or drag
         foo <- playClickOrDrag(playState, x0=x, y0=y,
-                               shape=dragShape)
+                               shape=dragShape, scales = scales)
         if (is.null(foo)) {
             ## drag went off device
             coordsCore(playState, NULL)
@@ -180,10 +183,10 @@ device.click_handler <- function(widget, event, playState)
                     rotate3DCore(playState, foo)
             }
             if (modeOK == "Identify") {
-                identifyCore(playState, foo, remove = isShiftClick)
+                identifyCore(playState, foo)
             }
             if (modeOK == "Brush") {
-                brushCore(playState, foo, remove = isShiftClick)
+                brushCore(playState, foo, add = isShiftClick)
             }
             if (modeOK == "Annotation") {
                 annotateCore(playState, foo)
@@ -383,12 +386,13 @@ contextCore <- function(playState, foo, event)
                                    i <- length(playState$ids) + 1
                                    playState$ids[[i]] <- ids.new
                                    names(playState$ids)[i] <- space
-                                   playState$undoStack <- c(playState$undoStack, "ids")
                                    ## draw them
                                    drawLabelsInSpace(playState, subscripts = id,
                                                      space = space, pos = pos)
                                    ## update other tool states
                                    updateAnnotationActionStates(playState)
+                                   ## store state
+                                   playStoreUndo(playState)
                                })
                 cMenu$append(item)
             }

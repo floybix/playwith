@@ -5,6 +5,8 @@ Changes in Version 0.9-22
 
   o New tools "Pan" (scroll), "Line", "Rect".
 
+  o "Undo" is now available in more cases.
+
   o Changed some click actions and keyboard shortcuts.
 
   o Fixed initial window size.

@@ -95,9 +95,7 @@ clone_handler <- function(widget, playState)
 }
 
 unlink_handler <- function(widget, playState)
-{
     playUnlink(playState)
-}
 
 save_handler <- function(widget, playState)
 {

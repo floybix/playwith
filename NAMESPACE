@@ -8,13 +8,16 @@ import(grDevices)
 importFrom(graphics, par, plot)
 import(utils)
 
-# the main function
+## playwith.R
 export(playwith,
-       autoplay,
+       playNewPlot,
+       playReplot,
        plotOnePage)
-S3method(print, playState)
 
-# latticist
+## autoplay.R
+export(autoplay)
+
+## latticist.R
 export(latticist,
        reorderByFreq,
        cutEq,
@@ -23,7 +26,7 @@ export(latticist,
        simpleColkey)
 S3method(levelplot, table)
 
-## latticeStyleGUI
+## latticeStyleGUI.R
 export(latticeStyleGUI,
        latticeStyleToBasePar,
        panel.usertext,
@@ -33,46 +36,54 @@ export(latticeStyleGUI,
        custom.theme.2,
        custom.theme.black)
 
-# settings
+## settings
 export(playwith.options,
        playwith.getOption)
 
-# API
-export(playNewPlot,
-       playReplot,
-       parameterControlTool,
-       playDevCur,
+## apiMain.R
+export(playDevCur,
        playDevSet,
        playDevList,
        playDevOff,
-       playGetIDs,
-       playSetIDs,
-       playUnlink,
        callArg,
        "callArg<-",
        mainCall,
        "mainCall<-",
        updateMainCall,
-       playSourceCode,
-       playDo,
-       playAnnotate,
-       playClear,
-       playFreezeGUI,
-       playThawGUI,
-       playPrompt,
        rawXLim,
        rawYLim,
        "rawXLim<-",
-       "rawYLim<-")
+       "rawYLim<-",
+       playSourceCode,
+       playPrompt,
+       playFreezeGUI,
+       playThawGUI)
+S3method(print, playState)
 
-## xyData
+## apiAnnotation.R
+export(playGetIDs,
+       playSetIDs,
+       playAnnotate,
+       playDo,
+       playClear,
+       playUndo,
+       playStoreUndo,
+       playUnlink)
+
+## apiInteraction.R
+export(playSelectData,
+       playPointInput,
+       playLineInput,
+       playRectInput)
+
+## apiData.R
 export(getDataArg,
        xyCoords,
        xyData,
        spaceCoordsToDataCoords,
        dataCoordsToSpaceCoords)
 
-## plotCoords
+## plotCoords.R
 export(plotCoords,
        plotCoords.plot,
        plotCoords.biplot)
@@ -99,13 +110,10 @@ S3method(case.names, POSIXt)
 S3method(case.names, yearmon)
 S3method(case.names, yearqtr)
 
-## clickOrDrag
-export(playSelectData,
-       playPointInput,
-       playLineInput,
-       playRectInput)
+## parameterControlTool.R
+export(parameterControlTool)
 
-## gridwork
+## gridwork.R
 export(convertFromDevicePixels,
        convertToDevicePixels,
        inViewport,

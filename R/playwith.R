@@ -564,6 +564,7 @@ playPostPlot <- function(playState)
     playDevSet(playState)
     result <- playState$result
     if (inherits(result, "trellis")) {
+        playState$trellis <- result
         ## work out panels and pages
         nPackets <- prod(dim(result))
         nPanels <- nPackets
@@ -579,12 +580,15 @@ playPostPlot <- function(playState)
         plotOnePage(result, page = playState$page)
         ## need to store this, it refers to last plot only!
         playState$tmp$currentLayout <- trellis.currentLayout(which="packet")
-        playState$trellis <- result
+        ## use lattice style settings attached to trellis object
+        ## for any annotations (in updateActions(), below)
+        opar <- trellis.par.set(trellis$par.settings)
+        on.exit(trellis.par.set(opar))
     }
     if (inherits(result, "ggplot")) {
+        playState$ggplot <- result
         ## plot ggplot object
         print(result)
-        playState$ggplot <- result
         ## typically want: playState$viewport <- list(plot="panel_1_1")
         vpNames <- grid.ls(viewports=TRUE, grobs=FALSE, print=FALSE)$name
         panelNames <- vpNames[grep("panel", vpNames)]

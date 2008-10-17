@@ -3,6 +3,10 @@
 ## Copyright (c) 2008 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
+LOTS <- 1000
+HEAPS <- 8000
+MAXPANELS <- 16
+INIT.NLEVELS <- 4
 
 latticist <-
     function(dat,
@@ -114,11 +118,6 @@ makeLatticist <- function(dat)
         ## assumes is.categorical(val)
         !is.ordered(val) && !is.shingle(val)
     }
-
-    LOTS <- 1000
-    HEAPS <- 8000
-    MAXPANELS <- 16
-    INIT.NLEVELS <- 4
 
     ## this is the init.action
     function(playState)
@@ -681,7 +680,9 @@ makeLatticist <- function(dat)
                 } else if (opt == "splom") {
                     callArg(playState, 0) <- quote(splom)
                     callArg(playState, 1) <- dat.form
-                    callArg(playState, "cex") <- 0.5
+                    # TODO:
+                    #callArg(playState, "par.settings") <-
+                    #    quote(simpleTheme(cex = 0.5))
                     callArg(playState, "varname.cex") <- 0.7
                     callArg(playState, "pscales") <- 0
                     if (doLines)

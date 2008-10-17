@@ -311,8 +311,8 @@ playSourceCode <- function(playState = playDevCur())
     theHeader <-
         paste("library(grid)",
               "library(lattice)",
-              "library(playwith) ## (panel.usertext, panel.brushpoints, etc)",
-              "## + might need others; try library(latticeExtra).",
+              "library(playwith) ## (for panel.usertext, etc)",
+              "## + might need others, often library(latticeExtra).",
               "## Assuming that the data are attached and any",
               "## customised style settings are in place; save with",
               "## myStyle <- trellis.par.get(); then restore with",
@@ -327,6 +327,15 @@ playSourceCode <- function(playState = playDevCur())
             code$plot <- call("plotOnePage", playState$call,
                             page = playState$page)
         }
+        ## use trellis$par.settings (if any) for annotations
+        pars <- playState$trellis$par.settings
+        if (length(pars) > 0) {
+            code$plot <- c(code$plot,
+                           call("<-", quote(opar),
+                                call("trellis.par.set", pars)),
+                           quote(on.exit(trellis.par.set(opar))))
+        }
+
     }
     code$plot <- as.expression(code$plot)
     ## set up viewports

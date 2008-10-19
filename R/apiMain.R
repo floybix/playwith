@@ -140,12 +140,16 @@ updateMainCall <- function(playState = playDevCur()) {
     main.function <- playState$main.function
     tmpCall <- playState$call
     okCallPath <- function(tmpCall, main.function) {
-        tmpFun <- eval(tmpCall[[1]])
+        name <- tmpCall[[1]]
+        ## ignore expression() constructs (typically plotmath)
+        if (identical(name, quote(expression)))
+            return(NULL)
+        tmpFun <- eval(name)
         if (!is.null(main.function)) {
             ok <- identical(tmpFun, main.function)
         } else {
             ok <- any(c("xlim", "...") %in% names(formals(tmpFun)))
-            ok <- ok && !identical(tmpFun, with) ## skip `with` function
+            ok <- ok && !identical(name, quote(with)) ## skip `with` function
         }
         if (ok) return(TRUE)
         if (length(tmpCall) > 1)
@@ -160,7 +164,7 @@ updateMainCall <- function(playState = playDevCur()) {
     main.call.index <-
         suppressWarnings(okCallPath(tmpCall, main.function))
     if (is.null(main.function)) {
-        ## look for a call to "plot"
+        ## look for a call to "plot" ## TODO -- can drop this?
         main.call.index.plot <- okCallPath(tmpCall, plot)
         if (!is.null(main.call.index.plot)) {
             ## found "plot" call

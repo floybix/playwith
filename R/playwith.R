@@ -579,11 +579,15 @@ playPostPlot <- function(playState)
         ## plot trellis object (specified page only)
         plotOnePage(result, page = playState$page)
         ## need to store this, it refers to last plot only!
-        playState$tmp$currentLayout <- trellis.currentLayout(which="packet")
+        playState$tmp$currentLayout <-
+            trellis.currentLayout(which="packet")
         ## use lattice style settings attached to trellis object
         ## for any annotations (in updateActions(), below)
-        opar <- trellis.par.set(trellis$par.settings)
-        on.exit(trellis.par.set(opar))
+        if (!is.null(result$par.settings)) {
+            opar <- trellis.par.get()
+            trellis.par.set(result$par.settings)
+            on.exit(trellis.par.set(opar, strict = TRUE))
+        }
     }
     if (inherits(result, "ggplot")) {
         playState$ggplot <- result

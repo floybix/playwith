@@ -1,6 +1,9 @@
 
 Changes in Version 0.9-22
 
+  o Latticist API abstracted into functions latticistParse() and
+    latticistCompose(); the function latticist() is purely a GUI.
+
   o Support for more plots via plotCoords and case.names methods.
 
   o New tools "Pan" (scroll), "Line", "Rect".

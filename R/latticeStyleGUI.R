@@ -33,16 +33,33 @@ panel.usertext <-
 }
 
 brush.symbol.default <-
-    list(pch = 21, col = "black", fill = "red",
-         alpha = 1, cex = 1)
+    list(pch = 21, col = "black", fill = "yellow",
+         alpha = 1, cex = 0.8, font = 1)
 
 brush.line.default <-
     list(col = "red", alpha = 1, lwd = 2, lty = 1)
 
 current.brush.symbol <- function() {
     brush.symbol <- trellis.par.get("brush.symbol")
-    if (is.null(eval(brush.symbol)))
+    if (is.null(eval(brush.symbol))) {
         brush.symbol <- brush.symbol.default
+        plot.symbol <- trellis.par.get("plot.symbol")
+        ## take cex from plot.symbol
+        brush.symbol$cex <- plot.symbol$cex
+        ## use filled equivalent to current plot symbol
+        ppch <- as.character(plot.symbol$pch)
+        pch <- 21 ## circle, default
+        if (ppch %in% c("0", "7", "12", "15", "22")) {
+            pch <- 22 ## square
+        } else if (ppch %in% c("5", "9", "18", "23")) {
+            pch <- 23 ## diamond
+        } else if (ppch %in% c("2", "17", "24")) {
+            pch <- 24 ## up triangle
+        } else if (ppch %in% c("6", "25")) {
+            pch <- 25 ## down triangle
+        }
+        brush.symbol$pch <- pch
+    }
     brush.symbol
 }
 
@@ -51,17 +68,17 @@ current.brush.line <- function() {
     if (is.null(eval(brush.line))) {
         brush.line <- brush.line.default
         ## take default 'col', 'alpha' from brush.symbol
-        brush.symbol <- current.brush.symbol()
-        brush.line$col <- brush.symbol$col
-        brush.line$alpha <- brush.symbol$alpha
+        #brush.symbol <- current.brush.symbol()
+        #brush.line$col <- brush.symbol$col
+        #brush.line$alpha <- brush.symbol$alpha
         ## if the brush symbol is a filled symbol
         ## take 'fill' rather than 'col'...
-        if (is.numeric(brush.symbol$pch) &&
-            (brush.symbol$pch >= 21)) {
+        #if (is.numeric(brush.symbol$pch) &&
+        #    (brush.symbol$pch >= 21)) {
             ## ...except if 'fill' is transparent
-            if (col2rgb(brush.symbol$fill, alpha = TRUE)[4] > 0)
-                brush.line$col <- brush.symbol$fill
-        }
+        #    if (col2rgb(brush.symbol$fill, alpha = TRUE)[4] > 0)
+        #        brush.line$col <- brush.symbol$fill
+        #}
     }
     brush.line
 }

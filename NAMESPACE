@@ -18,13 +18,19 @@ export(playwith,
 export(autoplay)
 
 ## latticist.R
-export(latticist,
+export(latticist)
+
+## latticistCompose.R
+export(latticistCompose,
        reorderByFreq,
        cutEq,
        try.prepanel.loess,
        n.level.colors,
        simpleColkey)
 S3method(levelplot, table)
+
+## latticistParse.R
+export(latticistParse)
 
 ## latticeStyleGUI.R
 export(latticeStyleGUI,

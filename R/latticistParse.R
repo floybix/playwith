@@ -10,26 +10,22 @@ latticistParse <- function(call, trellis = NULL)
     stopifnot(is.call(call))
     ## check that it is a sensible call
     if (length(call) <= 1) return(NULL)
-    ## defaults
-    xvar <- yvar <- zvar <- groups <- c1 <- c2 <- NULL
-    subset <- aspect <- aspect3D <- x.relation <- y.relation <- NULL
-    xdisc <- ydisc <- xprop <- yprop <- gprop <- FALSE
-    doTile <- doSegments <- doAsError <- FALSE
-    nLevels <- NULL
-    defaultPlot <- "marginal.plot"
+    ## latticist specification list
+    spec <- list()
+    ## non-core options
+    specXtra <- list()
     ## get name of plot function
     callName <- toString(deparse(call[[1]]))
     isHypervar <-
         (callName %in% c("splom", "parallel", "marginal.plot"))
-    if (isHypervar)
-        defaultPlot <- callName
+    specXtra$defaultPlot <- if (isHypervar) callName
     is3D <- (callName %in% c("cloud", "wireframe"))
     if (!is.null(trellis)) ## more reliable:
         is3D <- !is.null(trellis$panel.args.common$scales.3d)
     isTrivar <- (callName %in%
                  c("levelplot", "contourplot", "segplot", "tileplot"))
     isTrivar <- (isTrivar || is3D)
-    doTile <- (callName == "tileplot")
+    specXtra$doTile <- if (callName == "tileplot") TRUE
 
     isInteraction <- function(x)
         is.call.to(x, "*") || is.call.to(x, "+")
@@ -40,7 +36,10 @@ latticistParse <- function(call, trellis = NULL)
     }
 
     ## parse variables from plot call arguments
+    ## these are stored in 'spec' below (at the end)...
     arg1 <- call[[2]]
+    xvar <- yvar <- zvar <- groups <- c1 <- c2 <- NULL
+    xdisc <- ydisc <- xprop <- yprop <- gprop <- FALSE
     groups <- call[["groups"]]
     subset <- call[["subset"]]
     ## if is formula
@@ -57,7 +56,7 @@ latticistParse <- function(call, trellis = NULL)
         }
         if (isTrivar && isInteraction(xvar)) {
             if (callName == "segplot") {
-                doSegments <- TRUE
+                specXtra$doSegments <- TRUE
                 ## y ~ x + z
                 zvar <- xvar[[3]]
                 xvar <- xvar[[2]]
@@ -66,7 +65,7 @@ latticistParse <- function(call, trellis = NULL)
                     if (length(xvar[[2]]) == 3) {
                         zvar <- xvar[[2]][[3]]
                         xvar <- xvar[[2]][[2]]
-                        doAsError <- TRUE
+                        specXtra$doAsError <- TRUE
                     }
                 }
                 groups <- call[["level"]]
@@ -154,7 +153,8 @@ latticistParse <- function(call, trellis = NULL)
         }
         x
     }
-    if (!nlevset) nLevels <- NULL
+    if (nlevset)
+        specXtra$nLevels <- nLevels
     oxvar <- xvar
     oyvar <- yvar
     xvar <- stripDisc(xvar)
@@ -189,6 +189,7 @@ latticistParse <- function(call, trellis = NULL)
 
     ## aspect
     aspect <- eval(call[["aspect"]])
+    aspect3D <- NULL
     if (callName == "cloud") {
         aspect3D <- aspect
         aspect <- eval(call[["panel.aspect"]])
@@ -214,28 +215,33 @@ latticistParse <- function(call, trellis = NULL)
         }
     }
 
-    ## create latticist specification
-    list(xvar = xvar
-         yvar = yvar,
-         zvar = zvar,
-         groups = groups,
-         cond = c1,
-         cond2 = c2,
-         subset = subset,
-         aspect = aspect,
-         aspect3D = aspect3D,
-         x.relation = x.relation,
-         y.relation = y.relation,
-         xdisc = xdisc,
-         ydisc = ydisc,
-         xprop = xprop,
-         yprop = yprop,
-         gprop = gprop,
-         doTile = doTile,
-         doSegments = doSegments,
-         doAsError = doAsError,
-         nLevels = nLevels,
-         defaultPlot = defaultPlot)
+    ## doLines setting
+    type <- eval(call[["type"]])
+    if (!is.null(type))
+        specXtra$doLines <- !all(type %in% c("p", "g"))
+
+    ## store core items in the spec
+    ## note: NULL values are omitted from the list
+    spec$xvar <- xvar
+    spec$yvar <- yvar
+    spec$zvar <- zvar
+    spec$groups <- groups
+    spec$cond <- c1
+    spec$cond2 <- c2
+    spec$subset <- subset
+    spec$aspect <- aspect
+    spec$aspect3D <- aspect3D
+    spec$x.relation <- x.relation
+    spec$y.relation <- y.relation
+    spec$xdisc <- if (xdisc) TRUE else NULL
+    spec$ydisc <- if (ydisc) TRUE else NULL
+    spec$xprop <- if (xprop) TRUE else NULL
+    spec$yprop <- if (yprop) TRUE else NULL
+    spec$gprop <- if (gprop) TRUE else NULL
+
+    spec <- modifyList(spec, specXtra)
+
+    spec
 }
 
 

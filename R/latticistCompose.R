@@ -3,13 +3,18 @@
 ## Copyright (c) 2008 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
+LOTS <- 1000
+HEAPS <- 8000
+MAXPANELS <- 16
+INIT.NLEVELS <- 4
 
-latticistCompose <- function(dat, spec = list(), newXY = FALSE)
+latticistCompose <- function(dat, spec = alist(),
+                             datArg = substitute(dat))
 {
-    datArg <- substitute(dat)
+    force(datArg)
     doCompose <-
         function(xvar = NULL, yvar = NULL, zvar = NULL,
-                 groups = NULL, cond1 = NULL, cond2 = NULL,
+                 groups = NULL, cond = NULL, cond2 = NULL,
                  subset = NULL, varSubset = NULL,
                  aspect = NULL, aspect3D = NULL,
                  x.relation = NULL, y.relation = NULL,
@@ -19,16 +24,26 @@ latticistCompose <- function(dat, spec = list(), newXY = FALSE)
                  doLines = TRUE, do3DTable = FALSE,
                  defaultPlot = "marginal.plot")
         {
-            c1 <- cond1
-            c2 <- cond2
+            xvar <- substitute(xvar)
+            yvar <- substitute(yvar)
+            zvar <- substitute(zvar)
+            groups <- substitute(groups)
+            c1 <- substitute(cond)
+            c2 <- substitute(cond2)
+            subset <- substitute(subset)
             if (is.null(nLevels)) nLevels <- INIT.NLEVELS
+
+            deparse1 <- function(expr)
+                paste(deparse(expr, width = 500, control = NULL),
+                      collapse = " ")
+
             ## keep for titles etc
-            xvarOrigStr <- deparseOneLine(xvar)
-            yvarOrigStr <- deparseOneLine(yvar)
-            zvarOrigStr <- deparseOneLine(zvar)
-            c1OrigStr <- deparseOneLine(c1)
-            c2OrigStr <- deparseOneLine(c2)
-            groupsOrigStr <- deparseOneLine(groups)
+            xvarOrigStr <- deparse1(xvar)
+            yvarOrigStr <- deparse1(yvar)
+            zvarOrigStr <- deparse1(zvar)
+            c1OrigStr <- deparse1(c1)
+            c2OrigStr <- deparse1(c2)
+            groupsOrigStr <- deparse1(groups)
             if (is.null(subset)) subset <- TRUE
 
             ## evaluate to check types
@@ -48,6 +63,14 @@ latticistCompose <- function(dat, spec = list(), newXY = FALSE)
                 nPoints <- sum(is.finite(xVal[subsetVal]))
             else if (!is.null(yVal))
                 nPoints <- sum(is.finite(yVal[subsetVal]))
+
+            isUnordered <- function(x, val) {
+                ## need this because is.ordered(cut()) == FALSE!
+                if (is.call.to(x, "cut")) return(FALSE)
+                if (is.call.to(x, "cut2")) return(FALSE)
+                ## assumes is.categorical(val)
+                !is.ordered(val) && !is.shingle(val)
+            }
 
             ## discretize
             do.xdisc <- (!is.null(xvar) && !is.categorical(xVal) && xdisc)
@@ -127,7 +150,7 @@ latticistCompose <- function(dat, spec = list(), newXY = FALSE)
 
             ## create template plot call
             call <- quote(xyplot(0 ~ 0))
-            call$data <- datArg   ## TODO - ?
+            call$data <- datArg
             call$groups <- groups ## may be NULL
             call$subset <-
                 if (!isTRUE(subset)) subset else NULL
@@ -179,12 +202,12 @@ latticistCompose <- function(dat, spec = list(), newXY = FALSE)
 
                 dat.expr <- datArg
                 if (!is.null(varSubset))
-                    dat.expr <- call("[", quote(dat), varSubset)
+                    dat.expr <- call("[", datArg, varSubset)
                 dat.form <- call("~", dat.expr)
                 if (!is.null(cond))
                     dat.form <- call("~", call("|", dat.expr, cond))
 
-                if (defaultPlot == "marginals") {
+                if (defaultPlot == "marginal.plot") {
                     call[[1]] <- quote(marginal.plot)
                     call[[2]] <- dat.expr
                     call$reorder <- FALSE
@@ -215,16 +238,16 @@ latticistCompose <- function(dat, spec = list(), newXY = FALSE)
                         call[[1]] <- quote(dotplot)
                         call$data <- NULL
                         call$subset <- NULL
-                        xterms <- paste(c(deparseOneLine(yvar),
-                                          if (!is.null(c1)) deparseOneLine(c1),
-                                          if (!is.null(c2)) deparseOneLine(c2),
-                                          if (!is.null(groups)) deparseOneLine(groups)),
+                        xterms <- paste(c(deparse1(yvar),
+                                          if (!is.null(c1)) deparse1(c1),
+                                          if (!is.null(c2)) deparse1(c2),
+                                          if (!is.null(groups)) deparse1(groups)),
                                         collapse=" + ")
                         ## and set logical `groups` argument
                         call$groups <- !is.null(groups)
                         xform <- as.formula(paste("~", xterms))
                         tabcall <-
-                            call("xtabs", xform, quote(dat))
+                            call("xtabs", xform, datArg)
                         tabcall$subset <- if (!isTRUE(subset)) subset
                         if (doYProp) {
                             tabcall <- call("prop.table", tabcall, margin = 1)
@@ -254,16 +277,16 @@ latticistCompose <- function(dat, spec = list(), newXY = FALSE)
                             call[[1]] <- quote(barchart)
                             call$data <- NULL
                             call$subset <- NULL
-                            xterms <- paste(c(deparseOneLine(xvar),
-                                              if (!is.null(c1)) deparseOneLine(c1),
-                                              if (!is.null(c2)) deparseOneLine(c2),
-                                              if (!is.null(groups)) deparseOneLine(groups)),
+                            xterms <- paste(c(deparse1(xvar),
+                                              if (!is.null(c1)) deparse1(c1),
+                                              if (!is.null(c2)) deparse1(c2),
+                                              if (!is.null(groups)) deparse1(groups)),
                                             collapse=" + ")
                             ## and set logical `groups` argument
                             call$groups <- !is.null(groups)
                             xform <- as.formula(paste("~", xterms))
                             tabcall <-
-                                call("xtabs", xform, quote(dat))
+                                call("xtabs", xform, datArg)
                             tabcall$subset <- if (!isTRUE(subset)) subset
                             if (doXProp) {
                                 tabcall <- call("prop.table", tabcall, margin = 1)
@@ -326,7 +349,7 @@ latticistCompose <- function(dat, spec = list(), newXY = FALSE)
                         } else if (tst <= 1.2) {
                             ## uniform distribution
                             call$distribution <- quote(qunif)
-                            call$xlab <- expression(Proportion <= y)
+                            call$xlab <- expression("Proportion" <= y)
                         } else {
                             call$distribution <- quote(qnorm)
                             call$xlab <- "Probability (normal distribution)"
@@ -376,11 +399,11 @@ latticistCompose <- function(dat, spec = list(), newXY = FALSE)
                                 yVal <- eval(yvar, dat)
                             }
                         }
-                        xterms <- paste(c(deparseOneLine(xvar),
-                                          deparseOneLine(yvar),
-                                          if (!is.null(c1)) deparseOneLine(c1),
-                                          if (!is.null(c2)) deparseOneLine(c2),
-                                          if (!is.null(groups)) deparseOneLine(groups)),
+                        xterms <- paste(c(deparse1(xvar),
+                                          deparse1(yvar),
+                                          if (!is.null(c1)) deparse1(c1),
+                                          if (!is.null(c2)) deparse1(c2),
+                                          if (!is.null(groups)) deparse1(groups)),
                                         collapse=" + ")
                         xform <- as.formula(paste("~", xterms))
                         tabcall <- call("xtabs", xform, datArg)
@@ -749,7 +772,7 @@ latticistCompose <- function(dat, spec = list(), newXY = FALSE)
             subt <- paste(subt, toString(Sys.Date()), ", ",
                           Rvers, sep="")
             if (!isTRUE(subset)) {
-                subsetStr <- deparseOneLine(subset)
+                subsetStr <- deparse1(subset)
                 if (nchar(subsetStr) > 30)
                     subt <- call("paste", subsetStr, subt, sep="\n")
                 else subt <- call("paste", subsetStr, subt, sep=", ")
@@ -781,3 +804,77 @@ latticistCompose <- function(dat, spec = list(), newXY = FALSE)
         }
     do.call("doCompose", spec)
 }
+
+is.call.to <- function(x, name)
+    is.call(x) && identical(x[[1]], as.symbol(name))
+
+is.categorical <- function(x)
+    is.factor(x) || is.shingle(x) || is.character(x) || is.logical(x)
+
+levelsOK <- function(x) {
+    if (is.logical(x)) return(c(TRUE, FALSE))
+    levels(x)
+}
+
+reorderByFreq <- function(x) {
+    reorder(x, x, function(z) -length(z))
+}
+
+cutEq <- function(x, n, type=2, dig.lab=4, ...)
+{
+    stopifnot(length(n) == 1)
+    br <- quantile(x, seq(0, 1, length=n+1), type=type,
+                   na.rm=TRUE, names=FALSE)
+    br[length(br)] <- max(x, na.rm=TRUE)
+    br <- unique(br)
+    cut(x, br, dig.lab=dig.lab, right=FALSE,
+        include.lowest=TRUE, ordered_result=TRUE)
+}
+
+try.prepanel.loess <- function(...) {
+    result <- try(prepanel.loess(...), silent=TRUE)
+    if (inherits(result, "try-error"))
+        return(list())
+    result
+}
+
+levelplot.table <-
+    function(x, data = NULL, ...)
+{
+    if (!is.null(data))
+        warning("explicit 'data' specification ignored")
+    stopifnot(length(dim(x)) >= 2)
+    data <- as.data.frame(x)
+    nms <- names(data)
+    freq <- which(nms == "Freq")
+    nms <- nms[-freq]
+    form <- sprintf("Freq ~ %s * %s", nms[1], nms[2])
+    nms <- nms[-(1:2)]
+    len <- length(nms)
+    if (len > 0) {
+        rest <- paste(nms, collapse = "+")
+        form <- paste(form, rest, sep = "|")
+    }
+    levelplot(as.formula(form), data, ...)
+}
+
+n.level.colors <-
+    function(x, n.col = 30,
+             at = do.breaks(range(x, finite = TRUE), n.col),
+             ...)
+{
+    level.colors(x, at = at, ...)
+}
+
+simpleColkey <-
+    function(x, n.col = 30,
+             at = do.breaks(range(x, finite = TRUE), n.col),
+             ..., space = "right")
+{
+    foo <- list(space =
+                list(fun = "draw.colorkey",
+                     args = list(at = at, ...)))
+    names(foo) <- space
+    foo
+}
+

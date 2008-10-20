@@ -18,6 +18,28 @@ latticeSettingsGUI <- function(playState)
     wingroup <- ggroup(horizontal=FALSE, container = dialog)
     tabs <- gnotebook(container = wingroup)
     wid <- list()
+    ## keeps track of changed text fields during editing
+#    needUpdate <- list()
+    ## default gedit handler only triggered when Enter pressed;
+    ## need to detect changes (keystrokes) and update when lose focus
+    geditUpdateAfterChange <- function(wid, handler, ...) {
+        iNeedUpdating <- FALSE
+        setNeedUpdate <- function(h, ...)
+            #needUpdate[[h$action]] <<- TRUE
+            iNeedUpdating <<- TRUE
+        addHandlerKeystroke(wid, handler = setNeedUpdate)
+#                            action = nm)
+        doUpdateIfNeeded <- function(h, ...) {
+#            nm <- h$action
+#            if (isTRUE(needUpdate[[nm]]))
+            if (iNeedUpdating)
+                handler(h, ...)
+#            needUpdate[[nm]] <- NULL
+            iNeedUpdating <<- FALSE
+        }
+        addHandlerBlur(wid, handler = doUpdateIfNeeded, ...)
+#                       action = nm)
+    }
 
     origCall <- playState$call
     makeScalesArgAList(playState)
@@ -218,6 +240,16 @@ latticeSettingsGUI <- function(playState)
         lay[rownum, 2] <- wid[[nm]] <-
             gedit(toString(argVal), width=60, container = lay,
                   handler = setArgTitle, action = nm)
+        ## default handler only triggered when Enter pressed;
+        ## need to detect changes (keystrokes) and update when lose focus
+        geditUpdateAfterChange(wid[[nm]],
+                               handler = setArgTitle, action = nm)
+#        addHandlerKeystroke(wid[[nm]], handler = setNeedUpdate,
+#                            action = nm)
+#        addHandlerBlur(wid[[nm]], handler = function(h, ...)
+#                       if (isTRUE(needUpdate[[h$action]]))
+#                       setArgTitle(h), action = nm)
+        ## plotmath option
         lay[rownum, 3] <- wid[[nm.expr]] <-
             gcheckbox("plotmath", checked=isExpr, container = lay,
                       handler = setArgTitle, action = nm)
@@ -466,6 +498,11 @@ basePlotSettingsGUI <- function(playState)
     wingroup <- ggroup(horizontal=FALSE, container = dialog)
     tabs <- gnotebook(container=wingroup)
     wid <- list()
+    ## keeps track of changed text fields during editing
+    needUpdate <- list()
+    setNeedUpdate <- function(h, ...)
+        needUpdate[[h$action]] <<- TRUE
+
     origCall <- playState$call
 
     setArg <- function(h, ...) {
@@ -548,6 +585,14 @@ basePlotSettingsGUI <- function(playState)
         lay[rownum, 2] <- wid[[nm]] <-
             gedit(toString(argVal), width=60, container = lay,
                   handler = setArgTitle, action = nm)
+        ## default handler only triggered when Enter pressed;
+        ## need to detect changes (keystrokes) and update when lose focus
+        addHandlerKeystroke(wid[[nm]], handler = setNeedUpdate,
+                            action = nm)
+        addHandlerBlur(wid[[nm]], handler = function(h, ...)
+                       if (isTRUE(needUpdate[[h$action]]))
+                       setArgTitle(h), action = nm)
+        ## plotmath option
         lay[rownum, 3] <- wid[[nm.expr]] <-
             gcheckbox("plotmath", checked=isExpr, container = lay,
                       handler = setArgTitle, action = nm)

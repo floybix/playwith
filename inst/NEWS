@@ -1,5 +1,5 @@
 
-Changes in Version 0.9-22
+Changes in Version 0.9-30
 
   o Latticist API abstracted into functions latticistParse() and
     latticistCompose(); the function latticist() is purely a GUI.
@@ -8,11 +8,18 @@ Changes in Version 0.9-22
 
   o New tools "Pan" (scroll), "Line", "Rect".
 
-  o "Undo" is now available in more cases.
+  o "Undo" is now available in more cases, and is part of the API.
 
   o Changed some click actions and keyboard shortcuts.
 
+  o "Point / line style" dialog box.
+
+  o Labels menu: "Select from table" now implemented.
+
   o Fixed initial window size.
+
+  o Editing text fields in "Plot Settings" is now detected even
+    when <Enter> is not pressed.
 
   o Fixed occasional freeze-up of latticist.
 

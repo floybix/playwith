@@ -20,29 +20,31 @@
 
 panel.usertext <-
     function(x, y = NULL, labels = seq_along(x), col = user.text$col,
-    alpha = user.text$alpha, cex = user.text$cex, srt = 0, lineheight = user.text$lineheight,
-    font = user.text$font, fontfamily = user.text$fontfamily, fontface = user.text$fontface,
-    adj = c(0.5, 0.5), pos = NULL, offset = 0.5, ...)
+             alpha = user.text$alpha, cex = user.text$cex, srt = 0, lineheight = user.text$lineheight,
+             font = user.text$font, fontfamily = user.text$fontfamily, fontface = user.text$fontface,
+             adj = c(0.5, 0.5), pos = NULL, offset = 0.5, ...)
 {
-    user.text <- trellis.par.get("user.text")
-    add.text <- trellis.par.get("add.text")
-    if (is.null(eval(user.text))) user.text <- add.text
+    user.text <- current.user.text()
     panel.text(x, y, labels, col = col, alpha = alpha, cex = cex, srt = srt,
                lineheight = lineheight, font = font, fontfamily = fontfamily,
                fontface = fontface, adj = adj, pos = pos, offset = offset, ...)
 }
 
-brush.symbol.default <-
-    list(pch = 21, col = "black", fill = "yellow",
-         alpha = 1, cex = 0.8, font = 1)
-
-brush.line.default <-
-    list(col = "red", alpha = 1, lwd = 2, lty = 1)
+current.user.text <- function() {
+    user.text <- trellis.par.get("user.text")
+    if (is.null(eval(user.text))) {
+        user.text <- trellis.par.get("add.text")
+    }
+    user.text
+}
 
 current.brush.symbol <- function() {
     brush.symbol <- trellis.par.get("brush.symbol")
     if (is.null(eval(brush.symbol))) {
-        brush.symbol <- brush.symbol.default
+        ## defaults:
+        brush.symbol <-
+            list(pch = 21, col = "black", fill = "yellow",
+                 alpha = 1, cex = 0.8, font = 1)
         plot.symbol <- trellis.par.get("plot.symbol")
         ## take cex from plot.symbol
         brush.symbol$cex <- plot.symbol$cex
@@ -66,26 +68,16 @@ current.brush.symbol <- function() {
 current.brush.line <- function() {
     brush.line <- trellis.par.get("brush.line")
     if (is.null(eval(brush.line))) {
-        brush.line <- brush.line.default
-        ## take default 'col', 'alpha' from brush.symbol
-        #brush.symbol <- current.brush.symbol()
-        #brush.line$col <- brush.symbol$col
-        #brush.line$alpha <- brush.symbol$alpha
-        ## if the brush symbol is a filled symbol
-        ## take 'fill' rather than 'col'...
-        #if (is.numeric(brush.symbol$pch) &&
-        #    (brush.symbol$pch >= 21)) {
-            ## ...except if 'fill' is transparent
-        #    if (col2rgb(brush.symbol$fill, alpha = TRUE)[4] > 0)
-        #        brush.line$col <- brush.symbol$fill
-        #}
+        ## defaults:
+        brush.line <- list(col = "red", alpha = 1,
+                           lwd = 2, lty = 1)
     }
     brush.line
 }
 
 panel.brushpoints <-
     function(x, y = NULL, col = brush.symbol$col, pch = brush.symbol$pch,
-    alpha = brush.symbol$alpha, fill = brush.symbol$fill, cex = brush.symbol$cex, ...)
+             alpha = brush.symbol$alpha, fill = brush.symbol$fill, cex = brush.symbol$cex, ...)
 {
     brush.symbol <- current.brush.symbol()
     panel.points(x, y, col = col, pch = pch, alpha = alpha,
@@ -99,7 +91,7 @@ panel.brushlines <-
 {
     brush.line <- current.brush.line()
     panel.lines(x0, y0, type = type, col = col, alpha = alpha,
-                   lty = lty, lwd = lwd, ...)
+                lty = lty, lwd = lwd, ...)
 }
 
 latticeStyleGUI <-
@@ -107,8 +99,8 @@ latticeStyleGUI <-
              target.device = dev.cur(),
              base.graphics = FALSE)
 {
-    #if (!require("gWidgets", quiet = TRUE))
-    #    stop("This function requires the gWidgets package")
+                                        #if (!require("gWidgets", quiet = TRUE))
+                                        #    stop("This function requires the gWidgets package")
     force(target.device)
     if (target.device == 1) target.device <- NULL
     pars <- NULL
@@ -120,6 +112,37 @@ latticeStyleGUI <-
     }
     ## GRAPHICAL PARAMETER LISTS
     colList <- palette()
+    familyList <-
+        c("serif", "sans", "mono",
+          "HersheySerif", "HersheySans", "HersheyScript",
+          "HersheyGothicEnglish", "HersheyGothicGerman", "HersheyGothicItalian",
+          "HersheySymbol", "HersheySansSymbol")
+    faceList <-
+        c("plain", "bold", "italic", "bold.italic", "symbol",
+          "cyrillic", "cyrillic.oblique", "EUC")
+    pchList <-
+        list(`open circle` = 1,
+             `open square` = 0,
+             `open diamond` = 5,
+             `open triangle` = 2,
+             `open tri.down` = 6,
+             `solid circle` = 16,
+             `solid square` = 15,
+             `solid diamond` = 18,
+             `solid triangle` = 17,
+             `fill circle` = 21,
+             `fill square` = 22,
+             `fill diamond` = 23,
+             `fill triangle` = 24,
+             `fill tri.down` = 25,
+             `plus (+)` = 3,
+             `cross (x)` = 4,
+             `star (*)` = 8,
+             `dot (.)` = "."
+             )
+    ltyList <-
+        c("solid", "dashed", "dotted",
+          "dotdash", "longdash", "twodash", "blank")
     themeList <-
         alist(
               "Default" = standard.theme("pdf"),
@@ -142,34 +165,6 @@ latticeStyleGUI <-
     brewerQualList <- rownames(subset(brewer.pal.info, category=="qual"))
     brewerSeqList <- rownames(subset(brewer.pal.info, category=="seq"))
     brewerDivList <- rownames(subset(brewer.pal.info, category=="div"))
-    familyList <- c("serif", "sans", "mono",
-                    "HersheySerif", "HersheySans", "HersheyScript",
-                    "HersheyGothicEnglish", "HersheyGothicGerman", "HersheyGothicItalian",
-                    "HersheySymbol", "HersheySansSymbol")
-    faceList <- c("plain", "bold", "italic", "bold.italic", "symbol",
-                  "cyrillic", "cyrillic.oblique", "EUC")
-    pchList <-
-        list(`open circle` = 1,
-             `open square` = 0,
-             `open diamond` = 5,
-             `open triangle` = 2,
-             `open tri.down` = 6,
-             `solid circle` = 16,
-             `solid square` = 15,
-             `solid diamond` = 18,
-             `solid triangle` = 17,
-             `fill circle` = 21,
-             `fill square` = 22,
-             `fill diamond` = 23,
-             `fill triangle` = 24,
-             `fill tri.down` = 25,
-             `plus (+)` = 3,
-             `cross (x)` = 4,
-             `star (*)` = 8,
-             `dot (.)` = "."
-             )
-    ltyList <- c("solid", "dashed", "dotted",
-                 "dotdash", "longdash", "twodash", "blank")
     ## options for the graphic display
     plotDisplayList <-
         alist("Basic plot" = plot(latticeStyleDemo("plot")),
@@ -321,14 +316,14 @@ latticeStyleGUI <-
         }
         colName <- function(x) {
             x <- switch(tolower(x),
-                        "#000000" = "black",
-                        "#ffffff" = "white",
-                        "#ff0000" = "red",
-                        "#00ff00" = "green",
-                        "#0000ff" = "blue",
-                        "#00ffff" = "cyan",
-                        "#ff00ff" = "magenta",
-                        "#ffff00" = "yellow",
+                        "#000000" = "black", #
+                        "#ffffff" = "white", #
+                        "#ff0000" = "red",   #
+                        "#00ff00" = "green", #
+                        "#0000ff" = "blue",  #
+                        "#00ffff" = "cyan",  #
+                        "#ff00ff" = "magenta", #
+                        "#ffff00" = "yellow",  #
                         x)
         }
         pchName <- function(x) {
@@ -426,7 +421,7 @@ latticeStyleGUI <-
     win <- gwindow(title = "Lattice Style GUI")
     metagroup <- ggroup(horizontal = FALSE, container = win)
     displayg <- gframe("Display", horizontal = TRUE, container = metagroup)
-    #font(displayg) <- list(weight="bold")
+                                        #font(displayg) <- list(weight="bold")
     hgroup <- ggroupThin(horizontal = TRUE, container = metagroup, expand = TRUE)
     vgroup <- ggroupThin(horizontal = FALSE, container = hgroup)
     ## add the graphics device
@@ -443,23 +438,23 @@ latticeStyleGUI <-
     ## initial display
     grid::grid.newpage()
     grid::grid.text(paste(c("Loading...",
-                          "",
-                          "This device will show a preview",
-                          "of your settings. The settings",
-                          paste("will apply to", devTypeStr, "devices."),
-                          "(You can set them for others too).",
-                          "",
-                          if (base.graphics)
+                            "",
+                            "This device will show a preview",
+                            "of your settings. The settings",
+                            paste("will apply to", devTypeStr, "devices."),
+                            "(You can set them for others too).",
+                            "",
+                            if (base.graphics)
                             c("This is base graphics mode (par).",
                               ""),
-                          "Your full style settings are kept",
-                          "in the object `trellis.par.theme`,",
-                          "and your modifications only in",
-                          "`trellis.par.log`.",
-                          "",
-                          "Changes take effect immediately,",
-                          "but you need to press <Enter> in",
-                          "text fields."), collapse="\n"),
+                            "Your full style settings are kept",
+                            "in the object `trellis.par.theme`,",
+                            "and your modifications only in",
+                            "`trellis.par.log`.",
+                            "",
+                            "Changes take effect immediately,",
+                            "but you need to press <Enter> in",
+                            "text fields."), collapse="\n"),
                     x = 0.05, y = 0.95, just = c("left", "top"),
                     gp = gpar())
 
@@ -514,7 +509,7 @@ latticeStyleGUI <-
                    if (!is.null(lty)) "lty")
         for (type in types)
             setPar(list(obj = wid.super.list[[type]][[1]],
-                    action = maintargets[[type]]))
+                        action = maintargets[[type]]))
         svalue(autoRedrawW) <- odraw
         if (odraw) doRedraw()
     }
@@ -548,8 +543,8 @@ latticeStyleGUI <-
     wid.super.list$col <- list()
     maintargets <- list()
     maintargets$col <- c("plot.symbol$col", "plot.line$col",
-              "superpose.symbol$col[1]", "superpose.line$col[1]",
-              "box.rectangle$col", "box.umbrella$col", "dot.symbol$col")
+                         "superpose.symbol$col[1]", "superpose.line$col[1]",
+                         "box.rectangle$col", "box.umbrella$col", "dot.symbol$col")
     maintargets$pch <- c("plot.symbol$pch", "superpose.symbol$pch[1]")
     maintargets$lty <- c("plot.line$lty", "superpose.line$lty[1]")
     wid.super.list$col[[1]] <-
@@ -641,11 +636,11 @@ latticeStyleGUI <-
     qualPalW <- gdroplist(c("", brewerQualList), container = tmpg,
                           handler = loadQualPal)
     showQualW <- gbutton("Display Qual. palettes", container = palg,
-            handler = function(...) display.brewer.all(8, "qual"))
+                         handler = function(...) display.brewer.all(8, "qual"))
 
     ## GENERAL PROPERTIES
     genplg <- gframe("General points / lines properties", horizontal = FALSE,
-                       container = plotg)
+                     container = plotg)
     tmp1g <- ggroupThin(container = genplg)
     tmp2g <- ggroupThin(container = genplg)
     glabel("Point scale:", container = tmp1g)
@@ -667,7 +662,7 @@ latticeStyleGUI <-
 
     ## POLYGONS and REGIONS
     prg <- ggroup(horizontal = FALSE, spacing = 2, container = tabs,
-                    label = "Polygons & Regions")
+                  label = "Polygons & Regions")
 
     ## POLYGONS
 
@@ -697,11 +692,11 @@ latticeStyleGUI <-
     lay <- glayout(spacing = 1, container = polyg)
     wid.poly.col <- list()
     wid.poly.col[[1]] <- gedit("", width = 10, container = lay,
-              handler = setPar,
-              action = c("plot.polygon$col", "superpose.polygon$col[1]"))
+                               handler = setPar,
+                               action = c("plot.polygon$col", "superpose.polygon$col[1]"))
     wid.poly.border <- gedit("", width = 10, container = lay,
-              handler = setPar,
-              action = c("plot.polygon$border", "superpose.polygon$border[]"))
+                             handler = setPar,
+                             action = c("plot.polygon$border", "superpose.polygon$border[]"))
     lay[1,2] <- "Color:"
     lay[2,1] <- "Plot:"
     lay[2,2] <- wid.poly.col[[1]]
@@ -722,7 +717,7 @@ latticeStyleGUI <-
                   handler = setPar, action = action.col)
         lay[i+3, 2] <- wid.poly.col[[i]]
         lay[i+3, 3] <- gbutton("main", container = lay,
-                                handler = makeMainPoly, action = i)
+                               handler = makeMainPoly, action = i)
     }
     visible(lay) <- TRUE
 
@@ -742,9 +737,9 @@ latticeStyleGUI <-
     tmpg <- ggroupThin(horizontal = TRUE, container = palg)
     glabel("ColorBrewer Qualitative palette:", container = tmpg)
     qualPalW <- gdroplist(c("", brewerQualList), container = tmpg,
-                handler = function(...) loadQualPal(..., forPolygons = TRUE))
+                          handler = function(...) loadQualPal(..., forPolygons = TRUE))
     showQualW <- gbutton("Display Qual. palettes", container = palg,
-                 handler = function(...) display.brewer.all(8, "qual"))
+                         handler = function(...) display.brewer.all(8, "qual"))
 
     ## REGIONS
 
@@ -790,7 +785,7 @@ latticeStyleGUI <-
     }
 
     regiong <- gframe("Regions (color ramp palettes)", horizontal = FALSE,
-                       container = prg)
+                      container = prg)
     tmp1g <- ggroupThin(container = regiong)
     tmp2g <- ggroupThin(container = regiong)
     tmp3g <- ggroupThin(container = regiong)
@@ -853,7 +848,7 @@ latticeStyleGUI <-
                             action = c("par.xlab.text$cex", "par.ylab.text$cex",
                             "par.zlab.text$cex", "par.sub.text$cex"))
     wid.strip.bg.col <- gedit("", width = 12, container = lay,
-                           handler = setPar, action = "strip.background$col[]")
+                              handler = setPar, action = "strip.background$col[]")
     wid.strip.cex <- gedit("", width = 4, container = lay,
                            coerce.with = as.numeric, handler = setPar,
                            action = "add.text$cex")
@@ -885,12 +880,12 @@ latticeStyleGUI <-
     tmp3g <- ggroupThin(spacing = 0, container = addtextg)
     glabel("Color: ", container = tmp1g)
     wid.user.text.col <- gdroplist(colList, selected = 0, container = tmp1g,
-                                  editable = TRUE, handler = setPar,
-                                  action = "user.text$col")
+                                   editable = TRUE, handler = setPar,
+                                   action = "user.text$col")
     glabel(" Alpha:", container = tmp1g)
     wid.user.text.alpha <- gedit("", width = 4, container = tmp1g,
-                                coerce.with = as.numeric, handler = setPar,
-                                action = "user.text$alpha")
+                                 coerce.with = as.numeric, handler = setPar,
+                                 action = "user.text$alpha")
     glabel("Family:", container = tmp2g)
     wid.user.text.fontfamily <-
         gdroplist(familyList, selected = 0, container = tmp2g,
@@ -898,8 +893,8 @@ latticeStyleGUI <-
                   handler = setPar, action = "user.text$fontfamily")
     glabel(" Scale:", container = tmp2g)
     wid.user.text.cex <- gedit("", width = 4, container = tmp2g,
-                              coerce.with = as.numeric, handler = setPar,
-                              action = "user.text$cex")
+                               coerce.with = as.numeric, handler = setPar,
+                               action = "user.text$cex")
     glabel("Face:  ", container = tmp3g)
     wid.user.text.fontface <-
         gdroplist(c("", faceList), container = tmp3g,
@@ -964,7 +959,7 @@ latticeStyleGUI <-
     doRedraw()
 
     ## release size constraint on graphics device
-    #size(gg) <- c(-1, -1) # doesn't work
+                                        #size(gg) <- c(-1, -1) # doesn't work
 
     return(invisible())
 }
@@ -1022,22 +1017,22 @@ latticeStyleDemo <-
     objs <- list()
     if ("plot" %in% type) {
         objs$plot.symbol <-
-          xyplot(ozone ~ wind^2, environmental,
-                 type = c("p", "smooth"),
-                 panel = function(x, y, ...) {
-                     try(panel.refline(h = 0))
-                     panel.xyplot(x, y, ...)
-                     lims <- current.panel.limits()
-                     panel.abline(h = mean(lims$ylim))
-                     panel.bwplot(x, rep(quantile(lims$ylim, 0.9), length(x)),
-                                  box.width = diff(lims$ylim) * 0.08)
-                     panel.usertext(mean(lims$xlim), mean(lims$ylim),
-                                "This is user.text; \n that is add.line", pos = 3)
-                 })
+            xyplot(ozone ~ wind^2, environmental,
+                   type = c("p", "smooth"),
+                   panel = function(x, y, ...) {
+                       try(panel.refline(h = 0))
+                       panel.xyplot(x, y, ...)
+                       lims <- current.panel.limits()
+                       panel.abline(h = mean(lims$ylim))
+                       panel.bwplot(x, rep(quantile(lims$ylim, 0.9), length(x)),
+                                    box.width = diff(lims$ylim) * 0.08)
+                       panel.usertext(mean(lims$xlim), mean(lims$ylim),
+                                      "This is user.text; \n that is add.line", pos = 3)
+                   })
     }
     if ("polygons" %in% type) {
         objs$polygons <- barchart(margin.table(Titanic, c(1,4)),
-                   legend = list(top = list(fun = "drawSimpleKey", args = polygonKey)))
+                                  legend = list(top = list(fun = "drawSimpleKey", args = polygonKey)))
     }
     if ("superpose" %in% type) {
         objs$superpose <-
@@ -1061,11 +1056,11 @@ latticeStyleDemo <-
         obj <- update(obj, scales = list(x = list(draw = FALSE)),
                       legend = list(
                       right = if ("regions" %in% type)
-                         list(fun = "draw.colorkey", args = list(list(at=0:100))),
+                      list(fun = "draw.colorkey", args = list(list(at=0:100))),
                       bottom = if ("superpose" %in% type)
-                         list(fun = "drawSimpleKey", args = linesKey),
+                      list(fun = "drawSimpleKey", args = linesKey),
                       top = if ("polygons" %in% type)
-                         list(fun = "drawSimpleKey", args = polygonKey)
+                      list(fun = "drawSimpleKey", args = polygonKey)
                       ))
     }
     obj

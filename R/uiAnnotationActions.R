@@ -52,9 +52,9 @@ drawAnnotations <- function(playState, return.code = FALSE)
 clear_handler <- function(widget, playState)
 {
     types <- c(
-               if (length(playState$ids) > 0) "ids",
-               if (length(playState$annotations) > 0) "annotations",
-               if (length(playState$linked$ids) > 0) "brushed"
+               if (length(playState$ids) > 0) "labelled",
+               if (length(playState$linked$ids) > 0) "brushed",
+               if (length(playState$annotations) > 0) "annotations"
                )
     if (length(types) == 0) { widget$hide(); return() }
     clear.types <- types
@@ -80,10 +80,11 @@ edit.annotations_handler <- function(widget, playState)
     annotTxt <- paste(annotTxt, collapse = "\n")
     ## TODO: deparse / parse in a more readable form
     repeat {
-        newTxt <- guiTextInput(annotTxt, title="Edit annotations",
-                               prompt=paste("Make sure you keep this structure!",
-                               "(a list of expressions, named by space)", sep="\n"),
-                               accepts.tab=FALSE)
+        newTxt <-
+            guiTextInput(annotTxt, title="Edit annotations",
+                         prompt=paste("Make sure you keep this structure!",
+                         "(a list of expressions, named by space)", sep="\n"),
+                         accepts.tab=FALSE)
         if (is.null(newTxt)) break
         annotTxt <- newTxt
         tmp <- tryCatch(eval(parse(text=annotTxt)), error=function(e)e)
@@ -91,9 +92,11 @@ edit.annotations_handler <- function(widget, playState)
         if (inherits(tmp, "error")) {
             gmessage.error(conditionMessage(tmp))
         } else {
+            playStoreUndo(playState)
             playState$annotations <- tmp
             playReplot(playState)
-            playStoreUndo(playState)
+            ## update other tool states
+            updateAnnotationActionStates(playState)
             break
         }
     }

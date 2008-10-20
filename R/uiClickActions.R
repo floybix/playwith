@@ -382,17 +382,10 @@ contextCore <- function(playState, foo, event)
                 gSignalConnect(item, "activate",
                                function(widget, ...) {
                                    ## store newly identified points in playState
-                                   ids.new <- data.frame(subscripts = id, pos = pos)
-                                   i <- length(playState$ids) + 1
-                                   playState$ids[[i]] <- ids.new
-                                   names(playState$ids)[i] <- space
-                                   ## draw them
-                                   drawLabelsInSpace(playState, subscripts = id,
-                                                     space = space, pos = pos)
-                                   ## update other tool states
-                                   updateAnnotationActionStates(playState)
-                                   ## store state
-                                   playStoreUndo(playState)
+                                   playSetIDs(playState, id, pos = pos,
+                                              type = "labelled",
+                                              space = space,
+                                              add = TRUE)
                                })
                 cMenu$append(item)
             }

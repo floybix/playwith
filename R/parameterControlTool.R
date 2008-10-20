@@ -9,7 +9,12 @@ parameterControlTool <-
              horizontal = TRUE)
 {
     stopifnot(length(value) > 0)
-    if (!is.logical(value))
+    if (is.list(value)) {
+        if (!is.null(value$label))
+            label <- value$label
+        value <- value[[1]]
+    }
+    if (!is.logical(value) && !is.function(value))
         label <- paste(label, ": ", sep="")
     ## signal handlers
     updateParamValue <- function(widget, playState) {
@@ -171,6 +176,15 @@ parameterControlTool <-
         foo <- gtkToolItem()
         foo$add(widget)
         return(foo)
+    }
+    ## function: button
+    if (is.function(value)) {
+        widget <- gtkToolButton(label = label)
+        gSignalConnect(widget, "clicked",
+                       function(widget, playState)
+                       value(playState),
+                       data = playState)
+        return(widget)
     }
     ## otherwise...
     stop("do not know about ",

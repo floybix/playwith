@@ -247,17 +247,10 @@ identifyCore <- function(playState, foo)
                                ss <- user.data$ss
                                pos <- user.data$pos
                                ## store newly identified points in playState
-                               ids.new <- data.frame(subscripts = ss, pos = pos)
-                               i <- length(playState$ids) + 1
-                               playState$ids[[i]] <- ids.new
-                               names(playState$ids)[i] <- space
-                               ## draw them
-                               drawLabelsInSpace(playState, subscripts = ss,
-                                                 space = space, pos = pos)
-                               ## update other tool states
-                               updateAnnotationActionStates(playState)
-                               ## store state
-                               playStoreUndo(playState)
+                               playSetIDs(playState, ss, pos = pos,
+                                          type = "labelled",
+                                          space = space,
+                                          add = TRUE)
                            }, data = list(ss = ss, pos = pos))
         }
         idMenu$append(gtkSeparatorMenuItem())
@@ -274,24 +267,30 @@ identifyCore <- function(playState, foo)
         with(foo, {
             if (!is.click) pos <- 1
             ## store newly identified points in playState
-            ids.new <- data.frame(subscripts = subscripts, pos = pos)
-            i <- length(playState$ids) + 1
-            playState$ids[[i]] <- ids.new
-            names(playState$ids)[i] <- space
-            ## draw them
-            drawLabelsInSpace(playState, subscripts = subscripts,
-                              space = space, pos = pos)
-            ## store state
-            playStoreUndo(playState)
+            playSetIDs(playState, subscripts, pos = pos,
+                       type = "labelled",
+                       space = space,
+                       add = TRUE)
         })
-        ## update other tool states
-        updateAnnotationActionStates(playState)
     }
 }
 
-id.table_handler <- function(widget, playState) {
-    ## TODO
-    gmessage.error("not yet implemented")
+id.table_handler <- function(widget, playState)
+{
+    dat <- getDataArg(playState)
+    if (is.null(dat))
+        dat <- xyData(playState, space = "page")
+    tabW <- gtable(dat, multiple = TRUE)
+    cur.ids <- playGetIDs(playState)
+    if (length(cur.ids) > 0)
+        svalue(tabW, index = TRUE) <- cur.ids
+    gbasicdialog("Select cases to be brushed",
+                 widget = tabW,
+                 handler = function(h, ...) {
+                     ids <- svalue(tabW, index = TRUE)
+                     dispose(h$obj)
+                     playSetIDs(playState, ids)
+                 })
 }
 
 id.find_handler <- function(widget, playState) {
@@ -348,15 +347,17 @@ set.labels_handler <- function(widget, playState)
                          playState$labels <- tmp
                          ## and set default for playNewPlot
                          playState$.args$labels <- tmp
-                         ## redraw
-                         if (length(playState$ids))
+                         ## redraw if needed
+                         if (length(playGetIDs(playState, type = "labelled")))
                              playReplot(playState)
                      }
                  })
 }
 
-save.ids_handler <- function(widget, playState) {
-    name <- ginput("Save subscripts of labelled / brushed points to variable:",
+save.ids_handler <- function(widget, playState)
+{
+    name <- ginput(paste("Save subscripts of labelled /",
+                         "brushed points to variable:"),
                    title = "Save IDs", text = "myIds")
     if ((length(name) == 0) || (nchar(name) == 0))
         return()
@@ -369,17 +370,7 @@ brushCore <- function(playState, foo, add = TRUE)
     foo <- playSelectData(playState, foo = foo)
     if (is.null(foo)) return()
     if (length(foo$which) == 0) return()
-    ids <- foo$subscripts
-    if ((add == FALSE) &&
-        (length(playGetIDs(playState, type = "brushed")) > 0))
-    {
-        playClear(playState, type = "brushed")
-    }
-    i <- length(playState$linked$ids) + 1
-    playState$linked$ids[[i]] <- ids
-    updateAnnotationActionStates(playState)
-    drawLinkedLocal(playState)
-    updateLinkedSubscribers(playState)
-    playStoreUndo(playState)
+    playSetIDs(playState, foo$subscripts,
+               add = add)
 }
 

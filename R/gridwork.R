@@ -4,9 +4,6 @@
 ## GPL version 2 or newer
 
 
-DPI <- function()
-    round(mean(dev.size("px") / dev.size("in")))
-
 convertToDevicePixels <-
     function(x, y)
 {

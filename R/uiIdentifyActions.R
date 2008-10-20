@@ -6,57 +6,7 @@
 
 initIdentifyActions <- function(playState)
 {
-    playState$tmp$identify.ok <- FALSE
-    if (isBasicDeviceMode(playState)) return()
-    hasArgs <- playState$accepts.arguments
-    isLatt <- playState$is.lattice
-    isBase <- !isLatt && is.null(playState$viewport)
-    isBaseMulti <- isBase && any(par("mfrow") > 1)
-    ## detect known plots that this will not work with
-    if (is.null(playState$data.points)) {
-        if (!hasArgs) return()
-        if (isBaseMulti) return()
-        ## lattice package:
-        if (playState$callName %in%
-            c("histogram", "densityplot", "barchart")) return()
-        ## latticeExtra package:
-        if (playState$callName %in% "marginal.plot") return()
-        ## graphics package:
-        if (playState$callName %in%
-            c("hist", "barplot", "spineplot", "mosaic",
-              "assocplot", "fourfoldplot",
-              "coplot", "persp", "pie")) return()
-    }
-    labels <- playState$.args$labels
-    ## try to guess labels if they were not given
-    if (is.null(labels)) {
-        tmp.data <- getDataArg(playState)
-        if (!is.null(tmp.data) &&
-            !inherits(tmp.data, "list") &&
-            !is.environment(tmp.data))
-        {
-            ## data arg, probably a data.frame
-            labels <- case.names(tmp.data)
-        } else {
-            ## no useful data arg; take arg 1 instead
-            tmp.x <- callArg(playState, 1)
-            if (inherits(tmp.x, "formula")) {
-                ## get left-most term in RHS of formula
-                xObj <- if (length(tmp.x) == 2)
-                    tmp.x[[2]] else tmp.x[[3]]
-                while (is.call(xObj) && toString(xObj[[1]]) %in%
-                       c("|", "*", "+"))
-                    xObj <- xObj[[2]]
-                xObj <- eval(xObj, tmp.data, playState$env)
-                labels <- case.names(xObj)
-            } else {
-                ## first arg is an object, not a formula
-                labels <- case.names(tmp.x)
-            }
-        }
-    }
-    playState$labels <- labels
-    playState$tmp$identify.ok <- TRUE
+    guessLabels(playState)
 }
 
 updateIdentifyActions <- function(playState)
@@ -67,8 +17,7 @@ updateIdentifyActions <- function(playState)
     aGroup$getAction("Identify")$setSensitive(canIdent)
     aGroup$getAction("IdTable")$setSensitive(canIdent)
     aGroup$getAction("FindLabels")$setSensitive(canIdent)
-    hasIDs <- ((length(playState$ids) > 0) ||
-               (length(playState$linkeds$ids) > 0))
+    hasIDs <- (length(playGetIDs(playState)) > 0)
     aGroup$getAction("SaveIDs")$setSensitive(hasIDs)
     ## Brush
     aGroup$getAction("Brush")$setSensitive(canIdent)
@@ -77,122 +26,6 @@ updateIdentifyActions <- function(playState)
         drawLabels(playState)
         drawLinkedLocal(playState)
     }
-}
-
-drawLabels <- function(playState, return.code = FALSE)
-{
-    playDevSet(playState)
-    theCode <- expression()
-    ## group by space
-    spaces <- names(playState$ids)
-    for (space in unique(spaces)) {
-        items <- playState$ids[spaces == space]
-        idInfo <- do.call(rbind, items)
-        expr <- drawLabelsInSpace(playState, subscripts = idInfo$subscripts,
-                           space = space, pos = idInfo$pos,
-                           return.code = return.code)
-        if (return.code)
-            theCode <- c(theCode, expr)
-    }
-    theCode
-}
-
-drawLabelsInSpace <- function(playState, subscripts, space = "plot",
-                              pos = 1, return.code = FALSE)
-{
-    data <- xyCoords(playState, space=space)
-    if (length(data$x) == 0) return()
-    if (length(data$y) == 0) return()
-    ## convert to log scale if necessary
-    data <- dataCoordsToSpaceCoords(playState, data)
-    if (!is.null(data$subscripts)) {
-        ## 'data' is a subset given by data$subscripts,
-        ## so need to find which ones match the label subscripts
-        which <- match(subscripts, data$subscripts, 0)
-    } else {
-        ## 'data' (x and y) is the whole dataset
-        which <- subscripts
-    }
-    x <- if (is.matrix(data$x)) data$x[which,] else data$x[which]
-    y <- if (is.matrix(data$y)) data$y[which,] else data$y[which]
-    nvar <- max(NCOL(data$x), NCOL(data$y))
-    labels <- playState$labels[subscripts]
-    pos <- rep(pos, length = length(labels))
-    ## if each data point has multiple locations, replicate labels
-    labels <- rep(labels, each = nvar)
-    labels <- rep(pos, each = nvar)
-    offset <- as.numeric(playState$label.offset)
-    annots <- expression()
-    for (i in seq_along(labels)) {
-        annots[[i]] <- call("panel.usertext", x[i], y[i],
-                            labels[i], pos = pos[i])
-        if (offset != 0.5)
-            annots[[i]]$offset <- offset
-    }
-    playDo(playState, annots, space = space,
-           return.code = return.code)
-}
-
-drawLinkedLocal <- function(playState, return.code = FALSE)
-{
-    ## draw linked brushed points
-    theCode <- expression()
-    subscripts <- unlist(playState$linked$ids)
-    if (length(subscripts) == 0) return(theCode)
-    subscripts <- unique(sort(subscripts))
-    playDevSet(playState)
-    for (space in playState$spaces) {
-        data <- xyCoords(playState, space = space)
-        if (length(data$x) == 0) next
-        if (length(data$y) == 0) next
-        ## convert to log scale if necessary
-        data <- dataCoordsToSpaceCoords(playState, data)
-        if (!is.null(data$subscripts)) {
-            ## 'data' is a subset given by data$subscripts,
-            ## so need to find which ones match the label subscripts
-            which <- match(subscripts, data$subscripts, 0)
-        } else {
-            ## 'data' (x and y) is the whole dataset
-            which <- subscripts
-        }
-        x <- if (is.matrix(data$x)) data$x[which,] else data$x[which]
-        y <- if (is.matrix(data$y)) data$y[which,] else data$y[which]
-        if (length(x) == 0) next
-        annot <- call("panel.brushpoints", x, y)
-        ## special case: parallel -- draw lines not points
-        if (playState$callName == "parallel") {
-            ## use NAs to achieve breaks in lines
-            x <- t(cbind(x, NA))
-            y <- t(cbind(y, NA))
-            annot <- call("panel.brushlines", x, y)
-        }
-        expr <- playDo(playState, annot, space = space,
-                       return.code = return.code)
-        if (return.code)
-            theCode <- c(theCode, expr)
-    }
-    theCode
-}
-
-updateLinkedSubscribers <- function(playState, redraw = FALSE)
-{
-    whichDead <- NULL
-    for (i in seq_along(playState$linked$subscribers)) {
-        otherPlayState <- playState$linked$subscribers[[i]]
-        if (!identical(otherPlayState$ID, playState$ID)) {
-            ## first check that this subscriber is still alive
-            if (!inherits(otherPlayState$win, "GtkWindow")) {
-                whichDead <- c(whichDead, i)
-                next
-            }
-            ## trigger draw / redraw
-            if (redraw) playReplot(otherPlayState)
-            else drawLinkedLocal(otherPlayState)
-        }
-    }
-    if (length(whichDead))
-        playState$linked$subscribers <-
-            playState$linked$subscribers[-whichDead]
 }
 
 identifyCore <- function(playState, foo)

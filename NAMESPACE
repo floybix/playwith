@@ -14,33 +14,11 @@ export(playwith,
        playReplot,
        plotOnePage)
 
+## parameterControlTool.R
+export(parameterControlTool)
+
 ## autoplay.R
 export(autoplay)
-
-## latticist.R
-export(latticist)
-
-## latticistCompose.R
-export(latticistCompose,
-       reorderByFreq,
-       cutEq,
-       try.prepanel.loess,
-       n.level.colors,
-       simpleColkey)
-S3method(levelplot, table)
-
-## latticistParse.R
-export(latticistParse)
-
-## latticeStyleGUI.R
-export(latticeStyleGUI,
-       latticeStyleToBasePar,
-       panel.usertext,
-       panel.brushpoints,
-       panel.brushlines,
-       latticeStyleDemo,
-       custom.theme.2,
-       custom.theme.black)
 
 ## settings
 export(playwith.options,
@@ -66,18 +44,18 @@ export(playDevCur,
        playThawGUI)
 S3method(print, playState)
 
-## apiAnnotation.R
-export(playGetIDs,
+## apiIdentify.R
+export(playSelectData,
+       playGetIDs,
        playSetIDs,
-       playAnnotate,
-       playDo,
        playClear,
        playUndo,
        playStoreUndo,
        playUnlink)
 
-## apiInteraction.R
-export(playSelectData,
+## apiAnnotation.R
+export(playAnnotate,
+       playDo,
        playPointInput,
        playLineInput,
        playRectInput)
@@ -116,12 +94,34 @@ S3method(case.names, POSIXt)
 S3method(case.names, yearmon)
 S3method(case.names, yearqtr)
 
-## parameterControlTool.R
-export(parameterControlTool)
-
 ## gridwork.R
 export(convertFromDevicePixels,
        convertToDevicePixels,
        inViewport,
        grobBBDevicePixels,
        showGrobsBB)
+
+## latticist.R
+export(latticist)
+
+## latticistCompose.R
+export(latticistCompose,
+       reorderByFreq,
+       cutEq,
+       try.prepanel.loess,
+       n.level.colors,
+       simpleColkey)
+S3method(levelplot, table)
+
+## latticistParse.R
+export(latticistParse)
+
+## latticeStyleGUI.R
+export(latticeStyleGUI,
+       latticeStyleToBasePar,
+       panel.usertext,
+       panel.brushpoints,
+       panel.brushlines,
+       latticeStyleDemo,
+       custom.theme.2,
+       custom.theme.black)

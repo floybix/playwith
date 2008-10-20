@@ -41,6 +41,62 @@ getDataArg <- function(playState = playDevCur(), eval = TRUE)
     tmp.data
 }
 
+guessLabels <- function(playState)
+{
+    playState$tmp$identify.ok <- FALSE
+    if (isBasicDeviceMode(playState)) return()
+    hasArgs <- playState$accepts.arguments
+    isLatt <- playState$is.lattice
+    isBase <- !isLatt && is.null(playState$viewport)
+    isBaseMulti <- isBase && any(par("mfrow") > 1)
+    ## detect known plots that this will not work with
+    if (is.null(playState$data.points)) {
+        if (!hasArgs) return()
+        if (isBaseMulti) return()
+        ## lattice package:
+        if (playState$callName %in%
+            c("histogram", "densityplot", "barchart")) return()
+        ## latticeExtra package:
+        if (playState$callName %in% "marginal.plot") return()
+        ## graphics package:
+        if (playState$callName %in%
+            c("hist", "barplot", "spineplot", "mosaic",
+              "assocplot", "fourfoldplot",
+              "coplot", "persp", "pie")) return()
+    }
+    labels <- playState$.args$labels
+    ## try to guess labels if they were not given
+    if (is.null(labels)) {
+        tmp.data <- getDataArg(playState)
+        if (!is.null(tmp.data) &&
+            !inherits(tmp.data, "list") &&
+            !is.environment(tmp.data))
+        {
+            ## data arg, probably a data.frame
+            labels <- case.names(tmp.data)
+        } else {
+            ## no useful data arg; take arg 1 instead
+            tmp.x <- callArg(playState, 1)
+            if (inherits(tmp.x, "formula")) {
+                ## get left-most term in RHS of formula
+                xObj <- if (length(tmp.x) == 2)
+                    tmp.x[[2]] else tmp.x[[3]]
+                while (is.call(xObj) && toString(xObj[[1]]) %in%
+                       c("|", "*", "+"))
+                    xObj <- xObj[[2]]
+                xObj <- eval(xObj, tmp.data, playState$env)
+                labels <- case.names(xObj)
+            } else {
+                ## first arg is an object, not a formula
+                labels <- case.names(tmp.x)
+            }
+        }
+    }
+    playState$labels <- labels
+    playState$tmp$identify.ok <- TRUE
+    invisible()
+}
+
 xyCoords <- function(playState = playDevCur(), space="plot")
 {
     foo <- xyData(playState, space=space)

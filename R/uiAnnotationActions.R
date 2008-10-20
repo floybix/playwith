@@ -31,24 +31,6 @@ updateAnnotationActionStates <- function(playState)
     aGroup$getAction("EditAnnotations")$setSensitive(showEdit)
 }
 
-drawAnnotations <- function(playState, return.code = FALSE)
-{
-    theCode <- expression()
-    ## group by space
-    spaces <- names(playState$annotations)
-    for (space in unique(spaces)) {
-        items <- playState$annotations[spaces == space]
-        annots <- do.call("c", items)
-        expr <- playDo(playState,
-                       annots,
-                       space = space,
-                       return.code = return.code)
-        if (return.code)
-            theCode <- c(theCode, expr)
-    }
-    theCode
-}
-
 clear_handler <- function(widget, playState)
 {
     types <- c(

@@ -83,11 +83,12 @@ playGetIDs <-
 {
     type <- match.arg(type, several.ok = TRUE)
     ids.brushed <- unlist(playState$linked$ids)
-    ids.lab <- do.call(rbind, playState$ids)$subscripts
+    ids.labelled <- do.call(rbind, playState$ids)$subscripts
     ids <- NULL
-    if ("labelled" %in% type) ids <- ids.lab
+    if ("labelled" %in% type) ids <- ids.labelled
     if ("brushed" %in% type) ids <- c(ids, ids.brushed)
-    ids <- unique(sort(ids))
+    if (length(ids) > 0)
+        ids <- unique(sort(ids))
     if (labels) playState$labels[ids] else ids
 }
 

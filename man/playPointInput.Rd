@@ -8,17 +8,16 @@
 }
 \usage{
 playPointInput(playState = playDevCur(), prompt)
-playLineInput(playState = playDevCur(), prompt)
-playRectInput(playState = playDevCur(), prompt)
+playLineInput(playState = playDevCur(), prompt, scales = "dynamic")
+playRectInput(playState = playDevCur(), prompt, scales = "dynamic")
 }
 \arguments{
   \item{playState}{ a \code{\link{playState}} object representing the plot, window and device. }
   \item{prompt}{ text to display in the prompt. }
-  %  \item{scales}{ one or more of \code{"x"} and \code{"y"},
-  %	  constraining the dimensions of the region to select.
-  %	  E.g. if \code{scales="x"} then a section along the x-axis is selected,
-  %	  as might be appropriate for a time series.
-  %  }
+  \item{scales}{ the default allows the user to hold Shift while
+    dragging, to constrain the selection to x or y scales. Otherwise
+    this should be one or more of "x" and "y", specifying which axes to
+    select along. }
 }
 \details{
   \code{playPointInput} is similar to \code{\link{locator}}, but

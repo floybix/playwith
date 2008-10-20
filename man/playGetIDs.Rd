@@ -8,14 +8,15 @@
 }
 \usage{
 playGetIDs(playState = playDevCur(),
-           type = c("ids", "brushed"),
+           type = c("labelled", "brushed"),
            labels = FALSE)
 
 playSetIDs(playState = playDevCur(), value,
-           type = "brushed", space = "plot", redraw = NA)
+           type = "brushed", space = "plot",
+           add = FALSE, redraw = NA, pos = 1)
 
 playClear(playState = playDevCur(),
-          type = c("annotations", "ids", "brushed"),
+          type = c("annotations", "labelled", "brushed"),
           redraw = TRUE)
 }
 \arguments{
@@ -28,9 +29,12 @@ playClear(playState = playDevCur(),
     integer vector of subscripts, or a logical vector (not
     recycled). }
   \item{space}{ the space to draw labels in if \code{type = "ids"}. }
+  \item{add}{ if TRUE, add to any existing set of points; otherwise
+          replace them. }
   \item{redraw}{ whether to redraw the plot. The default \code{NA} only
     redraws if necessary (i.e. if an existing selection was
     replaced). If \code{FALSE} nothing is drawn. }
+  \item{pos}{ position specifier for labels. }
 }
 \details{
   Not yet.
@@ -48,7 +52,7 @@ playwith(xyplot(1:100 ~ 1:100 | 1:2, subscripts = TRUE),
     labels = paste("label", 1:100, sep=""))
 playSetIDs(value = c(50:60, 100))
 playGetIDs()
-playSetIDs(value = c(10, 20, 30), type = "ids",
+playSetIDs(value = c(10, 20, 30), type = "labelled",
     space = "packet 1")
 playGetIDs(labels = TRUE)
 playClear()

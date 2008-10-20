@@ -85,12 +85,12 @@ panel.brushpoints <-
 }
 
 panel.brushlines <-
-    function(x0, y0, type = "l", col = brush.line$col,
+    function(x, y = NULL, type = "l", col = brush.line$col,
              alpha = brush.line$alpha, lty = brush.line$lty,
              lwd = brush.line$lwd, ...)
 {
     brush.line <- current.brush.line()
-    panel.lines(x0, y0, type = type, col = col, alpha = alpha,
+    panel.lines(x, y, type = type, col = col, alpha = alpha,
                 lty = lty, lwd = lwd, ...)
 }
 
@@ -452,9 +452,9 @@ latticeStyleGUI <-
                             "and your modifications only in",
                             "`trellis.par.log`.",
                             "",
-                            "Changes take effect immediately,",
-                            "but you need to press <Enter> in",
-                            "text fields."), collapse="\n"),
+                            "Changes take effect immediately.",
+                            "Load a new theme to reset."),
+                          collapse="\n"),
                     x = 0.05, y = 0.95, just = c("left", "top"),
                     gp = gpar())
 

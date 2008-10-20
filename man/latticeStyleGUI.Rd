@@ -33,8 +33,8 @@ latticeStyleToBasePar()
   As such it can run under different GUI toolkits
   such as \pkg{gWidgetsRGtk2}, \pkg{gWidgetstcltk}, etc.
 
-  Changes take effect immediately, but you need to press \emph{Enter} in
-  text fields. The embedded graphic device (or non-embedded, depending
+  Changes take effect immediately. Load a new theme to reset.
+  The embedded graphic device (or non-embedded, depending
   on the GUI toolkit) will show a preview of your settings. You can also
   plot on the target device while keeping the GUI open, for testing.
 

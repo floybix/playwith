@@ -64,8 +64,14 @@ guessLabels <- function(playState)
               "assocplot", "fourfoldplot",
               "coplot", "persp", "pie")) return()
     }
-    labels <- playState$.args$labels
+    ok.case.names <- function(object) {
+        tmp <- case.names(object)
+        if (is.null(tmp))
+            return(seq_len(NROW(object)))
+        tmp
+    }
     ## try to guess labels if they were not given
+    labels <- playState$.args$labels
     if (is.null(labels)) {
         tmp.data <- getDataArg(playState)
         if (!is.null(tmp.data) &&
@@ -73,7 +79,7 @@ guessLabels <- function(playState)
             !is.environment(tmp.data))
         {
             ## data arg, probably a data.frame
-            labels <- case.names(tmp.data)
+            labels <- ok.case.names(tmp.data)
         } else {
             ## no useful data arg; take arg 1 instead
             tmp.x <- callArg(playState, 1)
@@ -85,10 +91,10 @@ guessLabels <- function(playState)
                        c("|", "*", "+"))
                     xObj <- xObj[[2]]
                 xObj <- eval(xObj, tmp.data, playState$env)
-                labels <- case.names(xObj)
+                labels <- ok.case.names(xObj)
             } else {
                 ## first arg is an object, not a formula
-                labels <- case.names(tmp.x)
+                labels <- ok.case.names(tmp.x)
             }
         }
     }

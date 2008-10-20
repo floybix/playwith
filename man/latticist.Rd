@@ -1,38 +1,42 @@
 \name{latticist}
 \alias{latticist}
 \alias{try.prepanel.loess}
-\alias{marginal.plot}
 \title{ A Lattice GUI }
 \description{
   Interactively explore a data set using \link[lattice]{Lattice} displays.
 }
 \usage{
 latticist(dat,
+          spec = alist(),
           reorder.levels = TRUE,
-          plot.call = quote(marginal.plot(dat, reorder = FALSE)),
           ...,
           labels = rownames(dat),
-          time.mode = FALSE)
+          time.mode = FALSE,
+          eval.args = playwith.getOption("eval.args"),
+          height = playwith.getOption("height") - 1,
+          plot.call)
 }
 \arguments{
   \item{dat}{ a data frame (with numeric and/or categorical variables),
     or an object that can be coerced with \code{\link{as.data.frame}}
     (such as a \code{table}). }
+  \item{spec}{ a list specifying the initial latticist display.
+    See \code{\link{latticistCompose}}. }
   \item{reorder.levels}{ if \code{TRUE}, change the ordering of levels of factor
-  variables so they are in order of frequency. Note that this does not
-  change the data, only its internal representation: see
-  \code{\link{reorder}}. This is recommended for effective graphic
-  displays. Factor variables of class \code{ordered} are not reordered.
-  Therefore you should ensure that any variables whose levels have an inherent
-  order are of class \code{ordered}: see \code{\link{as.ordered}}.
-  Note: the result of \code{\link{cut}} is by default NOT
-  \code{ordered}!
-  Numeric variables with discrete values in {0, 1, -1} are converted to factors.
+    variables so they are in order of frequency. Note that this does not
+    change the data, only its internal representation: see
+    \code{\link{reorder}}. This is recommended for effective graphic
+    displays. Factor variables of class \code{ordered} are not reordered.
+    Therefore you should ensure that any variables whose levels have an inherent
+    order are of class \code{ordered}: see \code{\link{as.ordered}}.
+    Note: the result of \code{\link{cut}} is by default NOT
+    \code{ordered}!
+    Numeric variables with discrete values in {0, 1, -1} are converted to factors.
   }
   \item{plot.call}{ call defining the initial plot display.
-  This can be given instead of \code{dat}, and the dataset will be
-  derived from it (see examples). }
-  \item{\dots, labels, time.mode}{
+    This can be given instead of \code{dat}, and the dataset will be
+    derived from it (see examples). }
+  \item{\dots, labels, time.mode, eval.args, height}{
     further arguments passed to \code{\link{playwith}}.
   }
 }
@@ -71,37 +75,27 @@ options(device.ask.default = FALSE)
 
 ## CO2 dataset: see ?CO2
 ## From an experiment on the cold tolerance of a grass species.
-## Try: uptake ~ conc
-##      uptake ~ conc | Plant
-##      uptake ~ conc | Type, groups = Treatment
 latticist(CO2)
+## The following sequence would normally be interactive:
+stopifnot(gconfirm("Hit Enter for next example..."))
+latticist(CO2, spec = alist(yvar = uptake))
+stopifnot(gconfirm("Hit Enter for next example..."))
+latticist(CO2, spec = alist(yvar = uptake, xvar = conc))
+stopifnot(gconfirm("Hit Enter for next example..."))
+latticist(CO2, spec = alist(yvar = uptake, xvar = conc,
+                            groups = Treatment))
+stopifnot(gconfirm("Hit Enter for next example..."))
+latticist(CO2, spec = alist(yvar = uptake, xvar = conc,
+                            groups = Treatment, cond = Type))
+stopifnot(gconfirm("Hit Enter for next example..."))
+latticist(CO2, spec = alist(yvar = uptake, xvar = conc,
+                            cond = Plant))
+stopifnot(gconfirm("Hit Enter for next example..."))
 
 ## environmental dataset: see ?environmental
 ## Daily measurements related to ozone pollution in NYC 1973.
 ## Specify initial display:
-readline("Hit Enter for 'environmental' example...")
-latticist(plot = quote(parallel(environmental, col = 1)))
-
-## National Health and Nutrition Examination Survey.
-## Try: ~ Smoke, groups = Sex
-##      Sex ~ Smoke
-##      Smoke ~ Age | Sex
-##      ~ Diet.Iron, groups = Sex
-##      Hemoglobin ~ Diet.Iron | Sex
-##      (with both x and y "discretized")
-if (require(hexbin)) {
-  readline("Hit Enter for 'NHANES' example...")
-  data(NHANES)
-  latticist(NHANES)
-}
-
-## audit dataset: artificial data representing tax work.
-if (require(rattle)) {
-  readline("Hit Enter for 'audit' example...")
-  audit <- read.csv(system.file("csv", "audit.csv",
-                    package = "rattle"))
-  latticist(audit, new = TRUE)
-}
+latticist(plot.call = quote(parallel(~ environmental, col = 1)))
 
 }
 }

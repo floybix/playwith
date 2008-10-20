@@ -1,4 +1,33 @@
 
+gedit <- function(..., handler, action = NULL) {
+    wid <- gWidgets::gedit(...)
+    geditAddGoodHandlers(wid, handler = handler, action = action)
+    wid
+}
+
+geditAddGoodHandlers <- function(wid, handler, ...) {
+    ## gedit event handler only triggered when Enter pressed:
+    addHandlerChanged(wid, handler = handler, ...)
+
+    ## need to also detect changes (keystrokes)
+    ## and update when lose focus
+
+    ## local state variable (exists in function environment)
+    iNeedUpdating <- FALSE
+    ## keystroke events trigger the flag
+    setNeedUpdate <- function(h, ...)
+        iNeedUpdating <<- TRUE
+    addHandlerKeystroke(wid, handler = setNeedUpdate)
+    ## when the widget loses focus, do the update
+    doUpdateIfNeeded <- function(h, ...) {
+        if (iNeedUpdating)
+            handler(h, ...)
+        iNeedUpdating <<- FALSE
+    }
+    addHandlerBlur(wid, handler = doUpdateIfNeeded, ...)
+}
+
+
 shrinkrange <- function(r, f = 0.1)
 {
   stopifnot(length(r) == 2)

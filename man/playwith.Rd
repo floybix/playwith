@@ -73,6 +73,8 @@ playwith(expr,
       \item \code{character} vector: creates a combo box (including
       text entry).
       \item \code{logical}: creates a checkbox.
+      \item \code{function}: creates a button, which calls
+      the given function with a single argument \code{playState}.
     }
   }
   \item{tools}{ a list of tool specifications. These are technically

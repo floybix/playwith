@@ -8,11 +8,16 @@
 playSelectData(playState = playDevCur(),
     prompt = paste("Click or drag to select data points;",
                    "Right-click or Esc to cancel."),
-    foo = playRectInput(playState, prompt = prompt))
+    scales = "dynamic",
+    foo = playRectInput(playState, prompt = prompt, scales = scales))
 }
 \arguments{
   \item{playState}{ a \code{\link{playState}} object representing the plot, window and device. }
   \item{prompt}{ text to display in the prompt. }
+  \item{scales}{ the default allows the user to hold Shift while
+    dragging, to constrain the selection to x or y scales. Otherwise
+    this should be one or more of "x" and "y", specifying which axes to
+    select along. }
   \item{foo}{ rectangular plot region structure, usually generated
     interactively. }
 }
@@ -32,14 +37,12 @@ playSelectData(playState = playDevCur(),
       character, specifies the plot space in which data points were selected.
       See the \code{space} argument to \code{\link{playDo}}.
     }
-    \item{\code{which}}{
+    \item{\code{subscripts}}{
       indices of the data points selected. This relies on the data being guessed
       correctly from the plot call, unless \code{data.points} was specified explicitly.
-      Note that for lattice plots, these are indices into the packet/panel data,
-      not indices into the original data set, so not the same as \code{subscripts}.
     }
     \item{\code{x, y}}{
-      native coordinates of the selected data points.
+      values of the selected data points.
     }
     \item{\code{is.click}}{
       logical, whether it was a click (otherwise a drag).

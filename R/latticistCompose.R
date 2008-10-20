@@ -12,6 +12,21 @@ latticistCompose <- function(dat, spec = alist(),
                              datArg = substitute(dat))
 {
     force(datArg)
+    force(spec)
+    if (inherits(spec, "formula"))
+        spec <- list(spec)
+    if (length(spec)) {
+        form <- spec[[1]]
+        if (inherits(spec[[1]], "formula") ||
+            is.call.to(spec[[1]], "~")) {
+            form <- eval(form)
+            yvar <- form[[2]]
+            if (length(form) > 2)
+                xvar <- form[[3]]
+            ## TODO...
+        }
+
+    }
     doCompose <-
         function(xvar = NULL, yvar = NULL, zvar = NULL,
                  groups = NULL, cond = NULL, cond2 = NULL,
@@ -24,6 +39,8 @@ latticistCompose <- function(dat, spec = alist(),
                  doLines = TRUE, do3DTable = FALSE,
                  defaultPlot = "marginal.plot")
         {
+            ## TODO: handle gprop
+
             xvar <- substitute(xvar)
             yvar <- substitute(yvar)
             zvar <- substitute(zvar)
@@ -56,7 +73,16 @@ latticistCompose <- function(dat, spec = alist(),
             subsetVal <- eval(subset, dat)
             ## calculate number of data points
             nPoints <- 0
-            if (!is.null(xVal) && !is.null(yVal))
+            if (is.null(xVal) && is.null(yVal)) {
+                ## hypervariate: just report size of subset
+                if (isTRUE(subsetVal)) {
+                    nPoints <- NROW(dat)
+                } else {
+                    ## handle integer/logical/recycling
+                    tmp <- rep(TRUE, NROW(dat))
+                    nPoints <- sum(tmp[subsetVal])
+                }
+            } else if (!is.null(xVal) && !is.null(yVal))
                 nPoints <- sum(is.finite(xVal[subsetVal]) &
                                is.finite(yVal[subsetVal]))
             else if (!is.null(xVal))
@@ -225,7 +251,8 @@ latticistCompose <- function(dat, spec = alist(),
                 } else if (defaultPlot == "parallel") {
                     call[[1]] <- quote(parallel)
                     call[[2]] <- dat.form
-                    call$col <- quote(trellis.par.get("plot.line")$col)
+                    if (is.null(groups))
+                        call$col <- quote(trellis.par.get("plot.line")$col)
                 }
 
             } else if (is.null(xVal) || is.null(yVal)) {
@@ -249,7 +276,7 @@ latticistCompose <- function(dat, spec = alist(),
                         tabcall <-
                             call("xtabs", xform, datArg)
                         tabcall$subset <- if (!isTRUE(subset)) subset
-                        if (doYProp) {
+                        if (yprop) {
                             tabcall <- call("prop.table", tabcall, margin = 1)
                         }
                         call[[2]] <- tabcall
@@ -288,7 +315,7 @@ latticistCompose <- function(dat, spec = alist(),
                             tabcall <-
                                 call("xtabs", xform, datArg)
                             tabcall$subset <- if (!isTRUE(subset)) subset
-                            if (doXProp) {
+                            if (xprop) {
                                 tabcall <- call("prop.table", tabcall, margin = 1)
                             }
                             call[[2]] <- tabcall
@@ -408,8 +435,8 @@ latticistCompose <- function(dat, spec = alist(),
                         xform <- as.formula(paste("~", xterms))
                         tabcall <- call("xtabs", xform, datArg)
                         tabcall$subset <- if (!isTRUE(subset)) subset
-                        if (doXProp || doYProp) {
-                            mgn <- c(if (doXProp) 1, if (doYProp) 2)
+                        if (xprop || yprop) {
+                            mgn <- c(if (xprop) 1, if (yprop) 2)
                             tabcall <- call("prop.table", tabcall, margin = mgn)
                         }
                         call[[2]] <- tabcall

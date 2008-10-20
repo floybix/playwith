@@ -13,6 +13,7 @@ latticist <-
              labels = rownames(dat),
              time.mode = FALSE,
              eval.args = playwith.getOption("eval.args"),
+             height = playwith.getOption("height") - 1,
              plot.call)
 {
     if (!missing(dat)) {
@@ -94,7 +95,9 @@ latticist <-
     }
 
     ## lattInit is the constructor (an init.action)
-    lattInit <- latticistToolConstructor(dat, datArg = datArg)
+    lattAction <- latticistToolConstructor(dat, datArg = datArg)
+    ## this list will store state in playState$latticist
+    lattList <- latticistInitOptions(dat)
 
     if (!is.list(eval.args))
         eval.args <- as.list(eval.args)
@@ -103,25 +106,26 @@ latticist <-
     playwith(plot.call = plot.call,
              eval.args = eval.args,
              title = title, ...,
+             height = height,
              labels = labels,
              time.mode = time.mode,
-             init.actions = list(latticist = lattInit),
-             latticist = list()) ## to replace any existing list
+             init.actions = list(latticist = lattAction),
+             latticist = lattList)
 }
 
-latticistInitOptions <- function(playState, dat)
+latticistInitOptions <- function(dat)
 {
-    playState$latticist <- list()
+    stuff <- list()
 
     ## options
-    playState$latticist$linesSetting <- TRUE
+    stuff$linesSetting <- TRUE
 
     ## which variables are categorical (vs numeric)
     iscat <- sapply(dat, is.categorical)
 
     ## variables and expressions
     ## group into categorical vs numeric
-    playState$latticist$varexprs <-
+    stuff$varexprs <-
         c(NULLNAMES[[1]],
           names(dat)[iscat],
           if (any(iscat) && any(!iscat))
@@ -158,14 +162,14 @@ latticistInitOptions <- function(playState, dat)
         subsetopts <- c(subsetopts, "complete.cases(dat)")
     }
     subsetopts <- c(subsetopts, missings)
-    playState$latticist$subsetopts <- subsetopts
+    stuff$subsetopts <- subsetopts
 
     ## aspect
-    playState$latticist$aspectopts <-
+    stuff$aspectopts <-
         c('"fill"', '"iso"', '"xy"',
           '0.5', '1', '2')
     ## scales
-    playState$latticist$scalesopts <-
+    stuff$scalesopts <-
         c("x same, y same",
           "x same, y free",
           "x free, y same",
@@ -176,6 +180,8 @@ latticistInitOptions <- function(playState, dat)
           "x sliced, y free",
           "x same, y sliced",
           "x free, y sliced")
+
+    stuff
 }
 
 latticistToolConstructor <- function(dat, datArg)
@@ -185,10 +191,6 @@ latticistToolConstructor <- function(dat, datArg)
     {
         ## check that it is a sensible call
         if (!isTRUE(playState$accepts.arguments)) return()
-        ## create list to store some settings
-        if (length(playState$latticist) == 0) {
-            latticistInitOptions(playState, dat)
-        }
 
         ## callback function
         ## creates a new plot from widget settings
@@ -901,11 +903,14 @@ latticistToolConstructor <- function(dat, datArg)
         box$packStart(cvarsBox, padding=1)
 
         ## add it directly to the window (not a toolbar!)
-        if (!is.null(playState$widgets$latticist))
-            playState$widgets$latticist$destroy()
-        playState$widgets$latticist <- box
+        ## use blockRedraws() to maintain current device size
+        blockRedraws({
+            if (!is.null(playState$widgets$latticist))
+                playState$widgets$latticist$destroy()
+            playState$widgets$vbox$packEnd(box, expand=FALSE)
+        }, playState = playState)
 
-        playState$widgets$vbox$packEnd(box, expand=FALSE)
+        playState$widgets$latticist <- box
 
         return(NA)
     }

@@ -18,28 +18,6 @@ latticeSettingsGUI <- function(playState)
     wingroup <- ggroup(horizontal=FALSE, container = dialog)
     tabs <- gnotebook(container = wingroup)
     wid <- list()
-    ## keeps track of changed text fields during editing
-#    needUpdate <- list()
-    ## default gedit handler only triggered when Enter pressed;
-    ## need to detect changes (keystrokes) and update when lose focus
-    geditUpdateAfterChange <- function(wid, handler, ...) {
-        iNeedUpdating <- FALSE
-        setNeedUpdate <- function(h, ...)
-            #needUpdate[[h$action]] <<- TRUE
-            iNeedUpdating <<- TRUE
-        addHandlerKeystroke(wid, handler = setNeedUpdate)
-#                            action = nm)
-        doUpdateIfNeeded <- function(h, ...) {
-#            nm <- h$action
-#            if (isTRUE(needUpdate[[nm]]))
-            if (iNeedUpdating)
-                handler(h, ...)
-#            needUpdate[[nm]] <- NULL
-            iNeedUpdating <<- FALSE
-        }
-        addHandlerBlur(wid, handler = doUpdateIfNeeded, ...)
-#                       action = nm)
-    }
 
     origCall <- playState$call
     makeScalesArgAList(playState)
@@ -51,14 +29,15 @@ latticeSettingsGUI <- function(playState)
     if (isLatt3D) scaleNames <- c("x", "y", "z")
     relations <- c("same", "free", "sliced")
     aspects <- c('"fill"', '"iso"', '"xy"', '0.5', '1', '2')
-    indexConds <- c("",
-                    "function(x, y) median(x, na.rm=TRUE)",
-                    "function(x, y) median(y, na.rm=TRUE)",
-                    "function(x, y) mean(x, na.rm=TRUE)",
-                    "function(x, y) mean(y, na.rm=TRUE)",
-                    "function(x, y) mean(y - x, na.rm=TRUE)",
-                    "function(x, y) sum(complete.cases(x))",
-                    "function(x, y) sum(complete.cases(x, y))")
+    indexConds <-
+        c("",
+          "function(x, y) median(x, na.rm=TRUE)",
+          "function(x, y) median(y, na.rm=TRUE)",
+          "function(x, y) mean(x, na.rm=TRUE)",
+          "function(x, y) mean(y, na.rm=TRUE)",
+          "function(x, y) mean(y - x, na.rm=TRUE)",
+          "function(x, y) sum(complete.cases(x))",
+          "function(x, y) sum(complete.cases(x, y))")
 
     setArg <- function(h, ...) {
         target <- parse(text=h$action)[[1]]
@@ -133,10 +112,10 @@ latticeSettingsGUI <- function(playState)
             if (is.logical(curVal)) {
                 curVal <- origVal
             }
-            callTxt <- c("## Default axis labels: ",
-                         paste("#",
+            callTxt <- c("## Default axis labels: ", #
+                         paste("#",                  #
                                deparse(call("<-", quote(labels), origVal)) ),
-                         "## Custom axis labels: ",
+                         "## Custom axis labels: ", #
                          deparse(call("<-", quote(labels), curVal)) )
         } else {
             ## numeric scale, need 'at' and optionally 'labels'
@@ -158,19 +137,19 @@ latticeSettingsGUI <- function(playState)
                 origAt <- NULL
             }
             if (!is.null(origAt))
-                callTxt <- c("## Default axis tick/label locations: ",
-                             paste("#",
+                callTxt <- c("## Default axis tick/label locations: ", #
+                             paste("#", #
                                    deparse(call("<-", quote(at), origAt)) ))
             callTxt <- c(callTxt,
-                         "## Custom axis tick/label locations: ",
+                         "## Custom axis tick/label locations: ", #
                          deparse(call("<-", quote(at), curAt)) )
             if (!is.logical(curLabs)) {
                 callTxt <- c(callTxt,
                              deparse(call("<-", quote(labels), curLabs)))
             } else {
                 callTxt <- c(callTxt,
-                             "## Corresponding labels, optional:",
-                             paste("#",
+                             "## Corresponding labels, optional:", #
+                             paste("#",                            #
                                    deparse(call("<-", quote(labels), origLabs)) ))
             }
         }
@@ -209,19 +188,15 @@ latticeSettingsGUI <- function(playState)
     labgroup <- gframe("Titles", horizontal=FALSE, container=basicsTab)
     lay <- glayout(spacing = 2, container=labgroup)
     rownum <- 1
-    isComplexTitle <- list()
     titleNames <- c("main", "sub", "xlab", "ylab")
     if (isLatt3D) titleNames <- c(titleNames, "zlab")
     for (nm in titleNames) {
-        isComplexTitle[[nm]] <- FALSE
         ## lattice titles can be: grob / list / vector
         argVal <- trell[[nm]]
         if (inherits(argVal, "grob")) {
-            isComplexTitle[[nm]] <- TRUE
             argVal <- toString(argVal)
         }
         if (is.list(argVal)) {
-            isComplexTitle[[nm]] <- TRUE
             argValMatch <- match.call(function(label, ...) NA,
                                       as.call(c(quote(foo), argVal)))
             argVal <- argValMatch$label
@@ -240,23 +215,10 @@ latticeSettingsGUI <- function(playState)
         lay[rownum, 2] <- wid[[nm]] <-
             gedit(toString(argVal), width=60, container = lay,
                   handler = setArgTitle, action = nm)
-        ## default handler only triggered when Enter pressed;
-        ## need to detect changes (keystrokes) and update when lose focus
-        geditUpdateAfterChange(wid[[nm]],
-                               handler = setArgTitle, action = nm)
-#        addHandlerKeystroke(wid[[nm]], handler = setNeedUpdate,
-#                            action = nm)
-#        addHandlerBlur(wid[[nm]], handler = function(h, ...)
-#                       if (isTRUE(needUpdate[[h$action]]))
-#                       setArgTitle(h), action = nm)
         ## plotmath option
         lay[rownum, 3] <- wid[[nm.expr]] <-
             gcheckbox("plotmath", checked=isExpr, container = lay,
                       handler = setArgTitle, action = nm)
-        if (isComplexTitle[[nm]]) {
-            #enabled(wid[[nm]]) <- FALSE
-            #enabled(wid[[nm.expr]]) <- FALSE
-        }
         rownum <- rownum + 1
     }
     visible(lay) <- TRUE
@@ -278,14 +240,14 @@ latticeSettingsGUI <- function(playState)
                            checked = !identical(trell$strip, FALSE),
                            handler = setArg, action = "strip")
     wid$strip.left <- gcheckbox("Show left strips", container = tmp,
-                           checked = !identical(trell$strip.left, FALSE),
-                           handler = setArg, action = "strip.left")
+                                checked = !identical(trell$strip.left, FALSE),
+                                handler = setArg, action = "strip.left")
     ## TODO: show names / show levels
     ## TODO: edit strip text... (only for one conditioning variable)
     ## strip.custom(factor.levels=c(...), strip.names=FALSE, strip.levels=TRUE)
     wid$strip.abbrev <- gcheckbox("Abbreviate text", container = stripgroup,
-                           checked = isTRUE(trell$par.strip.text$abbreviate),
-                           handler = setArg, action = "par.strip.text$abbreviate")
+                                  checked = isTRUE(trell$par.strip.text$abbreviate),
+                                  handler = setArg, action = "par.strip.text$abbreviate")
 
     ## LAYOUT
     if (isMulti) {
@@ -301,8 +263,8 @@ latticeSettingsGUI <- function(playState)
         glabel("rows. ", container = tmp)
         wid$as.table <-
             gcheckbox("as table", container = tmp,
-                  checked = trell$as.table,
-                  handler = setArg, action = "as.table")
+                      checked = trell$as.table,
+                      handler = setArg, action = "as.table")
         ## index.cond
         tmp <- ggroup(horizontal=TRUE, container = layoutgroup)
         glabel("Order panels by (index.cond): ", container = tmp)
@@ -408,14 +370,14 @@ latticeSettingsGUI <- function(playState)
         if (firstCol) lay[row, 1] <- "~ num. ticks: "
         lay[row, col] <- wid[[w]]$tick.number <-
             gedit(toString(w.scales$tick.number), width = 4, container = lay,
-                  handler = setArg, coerce.with = as.numeric,
+                  coerce.with = as.numeric, handler = setArg,
                   action = paste("scales", w, "tick.number", sep="$"))
         enabled(wid[[w]]$tick.number) <- !isFactorScale[[w]]
         row <- row + 1
         if (firstCol) lay[row, 1] <- "tick length: "
         lay[row, col] <- wid[[w]]$tck <-
             gedit(toString(w.scales$tck[1]), width = 4, container = lay,
-                  handler = setArgTck, coerce.with = as.numeric,
+                  coerce.with = as.numeric, handler = setArgTck,
                   action = w)
         if (!isLatt3D) {
             row <- row + 1
@@ -441,7 +403,7 @@ latticeSettingsGUI <- function(playState)
         if (firstCol) lay[row, 1] <- "rotation:"
         lay[row, col] <- wid[[w]]$rot <-
             gedit(as.numeric(w.scales$rot[1]), width = 4, container = lay,
-                  handler = setArg, coerce.with = as.numeric,
+                  coerce.with = as.numeric, handler = setArg,
                   action = paste("scales", w, "rot", sep="$"))
         row <- row + 1
         lay[row, col] <- wid[[w]]$abbreviate <-
@@ -453,7 +415,7 @@ latticeSettingsGUI <- function(playState)
         ## specify axis labels...
         lay[row, col] <- wid[[w]]$axis.labels <-
             gbutton("set labels...", container = lay,
-                      handler = setAxisLabels, action = w)
+                    handler = setAxisLabels, action = w)
 
         ## TODO: custom axis components?
 
@@ -585,14 +547,7 @@ basePlotSettingsGUI <- function(playState)
         lay[rownum, 2] <- wid[[nm]] <-
             gedit(toString(argVal), width=60, container = lay,
                   handler = setArgTitle, action = nm)
-        ## default handler only triggered when Enter pressed;
-        ## need to detect changes (keystrokes) and update when lose focus
-        addHandlerKeystroke(wid[[nm]], handler = setNeedUpdate,
-                            action = nm)
-        addHandlerBlur(wid[[nm]], handler = function(h, ...)
-                       if (isTRUE(needUpdate[[h$action]]))
-                       setArgTitle(h), action = nm)
-        ## plotmath option
+         ## plotmath option
         lay[rownum, 3] <- wid[[nm.expr]] <-
             gcheckbox("plotmath", checked=isExpr, container = lay,
                       handler = setArgTitle, action = nm)
@@ -698,7 +653,7 @@ basePlotSettingsGUI <- function(playState)
                   handler = setLab, coerce.with = as.numeric)
         row <- row + 1
         if (firstCol) lay[row, 1] <- "tick length:"
-        lay[row, col] <- wid[[w]]$tck <-
+        lay[row, col] <- wid[[w]]$tcl <-
             gedit(toString(par("tcl")), width = 4, container = lay,
                   handler = setArg, coerce.with = as.numeric,
                   action = "tcl")

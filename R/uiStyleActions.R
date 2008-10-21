@@ -212,6 +212,13 @@ set.point.line.style_handler <- function(widget, playState)
         playDevSet(playState)
         trellis.par.set(plot.symbol = newsym)
         trellis.par.set(plot.line = newline)
+        if (!playState$is.lattice) {
+          callArg(playState, "col") <- newsym$col
+          callArg(playState, "pch") <- newsym$pch
+          callArg(playState, "cex") <- newsym$cex
+          callArg(playState, "lty") <- newline$lty
+          callArg(playState, "lwd") <- newline$lwd
+        }
         dispose(h$obj)
         playState$win$present()
         playReplot(playState)

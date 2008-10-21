@@ -359,9 +359,9 @@ rotate3DCore <- function(playState, foo)
 contextCore <- function(playState, foo, event)
 {
     ## pop up context menu
-    cMenu <- gtkMenu()
-    cMenu$popup(button = event$button, activate.time = event$time)
-    cMenu["visible"] <- FALSE
+  #cMenu <- gtkMenu()
+  #cMenu$popup(button = event$button, activate.time = event$time)
+  #cMenu["visible"] <- FALSE
     ## fill in menu items
     space <- foo$space
     if (space != "page") {
@@ -370,10 +370,13 @@ contextCore <- function(playState, foo, event)
         id <- foo$subscripts
         pos <- foo$pos
         if (length(id) > 0) {
+            id <- id[1]
             ## clicked on a data point, don't show general stuff
-            cMenu["visible"] <- TRUE
+            cMenu <- gtkMenu()
+            cMenu$popup(button = event$button, activate.time = event$time)
+            #cMenu["visible"] <- TRUE
             ## action to add label to plot (current label value only)
-            if (length(playState$labels) > id[1]) {
+            if (length(playState$labels) >= id) {
                 item <- gtkMenuItem("Add label to plot:")
                 item["sensitive"] <- FALSE
                 cMenu$append(item)
@@ -431,7 +434,7 @@ contextCore <- function(playState, foo, event)
         }
     }
     ## did not click on a point, so show general stuff
-    cMenu$destroy()
+    #cMenu$destroy()
     cMenu <- playState$uiManager$getWidget("/ContextMenu")
     cMenu$popup(button = event$button, activate.time = event$time)
     while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)

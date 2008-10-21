@@ -76,25 +76,26 @@ options(device.ask.default = FALSE)
 ## From an experiment on the cold tolerance of a grass species.
 latticist(CO2)
 ## The following sequence would normally be interactive:
-stopifnot(gconfirm("Hit Enter for next example..."))
+stopifnot(gconfirm("Press OK for next example..."))
 latticist(CO2, spec = alist(yvar = uptake))
-stopifnot(gconfirm("Hit Enter for next example..."))
+stopifnot(gconfirm("Press OK for next example..."))
 latticist(CO2, spec = alist(yvar = uptake, xvar = conc))
-stopifnot(gconfirm("Hit Enter for next example..."))
+stopifnot(gconfirm("Press OK for next example..."))
 latticist(CO2, spec = alist(yvar = uptake, xvar = conc,
                             groups = Treatment))
-stopifnot(gconfirm("Hit Enter for next example..."))
+stopifnot(gconfirm("Press OK for next example..."))
 latticist(CO2, spec = alist(yvar = uptake, xvar = conc,
                             groups = Treatment, cond = Type))
-stopifnot(gconfirm("Hit Enter for next example..."))
+stopifnot(gconfirm("Press OK for next example..."))
 latticist(CO2, spec = alist(yvar = uptake, xvar = conc,
                             cond = Plant))
-stopifnot(gconfirm("Hit Enter for next example..."))
+stopifnot(gconfirm("Press OK for next example..."))
 
 ## environmental dataset: see ?environmental
 ## Daily measurements related to ozone pollution in NYC 1973.
 ## Specify initial display:
-latticist(plot.call = quote(parallel(~ environmental, col = 1)))
+latticist(plot.call = quote(parallel(environmental, col = 1)),
+    click.mode = "Brush")
 
 }
 }

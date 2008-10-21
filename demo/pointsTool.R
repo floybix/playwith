@@ -8,12 +8,12 @@ points_handler <- function(widget, playState) {
         foo <- playSelectData(playState,
                               prompt=paste(
                               "Click to add a point.",
-                              "Alt-click to delete.",
+                              "Ctrl-click to delete.",
                               "Right-click to stop."))
         if (is.null(foo)) return()
         xy <- xyData(playState)
-        if (foo$modifiers & GdkModifierType["mod1-mask"]) {
-            ## alt-click: delete data points
+        if (foo$modifiers & GdkModifierType["control-mask"]) {
+            ## Ctrl-click: delete data points
             xy$x[foo$which] <- NA
             xy$y[foo$which] <- NA
         } else {

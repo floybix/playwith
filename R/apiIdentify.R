@@ -166,7 +166,6 @@ playClear <-
     if (length(type) == 0) return()
     for (x in type) {
         if (x == "labelled") {
-            if (length(playState$ids) == 0)
             playState$ids <- list()
         } else if (x == "annotations") {
             playState$annotations <- list()
@@ -271,7 +270,7 @@ drawLabelsInSpace <- function(playState, subscripts, space = "plot",
     pos <- rep(pos, length = length(labels))
     ## if each data point has multiple locations, replicate labels
     labels <- rep(labels, each = nvar)
-    labels <- rep(pos, each = nvar)
+    pos <- rep(pos, each = nvar)
     offset <- as.numeric(playState$label.offset)
     annots <- expression()
     for (i in seq_along(labels)) {

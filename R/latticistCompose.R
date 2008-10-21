@@ -893,7 +893,7 @@ n.level.colors <-
     level.colors(x, at = at, ...)
 }
 
-simpleColkey <-
+simpleColorKey <-
     function(x, n.col = 30,
              at = do.breaks(range(x, finite = TRUE), n.col),
              ..., space = "right")

@@ -50,17 +50,22 @@ plotCoords.biplot(name, object, call, envir, ...)
 \method{plotCoords}{qqmath}(name, object, call, envir, panel.args, ...)
 \method{plotCoords}{cloud}(name, object, call, envir, panel.args, ...)
 \method{plotCoords}{parallel}(name, object, call, envir, panel.args, ...)
-\method{plotCoords}{splom}(name, object, call, envir, panel.args, ...)
+\method{plotCoords}{splom}(name, object, call, envir, panel.args,
+    packet, ...)
 }
 \arguments{
   \item{name}{ The class of this object is the name of the plot
-    function. Hence methods can be defined for different plot functions. }
+    function. Hence methods can be defined for different plot
+    functions. }
+  \item{object}{ the object passed as first argument to the plot call. }
   \item{call}{ the plot call. }
   \item{envir}{ environment containing objects referenced by the
     call. Call arguments should be evaluated in this environment. }
-  \item{panel.args}{ passed to Lattice plots only: panel arguments for the
+  \item{panel.args}{ passed for Lattice plots only: panel arguments for the
     relevant panel. }
-  \item{data}{ passed to non-Lattice plots only: a "data" argument, or NULL,
+  \item{packet}{ passed for Lattice plots only: packet number for which
+    to return data (corresponds to \code{panel.args}). }
+  \item{data}{ passed for non-Lattice plots only: a "data" argument, or NULL,
   to be used in evaluating call arguments (in addition to \code{envir}). }
   \item{\dots}{ ignored. }
 }

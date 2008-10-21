@@ -6,6 +6,7 @@ import(gridBase)
 #import(grid) ## gridBase needs grid attached
 import(grDevices)
 importFrom(graphics, par, plot)
+importFrom(stats, case.names)
 import(utils)
 
 ## playwith.R
@@ -109,7 +110,7 @@ export(latticistCompose,
        cutEq,
        try.prepanel.loess,
        n.level.colors,
-       simpleColkey)
+       simpleColorKey)
 S3method(levelplot, table)
 
 ## latticistParse.R

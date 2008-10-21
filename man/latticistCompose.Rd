@@ -1,6 +1,9 @@
 \name{latticistCompose}
 \alias{latticistCompose}
 \alias{latticistParse}
+\alias{try.prepanel.loess}
+\alias{n.level.colors}
+\alias{simpleColorKey}
 \title{ Latticist API }
 \description{
   Convert a simple specification list into a Lattice plot call,
@@ -39,13 +42,14 @@ latticistParse(call, trellis = NULL)
       or numeric).
     }
     \item{\code{cond, cond2}}{
-
+      conditioning variables.
     }
     \item{\code{subset}}{
-
+      subset expression.
     }
     \item{\code{varSubset}}{
-
+      the subset of variables (from the data frame, \code{dat}) to
+      include in hypervariate plots (see defaultPlot).
     }
     \item{\code{defaultPlot}}{
       one of "marginal.plot" (the default), "splom" or

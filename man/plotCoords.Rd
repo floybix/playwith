@@ -6,6 +6,7 @@
 \alias{plotCoords.plot}
 \alias{plotCoords.plot.default}
 \alias{plotCoords.plot.dendrogram}
+\alias{plotCoords.plot.hclust}
 \alias{plotCoords.plot.mca}
 \alias{plotCoords.biplot}
 \alias{plotCoords.biplot.default}
@@ -16,6 +17,7 @@
 \alias{plotCoords.parallel}
 \alias{plotCoords.splom}
 \alias{case.names.dendrogram}
+\alias{case.names.hclust}
 \alias{case.names.prcomp}
 \alias{case.names.princomp}
 \alias{case.names.mca}

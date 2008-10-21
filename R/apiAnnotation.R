@@ -3,17 +3,29 @@
 ## Copyright (c) 2007 Felix Andrews <felix@nfrac.org>
 ## GPL version 2 or newer
 
-playAnnotate <- function(playState, annot, space = "plot")
+playAnnotate <-
+    function(playState, annot, space = "plot",
+             add = TRUE, redraw = NA)
 {
     playStoreUndo(playState)
-    ## store annotation
+    if (add == FALSE) { ## replace
+        if (length(playState$annotations)) ## exists
+            if (is.na(redraw)) redraw <- TRUE
+        playState$annotations <- list()
+    }
     i <- length(playState$annotations) + 1
     playState$annotations[[i]] <- as.expression(annot)
     names(playState$annotations)[i] <- space
-    ## draw it
-    playDo(playState, annot, space = space)
-    ## update other tool states
-    updateAnnotationActionStates(playState)
+    if (is.na(redraw)) {
+        ## draw without a full redraw
+        playDo(playState, annot, space = space)
+        ## update other tool states
+        updateAnnotationActionStates(playState)
+    }
+    if (isTRUE(redraw)) {
+        ## full redraw
+        playReplot(playState)
+    }
     invisible()
 }
 
@@ -75,7 +87,7 @@ playDo <- function(playState, expr, space = "plot",
     })
     ## do the stuff and return the result
     seekViewport(vpName)
-    eval(expr, parent.frame(), playState$env)
+    eval.parent(expr)
 }
 
 drawAnnotations <- function(playState, return.code = FALSE)

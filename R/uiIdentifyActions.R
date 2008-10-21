@@ -11,21 +11,27 @@ initIdentifyActions <- function(playState)
 
 updateIdentifyActions <- function(playState)
 {
-    aGroup <- playState$actionGroups[["PlotActions"]]
-    ## Identify etc
-    canIdent <- playState$tmp$identify.ok
-    aGroup$getAction("Identify")$setSensitive(canIdent)
-    aGroup$getAction("IdTable")$setSensitive(canIdent)
-    aGroup$getAction("FindLabels")$setSensitive(canIdent)
-    hasIDs <- (length(playGetIDs(playState)) > 0)
-    aGroup$getAction("SaveIDs")$setSensitive(hasIDs)
-    ## Brush
-    aGroup$getAction("Brush")$setSensitive(canIdent)
     ## draw persistent labels and brushed points
+    canIdent <- playState$tmp$identify.ok
     if (canIdent) {
         drawLabels(playState)
         drawLinkedLocal(playState)
     }
+    updateIdentifyActionStates(playState)
+}
+
+updateIdentifyActionStates <- function(playState)
+{
+    aGroup <- playState$actionGroups[["PlotActions"]]
+    ## Identify etc
+    canIdent <- playState$tmp$identify.ok
+    aGroup$getAction("Identify")$setSensitive(canIdent)
+    aGroup$getAction("IdTable")$setSensitive(FALSE) #canIdent)
+    aGroup$getAction("FindLabels")$setSensitive(FALSE) #canIdent)
+    hasIDs <- (length(playGetIDs(playState)) > 0)
+    aGroup$getAction("SaveIDs")$setSensitive(hasIDs)
+    ## Brush
+    aGroup$getAction("Brush")$setSensitive(canIdent)
 }
 
 identifyCore <- function(playState, foo)
@@ -202,8 +208,13 @@ brushCore <- function(playState, foo, add = TRUE)
 {
     foo <- playSelectData(playState, foo = foo)
     if (is.null(foo)) return()
-    if (length(foo$which) == 0) return()
-    playSetIDs(playState, foo$subscripts,
-               add = add)
+    if (length(foo$which) == 0) {
+        ## no data points selected
+        if (add == FALSE)
+            playClear(playState, type = "brushed")
+    } else {
+        playSetIDs(playState, foo$subscripts,
+                   add = add)
+    }
 }
 

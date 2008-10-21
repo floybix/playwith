@@ -145,6 +145,7 @@ playSetIDs <-
     }
     ## update other tool states
     updateAnnotationActionStates(playState)
+    updateIdentifyActionStates(playState)
     invisible()
 }
 
@@ -181,6 +182,7 @@ playClear <-
             updateLinkedSubscribers(playState, redraw = TRUE)
     }
     updateAnnotationActionStates(playState)
+    updateIdentifyActionStates(playState)
     invisible()
 }
 
@@ -202,7 +204,6 @@ playUndo <- function(playState = playDevCur())
     playState$ids <- state$ids
     playState$annotations <- state$annotations
     playState$linked$ids <- state$brushed
-    updateAnnotationActionStates(playState)
     ## redraw
     playReplot(playState)
     if (anyLinked)

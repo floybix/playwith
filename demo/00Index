@@ -2,3 +2,4 @@ helloTool      A simple "Hello world" tool for playwith().
 lineEqTool     Draw a line and place its equation on the plot.
 varLinkTool    Create a linked plot of covariates.
 pointsTool     A tool to add and remove points from a plot.
+clusterApp     A mini application (a playwith toolbar) for clustering.

@@ -231,6 +231,7 @@ latticeStyleGUI <-
         expr <- themeList[[ svalue(h$obj) ]]
         trellis.par.set(eval(expr))
         trellis.par.set(grid.pars = list(), strict = TRUE)
+        trellis.par.set(user.text = NULL)
         assign("trellis.par.theme", trellis.par.get(), globalenv())
         if (svalue(autoRedrawW)) doRedraw()
         updateFromSettings()

@@ -18,7 +18,8 @@ initClickActions <- function(playState)
         val <- vals[[playState$click.mode]]
         if (!is.null(val)) {
             aGroup <- playState$actionGroups[["PlotActions"]]
-            aGroup$getAction("Zoom")$setCurrentValue(val)
+            try(aGroup$getAction("Zoom")$setCurrentValue(val),
+                silent = TRUE)
         }
         playState$click.mode <- NULL
     }
@@ -26,9 +27,11 @@ initClickActions <- function(playState)
 
 clickmode.change_handler <- function(action, current, playState)
 {
-    if (!current["active"]) return()
-    playState$tmp$click.mode <- gtkActionGetName(current)
-    updateClickActions(playState)
+    if (current["active"]) {
+        playState$tmp$click.mode <- gtkActionGetName(current)
+        updateClickActions(playState)
+    }
+    return()
 }
 
 updateClickActions <- function(playState)

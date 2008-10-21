@@ -179,12 +179,14 @@ parameterControlTool <-
     }
     ## function: button
     if (is.function(value)) {
-        widget <- gtkToolButton(label = label)
+        widget <- gtkButton(label)
         gSignalConnect(widget, "clicked",
                        function(widget, playState)
                        value(playState),
                        data = playState)
-        return(widget)
+        foo <- gtkToolItem()
+        foo$add(widget)
+        return(foo)
     }
     ## otherwise...
     stop("do not know about ",

@@ -109,8 +109,6 @@ updateActions <- function(playState)
     updateGlobalActions(playState)
     updateClickActions(playState)
     updatePlotActions(playState)
-    updateIdentifyActions(playState)
-    updateAnnotationActions(playState)
     updateGrobActions(playState)
     updateOptionsActions(playState)
     ## custom update actions
@@ -122,4 +120,7 @@ updateActions <- function(playState)
         if (is.function(x)) x(playState)
         if (is.language(x)) eval(x, playState$env)
     }
+    ## these are user-defined, should draw on top:
+    updateIdentifyActions(playState)
+    updateAnnotationActions(playState)
 }

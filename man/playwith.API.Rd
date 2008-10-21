@@ -8,6 +8,7 @@
 \alias{playNewPlot}
 \alias{playSourceCode}
 \alias{playUndo}
+\alias{updateLinkedSubscribers}
 \alias{playUnlink}
 \alias{playAnnotate}
 \alias{playPrompt}
@@ -72,6 +73,9 @@
 	      reverts the last change any annotations (including the set
 	      of labelled and brushed data points).
 	    }
+	    \item{\code{updateLinkedSubscribers(playState, redraw)}}{
+	      triggers a redraw of any linked plots.
+	    }
 	    \item{\code{playUnlink(playState)}}{ removes links from the
 	      given plot to any other plots (for linked brushing).
 	    }
@@ -114,7 +118,7 @@
 	      given plot \dfn{space}, i.e. after moving to the
 	      corresponding grid viewport.
 	    }
-	    \item{\code{playAnnotate(playState, annot, space)}}{
+	    \item{\code{playAnnotate(playState, annot, space, add, redraw)}}{
 	      adds the annotation (a call or expression to draw on the
 	      plot) to the list of persistent annotations, and draws
 	      them. These will always be drawn after plotting (unless they

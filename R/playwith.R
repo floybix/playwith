@@ -370,6 +370,9 @@ playwith <-
         playState$linked <- link.to$linked
         playState$linked$subscribers <-
             c(playState$linked$subscribers, playState)
+        ## set click.mode from linked plot
+        if (is.null(dots$click.mode))
+            playState$click.mode <- link.to$tmp$click.mode
     } else {
         playState$linked <- new.env(parent = baseenv())
         playState$linked$ids <- list()
@@ -402,6 +405,8 @@ playwith <-
     for (i in seq_along(parameters)) {
         parname <- names(parameters)[i]
         parval <- parameters[[i]]
+        if (is.list(parval)) parval <- parval[[1]]
+        if (is.function(parval)) next
         assign(parname, parval[1], envir=env)
     }
     ## make dynamic parameter tools
@@ -740,6 +745,15 @@ window.close_handler <- function(widget, event, playState)
         foo <- try(playState$on.close(playState))
         ## if on.close() returns TRUE, do not close the window
         if (isTRUE(foo)) return(TRUE)
+    }
+    if (length(playState$linked$subscribers) > 1) {
+        ans <- gconfirm("Also close linked plots?",
+                        parent = playState$win)
+        if (isTRUE(ans)) {
+            lapply(playState$linked$subscribers,
+                   playDevOff)
+            return(FALSE)
+        }
     }
     ## close the window and clean up
     playDevOff(playState)

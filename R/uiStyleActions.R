@@ -7,12 +7,12 @@ createStyleActions <- function(playState, manager)
 {
     ## TODO: use real GtkAction s
     ## add custom items to style submenus
+    ## style shortcuts
     do.style_handler <- function(widget, theme) {
         playDevSet(playState)
         eval(theme, list(playState = playState), globalenv())
         playReplot(playState)
     }
-    ## style shortcuts
     ssMenu <- manager$getWidget("/MenuBar/StyleMenu/ShortcutsMenu")
     if (!is.null(ssMenu)) {
         ssMenu <- ssMenu$getSubmenu()
@@ -28,6 +28,12 @@ createStyleActions <- function(playState, manager)
         }
     }
     ## themes
+    do.theme_handler <- function(widget, theme) {
+        playDevSet(playState)
+        eval(theme, list(playState = playState), globalenv())
+        trellis.par.set(user.text = NULL)
+        playReplot(playState)
+    }
     thMenu <- manager$getWidget("/MenuBar/StyleMenu/ThemesMenu")
     if (!is.null(thMenu)) {
         thMenu <- thMenu$getSubmenu()
@@ -38,7 +44,7 @@ createStyleActions <- function(playState, manager)
         for (nm in names(themes)) {
             item <- gtkMenuItem(nm)
             thMenu$append(item)
-            gSignalConnect(item, "activate", do.style_handler,
+            gSignalConnect(item, "activate", do.theme_handler,
                            data = themes[[nm]])
         }
     }

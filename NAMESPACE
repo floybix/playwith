@@ -51,7 +51,8 @@ export(playSelectData,
        playSetIDs,
        playClear,
        playUndo,
-       playUnlink)
+       playUnlink,
+       updateLinkedSubscribers)
 
 ## apiAnnotation.R
 export(playAnnotate,
@@ -76,6 +77,7 @@ S3method(plotCoords, qqnorm)
 S3method(plotCoords, qqplot)
 S3method(plotCoords.plot, default)
 S3method(plotCoords.plot, dendrogram)
+S3method(plotCoords.plot, hclust)
 S3method(plotCoords.plot, mca)
 S3method(plotCoords.biplot, default)
 S3method(plotCoords.biplot, prcomp)
@@ -85,6 +87,7 @@ S3method(plotCoords, cloud)
 S3method(plotCoords, parallel)
 S3method(plotCoords, splom)
 S3method(case.names, dendrogram)
+S3method(case.names, hclust)
 S3method(case.names, prcomp)
 S3method(case.names, princomp)
 S3method(case.names, mca)

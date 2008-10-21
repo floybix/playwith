@@ -1,7 +1,9 @@
 
-gedit <- function(..., handler, action = NULL) {
+gedit <- function(..., handler = NULL, action = NULL) {
     wid <- gWidgets::gedit(...)
-    geditAddGoodHandlers(wid, handler = handler, action = action)
+    if (!is.null(handler))
+        geditAddGoodHandlers(wid, handler = handler,
+                             action = action)
     wid
 }
 

@@ -102,6 +102,15 @@ case.names.dendrogram <- function(object, ...)
     labels(object)[order(subscripts)]
 }
 
+plotCoords.plot.hclust <- function(name, object, call, envir, ...)
+{
+    object <- as.dendrogram(object)
+    plotCoords.plot.dendrogram(name, object, call = call,
+                               envir = envir, ...)
+}
+case.names.hclust <- function(object, ...)
+    case.names(as.dendrogram(object), ...)
+
 plotCoords.plot.mca <- function(name, object, call, envir, ...)
 {
     ## only makes sense if coordinates of rows are plotted
@@ -152,7 +161,7 @@ plotCoords.biplot.prcomp <- function(name, object, call, envir, ...)
     ## substitute default arguments if missing
     for (nm in c("choices", "scale", "pc.biplot")) {
         if ((nm %in% names(call)) == FALSE)
-            call[[nm]] <- formals(stats:::biplot.prcomp)[[nm]]
+            call[nm] <- formals(stats:::biplot.prcomp)[nm]
     }
     ## extract required arguments
     x <- object

@@ -94,14 +94,20 @@ latticist <-
         }
     }
 
+    ## make a local copy of dat under the original name (datArg)
+    ## if it was modified (TODO)
+    if (reorder.levels && is.symbol(datArg)) {
+        assign(as.character(datArg), dat)
+    }
+
     ## lattInit is the constructor (an init.action)
     lattAction <- latticistToolConstructor(dat, datArg = datArg)
     ## this list will store state in playState$latticist
-    lattList <- latticistInitOptions(dat)
+    lattList <- latticistInitOptions(dat, datArg = datArg)
 
-    if (!is.list(eval.args))
-        eval.args <- as.list(eval.args)
-    eval.args$envir <- parent.frame()
+    #if (!is.list(eval.args))
+    #    eval.args <- as.list(eval.args)
+    #eval.args$envir <- parent.frame()
 
     playwith(plot.call = plot.call,
              eval.args = eval.args,
@@ -113,9 +119,10 @@ latticist <-
              latticist = lattList)
 }
 
-latticistInitOptions <- function(dat)
+latticistInitOptions <- function(dat, datArg)
 {
     stuff <- list()
+    datNm <- toString(deparse(datArg))
 
     ## options
     stuff$linesSetting <- TRUE
@@ -132,7 +139,7 @@ latticistInitOptions <- function(dat)
           "------------------",
           names(dat)[!iscat],
           "-------------------",
-          "1:nrow(dat)")
+          sprintf("1:nrow(%s)", datNm))
 
     ## subsets -- preload some useful subsets
     subsetopts <- NULLNAMES[[1]]
@@ -148,7 +155,8 @@ latticistInitOptions <- function(dat)
         ## a regular sample down by one order of magnitude
         subN <- 10 ^ (round(log10(nrow(dat))) - 1)
         subsetopts <- c(subsetopts,
-                        sprintf("seq(1, nrow(dat), length = %i)", subN))
+                        sprintf("seq(1, nrow(%s), length = %i)",
+                                datNm, subN))
         subsetopts <- c(subsetopts, "-----------------")
     }
     ## is.finite() of variables with missing values
@@ -159,7 +167,8 @@ latticistInitOptions <- function(dat)
     })
     missings <- unlist(missings)
     if (length(missings) > 0) {
-        subsetopts <- c(subsetopts, "complete.cases(dat)")
+        subsetopts <- c(subsetopts,
+                        sprintf("complete.cases(%s)", datNm))
     }
     subsetopts <- c(subsetopts, missings)
     stuff$subsetopts <- subsetopts

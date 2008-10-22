@@ -26,7 +26,7 @@ updateIdentifyActionStates <- function(playState)
     ## Identify etc
     canIdent <- playState$tmp$identify.ok
     aGroup$getAction("Identify")$setSensitive(canIdent)
-    aGroup$getAction("IdTable")$setSensitive(FALSE) #canIdent)
+    aGroup$getAction("IdTable")$setSensitive(canIdent)
     aGroup$getAction("FindLabels")$setSensitive(FALSE) #canIdent)
     hasIDs <- (length(playGetIDs(playState)) > 0)
     aGroup$getAction("SaveIDs")$setSensitive(hasIDs)
@@ -118,7 +118,10 @@ id.table_handler <- function(widget, playState)
 {
     dat <- getDataArg(playState)
     if (is.null(dat))
-        dat <- xyData(playState, space = "page")
+        dat <- xyData(playState, space = "page")[c("x","y")]
+    ## add row numbers and names
+    dat <- cbind(row = 1:NROW(dat), names = rownames(dat),
+                 dat)
     tabW <- gtable(dat, multiple = TRUE)
     cur.ids <- playGetIDs(playState)
     if (length(cur.ids) > 0)
@@ -126,7 +129,7 @@ id.table_handler <- function(widget, playState)
     gbasicdialog("Select cases to be brushed",
                  widget = tabW,
                  handler = function(h, ...) {
-                     ids <- svalue(tabW, index = TRUE)
+                     ids <- svalue(tabW)#, index = TRUE)
                      dispose(h$obj)
                      playSetIDs(playState, ids)
                  })

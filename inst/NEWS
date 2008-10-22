@@ -1,5 +1,12 @@
 
-Changes in Version 0.9-30
+Changes in Version 0.9-32
+
+  o Select IDs from Table works correctly when columns are sorted.
+
+  o Latticist reorders factor levels again (when reorder = TRUE),
+    and variable expressions involving "dat" have been fixed.
+
+Changes in Version 0.9-31
 
   o Latticist API abstracted into functions latticistParse() and
     latticistCompose(); the function latticist() is purely a GUI.

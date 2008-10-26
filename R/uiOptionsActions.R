@@ -146,6 +146,7 @@ time.mode_scrollbar_handler <- function(widget, playState)
                                         #oldLim <- rawXLim(playState)
                                         #if (min(oldLim) == min(newLim)) return()
     newLim <- round(newLim, 7)
+    if (any(!is.finite(newLim))) return()
     rawXLim(playState) <- newLim
     playReplot(playState)
 }
@@ -192,7 +193,9 @@ time.mode_entry_handler <- function(widget, playState)
     else if ("yearmon" %in% cls) newLim <- as.yearmon(newLim, "%b %Y")
     else if ("yearqtr" %in% cls) newLim <- as.yearqtr(as.yearmon(newLim, "%b %Y"))
     else if ("integer" %in% cls) newLim <- as.integer(newLim)
-    rawXLim(playState) <- as.numeric(newLim)
+    newLim <- as.numeric(newLim)
+    if (any(!is.finite(newLim))) return()
+    rawXLim(playState) <- newLim
     playReplot(playState)
 }
 

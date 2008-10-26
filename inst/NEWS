@@ -1,4 +1,13 @@
 
+Changes in Version 0.9-40
+
+  o Latticist uses package 'vcd' to produce a mosaic plot when
+    two or more categorical variables are plotted.
+
+  o Latticist now supports table objects.
+
+  o Latticist code simplified; function latticistParse() defunct.
+
 Changes in Version 0.9-32
 
   o Select IDs from Table works correctly when columns are sorted.

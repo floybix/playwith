@@ -26,6 +26,7 @@ latticistParse <- function(call, trellis = NULL)
                  c("levelplot", "contourplot", "segplot", "tileplot"))
     isTrivar <- (isTrivar || is3D)
     specXtra$doTile <- if (callName == "tileplot") TRUE
+    specXtra$doSeparateStrata <- if (callName == "cotabplot") TRUE
 
     isInteraction <- function(x)
         is.call.to(x, "*") || is.call.to(x, "+")

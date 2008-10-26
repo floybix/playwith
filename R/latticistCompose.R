@@ -12,166 +12,171 @@ latticistCompose <- function(dat, spec = alist(),
                              datArg = substitute(dat))
 {
     force(datArg)
-    force(spec)
-    if (inherits(spec, "formula"))
-        spec <- list(spec)
-    if (length(spec)) {
-        form <- spec[[1]]
-        if (inherits(spec[[1]], "formula") ||
-            is.call.to(spec[[1]], "~")) {
-            form <- eval(form)
-            yvar <- form[[2]]
-            if (length(form) > 2)
-                xvar <- form[[3]]
-            ## TODO...
-        }
-
-    }
     doCompose <-
         function(xvar = NULL, yvar = NULL, zvar = NULL,
                  groups = NULL, cond = NULL, cond2 = NULL,
                  subset = NULL, varSubset = NULL,
                  aspect = NULL, aspect3D = NULL,
                  x.relation = NULL, y.relation = NULL,
-                 xdisc = FALSE, ydisc = FALSE, nLevels = NULL,
-                 xprop = FALSE, yprop = FALSE, gprop = FALSE,
+                 doXDisc = FALSE, doYDisc = FALSE, nLevels = NULL,
                  doTile = FALSE, doSegments = FALSE, doAsError = FALSE,
-                 doLines = TRUE, do3DTable = FALSE,
+                 doLines = TRUE, do3DTable = FALSE, doHexbin = FALSE,
+                 doSeparateStrata = TRUE,
                  defaultPlot = "marginal.plot")
         {
-            ## TODO: handle gprop
 
             xvar <- substitute(xvar)
             yvar <- substitute(yvar)
             zvar <- substitute(zvar)
             groups <- substitute(groups)
-            c1 <- substitute(cond)
-            c2 <- substitute(cond2)
+            cond <- substitute(cond)
+            cond2 <- substitute(cond2)
             subset <- substitute(subset)
+            if (is.null(subset)) subset <- TRUE
             if (is.null(nLevels)) nLevels <- INIT.NLEVELS
 
             deparse1 <- function(expr)
                 paste(deparse(expr, width = 500, control = NULL),
                       collapse = " ")
 
-            ## keep for titles etc
+            ## keep raw variable expressions for titles etc
             xvarOrigStr <- deparse1(xvar)
             yvarOrigStr <- deparse1(yvar)
             zvarOrigStr <- deparse1(zvar)
-            c1OrigStr <- deparse1(c1)
-            c2OrigStr <- deparse1(c2)
             groupsOrigStr <- deparse1(groups)
-            if (is.null(subset)) subset <- TRUE
+            condOrigStr <- deparse1(cond)
+            cond2OrigStr <- deparse1(cond2)
 
-            ## evaluate to check types
-            xVal <- eval(xvar, dat)
-            yVal <- eval(yvar, dat)
-            zVal <- eval(zvar, dat)
-            c1Val <- eval(c1, dat)
-            c2Val <- eval(c2, dat)
-            groupsVal <- eval(groups, dat)
-            subsetVal <- eval(subset, dat)
-            ## calculate number of data points
+            ## work out data types
+            xIsCat <- yIsCat <- zIsCat <-
+                groupsIsCat <- condIsCat <- cond2IsCat <- NA
+            xVal <- yVal <- zVal <-
+                groupsVal <- condVal <- cond2Val <- NULL
             nPoints <- 0
-            if (is.null(xVal) && is.null(yVal)) {
-                ## hypervariate: just report size of subset
-                if (isTRUE(subsetVal)) {
-                    nPoints <- NROW(dat)
-                } else {
-                    ## handle integer/logical/recycling
-                    tmp <- rep(TRUE, NROW(dat))
-                    nPoints <- sum(tmp[subsetVal])
-                }
-            } else if (!is.null(xVal) && !is.null(yVal))
-                nPoints <- sum(is.finite(xVal[subsetVal]) &
-                               is.finite(yVal[subsetVal]))
-            else if (!is.null(xVal))
-                nPoints <- sum(is.finite(xVal[subsetVal]))
-            else if (!is.null(yVal))
-                nPoints <- sum(is.finite(yVal[subsetVal]))
+            anyNumerics <- NA
 
-            isUnordered <- function(x, val) {
-                ## need this because is.ordered(cut()) == FALSE!
-                if (is.call.to(x, "cut")) return(FALSE)
-                if (is.call.to(x, "cut2")) return(FALSE)
-                ## assumes is.categorical(val)
-                !is.ordered(val) && !is.shingle(val)
-            }
+            if (is.table(dat)) {
+                xIsCat <- !is.null(xvar)
+                yIsCat <- !is.null(yvar)
+                zIsCat <- !is.null(zvar)
+                groupsIsCat <- !is.null(groups)
+                condIsCat <- !is.null(cond)
+                cond2IsCat <- !is.null(cond2)
 
-            ## discretize
-            do.xdisc <- (!is.null(xvar) && !is.categorical(xVal) && xdisc)
-            do.ydisc <- (!is.null(yvar) && !is.categorical(yVal) && ydisc)
-            do.c1disc <- (!is.null(c1) && !is.categorical(c1Val))
-            do.c2disc <- (!is.null(c2) && !is.categorical(c2Val))
-            do.gdisc <- (!is.null(groups) && !is.categorical(groupsVal))
+                nPoints <- sum(dat, na.rm = TRUE)
+                anyNumerics <- FALSE
 
-            ## if there are any numerical variables on plot
-            ## we can use shingles (otherwise plotting a "table" method)
-            anyNumerics <- ((!is.null(xvar) && !is.categorical(xVal) && !do.xdisc) ||
-                            (!is.null(yvar) && !is.categorical(yVal) && !do.ydisc))
-            if (anyNumerics) {
-                ## use shingles where appropriate
-                if (do.xdisc) xvar <- call("equal.count", xvar, nLevels) ## or cut?
-                if (do.ydisc) yvar <- call("equal.count", yvar, nLevels) ## or cut?
-                ## conditioning variables
-                if (do.c1disc) c1 <- call("equal.count", c1, nLevels)
-                if (do.c2disc) c2 <- call("equal.count", c2, nLevels)
             } else {
-                ## table method, need factors not shingles
-                if (do.xdisc) {
-                    if (is.null(yvar) || do.ydisc)
-                        xvar <- call("cut", xvar, nLevels)
-                    else xvar <- call("cutEq", xvar, nLevels)
-                }
-                if (do.ydisc) {
-                    if (is.null(xvar) || do.xdisc)
-                        yvar <- call("cut", yvar, nLevels)
-                    else yvar <- call("cutEq", yvar, nLevels)
-                }
-                if (do.c1disc) c1 <- call("cutEq", c1, nLevels)
-                if (do.c2disc) c2 <- call("cutEq", c2, nLevels)
-            }
-            if (do.gdisc) groups <- call("cutEq", groups, nLevels)
-            ## re-evaluate data if changed
-            if (do.xdisc) xVal <- eval(xvar, dat)
-            if (do.ydisc) yVal <- eval(yvar, dat)
-            if (do.c1disc) c1Val <- eval(c1, dat)
-            if (do.c2disc) c2Val <- eval(c2, dat)
-            if (do.gdisc) groupsVal <- eval(groups, dat) ## TODO avoid this?
+                ## dat is a data.frame
+                ## evaluate to check types
+                xVal <- eval(xvar, dat)
+                yVal <- eval(yvar, dat)
+                zVal <- eval(zvar, dat)
+                groupsVal <- eval(groups, dat)
+                condVal <- eval(cond, dat)
+                cond2Val <- eval(cond2, dat)
+                subsetVal <- eval(subset, dat)
+                xIsCat <- is.categorical(xVal)
+                yIsCat <- is.categorical(yVal)
+                zIsCat <- is.categorical(zVal)
+                groupsIsCat <- is.categorical(groupsVal)
+                condIsCat <- is.categorical(condVal)
+                cond2IsCat <- is.categorical(cond2Val)
+                ## calculate number of data points
+                if (is.null(xVal) && is.null(yVal)) {
+                    ## hypervariate: just report size of subset
+                    if (isTRUE(subsetVal)) {
+                        nPoints <- NROW(dat)
+                    } else {
+                        ## handle integer/logical/recycling
+                        tmp <- rep(TRUE, NROW(dat))
+                        nPoints <- sum(tmp[subsetVal])
+                    }
+                } else if (!is.null(xVal) && !is.null(yVal))
+                    nPoints <- sum(is.finite(xVal[subsetVal]) &
+                                   is.finite(yVal[subsetVal]))
+                else if (!is.null(xVal))
+                    nPoints <- sum(is.finite(xVal[subsetVal]))
+                else if (!is.null(yVal))
+                    nPoints <- sum(is.finite(yVal[subsetVal]))
 
-            ## if only one conditioning term, call it c1
-            if (is.null(c1) && !is.null(c2)) {
-                c1 <- c2
-                c1Val <- c2Val
-                c2 <- c2Val <- NULL
+                isUnordered <- function(x, val) {
+                    ## need this because is.ordered(cut()) == FALSE!
+                    if (is.call.to(x, "cut")) return(FALSE)
+                    if (is.call.to(x, "cut2")) return(FALSE)
+                    ## assumes is.categorical(val)
+                    !is.ordered(val) && !is.shingle(val)
+                }
+
+                ## discretize
+                doXDisc <- doXDisc && (!is.null(xvar) && !xIsCat)
+                doYDisc <- doYDisc && (!is.null(yvar) && !yIsCat)
+                doGroupsDisc <- (!is.null(groups) && !groupsIsCat)
+                doCondDisc <- (!is.null(cond) && !condIsCat)
+                doCond2Disc <- (!is.null(cond2) && !cond2IsCat)
+
+                ## if there are any numerical variables on plot
+                ## we can use shingles (otherwise plotting a "table" method)
+                anyNumerics <- ((!is.null(xvar) && !xIsCat && !doXDisc) ||
+                                (!is.null(yvar) && !yIsCat && !doYDisc))
+                if (anyNumerics) {
+                    ## use shingles where appropriate
+                    if (doXDisc) xvar <- call("equal.count", xvar, nLevels) ## or cut?
+                    if (doYDisc) yvar <- call("equal.count", yvar, nLevels) ## or cut?
+                    ## conditioning variables
+                    if (doCondDisc) cond <- call("equal.count", cond, nLevels)
+                    if (doCond2Disc) cond2 <- call("equal.count", cond2, nLevels)
+                } else {
+                    ## table method, need factors not shingles
+                    if (doXDisc) {
+                        if (is.null(yvar) || doYDisc)
+                            xvar <- call("cut", xvar, nLevels)
+                        else xvar <- call("cutEq", xvar, nLevels)
+                    }
+                    if (doYDisc) {
+                        if (is.null(xvar) || doXDisc)
+                            yvar <- call("cut", yvar, nLevels)
+                        else yvar <- call("cutEq", yvar, nLevels)
+                    }
+                    if (doCondDisc) cond <- call("cutEq", cond, nLevels)
+                    if (doCond2Disc) cond2 <- call("cutEq", cond2, nLevels)
+                }
+                if (doGroupsDisc) groups <- call("cutEq", groups, nLevels)
+                ## re-evaluate data if changed
+                if (doXDisc) xVal <- eval(xvar, dat)
+                if (doYDisc) yVal <- eval(yvar, dat)
+                if (doCondDisc) condVal <- eval(cond, dat)
+                if (doCond2Disc) cond2Val <- eval(cond2, dat)
+                if (doGroupsDisc) groupsVal <- eval(groups, dat) ## TODO avoid this?
             }
 
-            ## reorder factor levels of groups
-                                        #            if (!is.null(groupsVal)) {
-                                        #                if (isUnordered(groups, groupsVal)) {
-                                        #                    groups <- call("reorderByFreq", groups)
-                                        #                    groupsVal <- tryEval(groups, dat)
-                                        #                }
-                                        #            }
+            ## if only one conditioning term, call it cond
+            if (is.null(cond) && !is.null(cond2)) {
+                cond <- cond2
+                condVal <- cond2Val
+                cond2 <- cond2Val <- NULL
+            }
 
             ## reorder conditioning (TODO: index.cond)
-            if (!is.null(c1Val)) {
+            if (!is.null(condVal)) {
                                         #                    if (!is.null(yVal) || !is.null(xVal)) {
-                                        #                        c1 <- call("reorder", c1,
+                                        #                        cond <- call("reorder", cond,
                                         #                                   if (!is.null(yVal)) yvar else xvar)
                                         #                    }
-                                        #                    c1Val <- tryEval(c1, dat)
+                                        #                    condVal <- tryEval(cond, dat)
             }
 
             ## combined conditioning term (may be NULL)
-            cond <- c1
-            if (!is.null(c2)) cond <- call("*", c1, c2)
-            ncond <- 1
+            conds <- cond
+            if (!is.null(cond2)) conds <- call("*", cond, cond2)
+            nCondLevels <- 1
             tooManyPanels <- FALSE
-            if (!is.null(cond)) {
-                ncond <- nlevels(c1Val)
-                if (!is.null(c2Val)) ncond <- ncond * nlevels(c2Val)
-                if (ncond > MAXPANELS) tooManyPanels <- TRUE
+            if (!is.null(conds)) {
+                nCondLevels <- nlevels(condVal)
+                if (!is.null(cond2Val))
+                    nCondLevels <- nCondLevels * nlevels(cond2Val)
+                if (nCondLevels > MAXPANELS)
+                    tooManyPanels <- TRUE
             }
 
             ## create template plot call
@@ -185,17 +190,20 @@ latticistCompose <- function(dat, spec = alist(),
 
             ## put shingle levels on axis
             if (anyNumerics) {
-                if (do.xdisc)
+                if (doXDisc)
                     scales$x$limits <-
                         as.character(levels(xVal))
-                if (do.ydisc)
+                if (doYDisc)
                     scales$y$limits <-
                         as.character(levels(yVal))
             }
             ## put shingle levels in strip
-            if (anyNumerics && do.c1disc && (is.null(c2) || do.c2disc))
+            if (anyNumerics && doCondDisc &&
+                (is.null(cond2) || doCond2Disc))
+            {
                 call$strip <-
                     quote(strip.custom(strip.levels=TRUE, strip.names=FALSE))
+            }
 
             ## construct plot title
             if (!is.null(xvar) || !is.null(yvar)) {
@@ -207,8 +215,8 @@ latticistCompose <- function(dat, spec = alist(),
                                    "and", yvarOrigStr)
                 if (is.null(xvar) || is.null(yvar))
                     title <- paste("Distribution of", title)
-                byStr <- paste(c(if (!is.null(c1)) c1OrigStr,
-                                 if (!is.null(c2)) c2OrigStr,
+                byStr <- paste(c(if (!is.null(cond)) condOrigStr,
+                                 if (!is.null(cond2)) cond2OrigStr,
                                  if (!is.null(groups)) groupsOrigStr),
                                collapse=" and ")
                 if (nchar(byStr) > 0)
@@ -217,21 +225,21 @@ latticistCompose <- function(dat, spec = alist(),
             }
 
             ## axis labels (not for categoricals)
-            if (!is.null(xvar) && !is.categorical(xVal))
+            if (!is.null(xvar) && !xIsCat)
                 call$xlab <- xvarOrigStr
-            if (!is.null(yvar) && !is.categorical(yVal))
+            if (!is.null(yvar) && !yIsCat)
                 call$ylab <- yvarOrigStr
 
             ## choose plot type and formula
-            if (is.null(xVal) && is.null(yVal)) {
+            if (is.null(xvar) && is.null(yvar)) {
                 ## HYPERVARIATE
 
                 dat.expr <- datArg
                 if (!is.null(varSubset))
                     dat.expr <- call("[", datArg, varSubset)
                 dat.form <- call("~", dat.expr)
-                if (!is.null(cond))
-                    dat.form <- call("~", call("|", dat.expr, cond))
+                if (!is.null(conds))
+                    dat.form <- call("~", call("|", dat.expr, conds))
 
                 if (defaultPlot == "marginal.plot") {
                     call[[1]] <- quote(marginal.plot)
@@ -246,7 +254,7 @@ latticistCompose <- function(dat, spec = alist(),
                     if (doLines)
                         call$lower.panel <-
                             function(..., type)
-                                panel.xyplot(..., type = "smooth")
+                                try(panel.xyplot(..., type = "smooth"))
 
                 } else if (defaultPlot == "parallel") {
                     call[[1]] <- quote(parallel)
@@ -255,31 +263,40 @@ latticistCompose <- function(dat, spec = alist(),
                         call$col <- quote(trellis.par.get("plot.line")$col)
                 }
 
-            } else if (is.null(xVal) || is.null(yVal)) {
+            } else if (is.null(xvar) || is.null(yvar)) {
                 ## UNIVARIATE
 
-                if (is.categorical(xVal) || is.categorical(yVal)) {
+                if (xIsCat || yIsCat) {
                     ## UNIVARIATE CATEGORICAL
-                    if (!is.null(yVal)) {
+                    if (!is.null(yvar)) {
                         ## data on y axis, use dotplot
                         call[[1]] <- quote(dotplot)
-                        call$data <- NULL
-                        call$subset <- NULL
-                        xterms <- paste(c(deparse1(yvar),
-                                          if (!is.null(c1)) deparse1(c1),
-                                          if (!is.null(c2)) deparse1(c2),
-                                          if (!is.null(groups)) deparse1(groups)),
-                                        collapse=" + ")
-                        ## and set logical `groups` argument
-                        call$groups <- !is.null(groups)
-                        xform <- as.formula(paste("~", xterms))
-                        tabcall <-
-                            call("xtabs", xform, datArg)
-                        tabcall$subset <- if (!isTRUE(subset)) subset
-                        if (yprop) {
-                            tabcall <- call("prop.table", tabcall, margin = 1)
+                        if (is.table(dat)) {
+                            form <- paste(deparse1(yvar), "~", "Freq")
+                            if (!is.null(conds))
+                                form <- paste(form, "|", deparse1(conds))
+                            call[[2]] <- as.formula(form)
+                            call$data <- call("as.data.frame", datArg)
+
+                        } else {
+                            call$data <- NULL
+                            call$subset <- NULL
+                            form <- paste(c(deparse1(yvar),
+                                            if (!is.null(cond)) deparse1(cond),
+                                            if (!is.null(cond2)) deparse1(cond2),
+                                            if (!is.null(groups)) deparse1(groups)),
+                                          collapse=" + ")
+                            form <- paste("~", form)
+                            tabcall <-
+                                call("xtabs", as.formula(form), datArg)
+                            tabcall$subset <- if (!isTRUE(subset)) subset
+                                        #                            if (yprop) {
+                                        #                                tabcall <- call("prop.table", tabcall, margin = 1)
+                                        #                            }
+                            call[[2]] <- tabcall
+                            ## and set logical `groups` argument
+                            call$groups <- !is.null(groups)
                         }
-                        call[[2]] <- tabcall
 
                         if (doLines) {
                             if (!is.null(groups))
@@ -293,11 +310,11 @@ latticistCompose <- function(dat, spec = alist(),
                         ## data on x axis, use barchart
                         ## (just for variety? & dotplot.table has no horizontal=FALSE)
                         ## BUT if x is a discretized numeric, use histogram
-                        if (do.xdisc && is.null(groups)) {
+                        if (doXDisc && is.null(groups)) {
                             xvar <- xvar[[2]] ## undo disc function
                             call[[1]] <- quote(histogram)
-                            if (!is.null(cond))
-                                call[[2]] <- call("~", call("|", xvar, cond))
+                            if (!is.null(conds))
+                                call[[2]] <- call("~", call("|", xvar, conds))
                             else
                                 call[[2]] <- call("~", xvar)
                         } else {
@@ -305,8 +322,8 @@ latticistCompose <- function(dat, spec = alist(),
                             call$data <- NULL
                             call$subset <- NULL
                             xterms <- paste(c(deparse1(xvar),
-                                              if (!is.null(c1)) deparse1(c1),
-                                              if (!is.null(c2)) deparse1(c2),
+                                              if (!is.null(cond)) deparse1(cond),
+                                              if (!is.null(cond2)) deparse1(cond2),
                                               if (!is.null(groups)) deparse1(groups)),
                                             collapse=" + ")
                             ## and set logical `groups` argument
@@ -315,9 +332,9 @@ latticistCompose <- function(dat, spec = alist(),
                             tabcall <-
                                 call("xtabs", xform, datArg)
                             tabcall$subset <- if (!isTRUE(subset)) subset
-                            if (xprop) {
-                                tabcall <- call("prop.table", tabcall, margin = 1)
-                            }
+                                        #                            if (xprop) {
+                                        #                                tabcall <- call("prop.table", tabcall, margin = 1)
+                                        #                            }
                             call[[2]] <- tabcall
                             ## TODO: make stack an option?
                             call$stack <- TRUE
@@ -327,11 +344,11 @@ latticistCompose <- function(dat, spec = alist(),
 
                 } else {
                     ## UNIVARIATE NUMERIC
-                    if (!is.null(xVal)) {
+                    if (!is.null(xvar)) {
                         ## data on x axis, use densityplot
                         call[[1]] <- quote(densityplot)
-                        if (!is.null(cond))
-                            call[[2]] <- call("~", call("|", xvar, cond))
+                        if (!is.null(conds))
+                            call[[2]] <- call("~", call("|", xvar, conds))
                         else
                             call[[2]] <- call("~", xvar)
                         ## settings depend on number of points, groups
@@ -345,8 +362,8 @@ latticistCompose <- function(dat, spec = alist(),
                     } else {
                         ## data on y axis, use qqmath
                         call[[1]] <- quote(qqmath)
-                        if (!is.null(cond))
-                            call[[2]] <- call("~", call("|", yvar, cond))
+                        if (!is.null(conds))
+                            call[[2]] <- call("~", call("|", yvar, conds))
                         else
                             call[[2]] <- call("~", yvar)
                         ## settings depend on number of points, groups
@@ -390,83 +407,33 @@ latticistCompose <- function(dat, spec = alist(),
                     }
                 }
 
-            } else if (is.null(zVal)) {
-                ## BIVARIATE
+            } else if (xIsCat && yIsCat && (is.null(zvar) || zIsCat)) {
+                ## BIVARIATE CATEGORICAL OR TRIVARIATE CATEGORICAL
 
-                if (is.categorical(xVal) && is.categorical(yVal)) {
-                    ## BIVARIATE CATEGORICAL
-                    if (do.xdisc && do.ydisc && require("hexbin")) {
-                        ## if both are discretized numerics, use 2D binning
-                        ## use hexbin package if available
-                        call[[1]] <- quote(hexbinplot)
-                        xvar <- xvar[[2]] ## undo disc function
-                        yvar <- yvar[[2]] ## undo disc function
-                        if (!is.null(cond))
-                            call[[2]] <- call("~", yvar, call("|", xvar, cond))
-                        else
-                            call[[2]] <- call("~", yvar, xvar)
-                        type <- if (doLines) "r"
-                        if (!is.null(cond)) type <- c("g", type)
-                        call$type <- type
-                        if (is.null(aspect))
-                            aspect <- 1
-                        ## ignore groups setting
-                        call$groups <- NULL
+                ## MOSAIC PLOT
+                if (doSeparateStrata && !is.null(conds)) {
+                    call[[1]] <- quote(cotabplot)
+                } else {
+                    call[[1]] <- quote(mosaic)
+                }
+                xterms <- paste(c(deparse1(yvar),
+                                  deparse1(xvar),
+                                  if (!is.null(zvar)) deparse1(zvar),
+                                  if (!is.null(groups)) deparse1(groups)),
+                                collapse=" + ")
+                if (!is.null(conds))
+                    xterms <- paste(xterms, "|", deparse1(conds))
+                xform <- as.formula(paste("~", xterms))
+                call[[2]] <- xform
+                if (!is.null(groups)) {
+                    call$groups <- NULL
+                    call$highlighting <- deparse1(groups)
+                }
 
-                    } else {
-                        ## 2D TABLE (3D BARCHART)
-                        call[[1]] <- quote(cloud)
-                        call$data <- NULL
-                        call$subset <- NULL
-                        ## reorder factor levels
-                        if (isUnordered(yvar, yVal)) {
-                            if (nlevels(yVal) > 2) {
-                                yvar <- call("reorder", yvar,
-                                             call("unclass", xvar), na.rm=T)
-                                yVal <- eval(yvar, dat)
-                            }
-                        }
-                        xterms <- paste(c(deparse1(xvar),
-                                          deparse1(yvar),
-                                          if (!is.null(c1)) deparse1(c1),
-                                          if (!is.null(c2)) deparse1(c2),
-                                          if (!is.null(groups)) deparse1(groups)),
-                                        collapse=" + ")
-                        xform <- as.formula(paste("~", xterms))
-                        tabcall <- call("xtabs", xform, datArg)
-                        tabcall$subset <- if (!isTRUE(subset)) subset
-                        if (xprop || yprop) {
-                            mgn <- c(if (xprop) 1, if (yprop) 2)
-                            tabcall <- call("prop.table", tabcall, margin = mgn)
-                        }
-                        call[[2]] <- tabcall
-                        if (do3DTable) {
-                            ## and set logical `groups` argument
-                            call$groups <- !is.null(groups)
-                            call$panel.3d.cloud <- quote(panel.3dbars)
-                            call$col.facet <- "grey"
-                            call$xbase <- 0.4
-                            call$ybase <- 0.4
-                            ## rotate view 180 around z axis (better with reordering)
-                            call$screen <-
-                                list(z = 180, z = 40, x = -60)
-                            ## set aspect so that bars have square bases, like "iso"
-                            ## aspect for cloud is in the form c(y/x, z/x)
-                            asp.y.x <- length(levelsOK(yVal)) / length(levelsOK(xVal))
-                            call$aspect <- round(c(asp.y.x, min(asp.y.x, 1)), 2)
-                            scales$z$draw <- FALSE
-                            call$xlab <- expression(NULL)
-                            call$ylab <- expression(NULL)
-                            call$zlab <- expression(NULL)
-                                        # scales = list(rot = 90) # TODO use generic code below
-                        } else {
-                            ## levelplot: use color rather than depth for frequencies
-                            call[[1]] <- quote(levelplot)
-                        }
-                    }
-                } else
+            } else if (is.null(zvar)) {
+                ## BIVARIATE, WITH AT LEAST ONE NUMERIC
 
-                if (is.categorical(yVal) || is.categorical(xVal)) {
+                if (yIsCat || xIsCat) {
                     ## BIVARIATE CATEGORICAL AND NUMERIC
 
                     ## TODO: if only one value for each level use dotplot
@@ -488,8 +455,8 @@ latticistCompose <- function(dat, spec = alist(),
                         }
                     }
                     ## formula
-                    if (!is.null(cond))
-                        call[[2]] <- call("~", yvar, call("|", xvar, cond))
+                    if (!is.null(conds))
+                        call[[2]] <- call("~", yvar, call("|", xvar, conds))
                     else
                         call[[2]] <- call("~", yvar, xvar)
 
@@ -512,111 +479,124 @@ latticistCompose <- function(dat, spec = alist(),
                 } else {
                     ## BIVARIATE NUMERIC
                     call[[1]] <- quote(xyplot)
-                    if (!is.null(cond))
-                        call[[2]] <- call("~", yvar, call("|", xvar, cond))
+                    if (!is.null(conds))
+                        call[[2]] <- call("~", yvar, call("|", xvar, conds))
                     else
                         call[[2]] <- call("~", yvar, xvar)
 
-                    if (is.numeric(groupsVal) || do.gdisc) {
-                        if (doTile) {
-                            call[[1]] <- quote(tileplot)
-                            if (require("tripack", quietly = TRUE))
-                                call$use.tripack <- TRUE
-                        } else {
-                            call[[1]] <- quote(levelplot)
-                            call$panel <- quote(panel.levelplot.points)
-                            call$prepanel <- quote(prepanel.default.xyplot)
-                        }
-                        ## un-discretize groups
-                        if (do.gdisc) groups <- groups[[2]]
-                        form <- call("~", groups, call("*", xvar, yvar))
-                        if (!is.null(cond))
-                            form[[3]] <- call("|", form[[3]], cond)
-                        call[[2]] <- form
+                    if (doHexbin && require("hexbin")) {
+                        call[[1]] <- quote(hexbinplot)
+                        type <- if (doLines) "r"
+                        if (!is.null(conds)) type <- c("g", type)
+                        call$type <- type
+                        if (is.null(aspect))
+                            aspect <- 1
+                        ## ignore groups setting
                         call$groups <- NULL
-                    }
 
-                    if (doLines) {
-                        ## work out whether x data (in each panel) is spaced out
-                        ## enough to join by lines (rather than smoothing, below)
-                        guessPanelType <- function(panelx) {
-                            ans <- list(lines=TRUE, jitter=FALSE)
-                            if (!any(is.finite(panelx)))
-                                return(ans)
-                            rge <- range(panelx, na.rm=TRUE)
-                            diffs <- diff(sort(panelx))
-                            diffr <- range(diffs)
-                            ans$lines <- FALSE
-                            if (min(diffr) == 0) {
-                                ans$jitter <- TRUE
-                                posdiff <- min(diffs[diffs > 0])
-                                ## join averages by lines if few discrete values
-                                if (posdiff > diff(rge) / 30) {
-                                    ans$lines <- TRUE
-                                }
+                    } else {
+
+                        if (is.numeric(groupsVal) || doGroupsDisc) {
+                            if (doTile) {
+                                call[[1]] <- quote(tileplot)
+                                if (require("tripack", quietly = TRUE))
+                                    call$use.tripack <- TRUE
                             } else {
-                                if ((max(diffr) - min(diffr) < getOption("ts.eps")) &&
-                                    (min(diffr) > 2 * getOption("ts.eps"))) {
-                                    ## regular differences -- likely time series
-                                    ans$lines <- TRUE
-                                } else {
-                                    if (min(diffr) > diff(rge) / 100) {
+                                call[[1]] <- quote(levelplot)
+                                call$panel <- quote(panel.levelplot.points)
+                                call$prepanel <- quote(prepanel.default.xyplot)
+                            }
+                            ## un-discretize groups
+                            if (doGroupsDisc) groups <- groups[[2]]
+                            form <- call("~", groups, call("*", xvar, yvar))
+                            if (!is.null(conds))
+                                form[[3]] <- call("|", form[[3]], conds)
+                            call[[2]] <- form
+                            call$groups <- NULL
+                        }
+
+                        if (doLines) {
+                            ## work out whether x data (in each panel) is spaced out
+                            ## enough to join by lines (rather than smoothing, below)
+                            guessPanelType <- function(panelx) {
+                                ans <- list(lines=TRUE, jitter=FALSE)
+                                if (!any(is.finite(panelx)))
+                                    return(ans)
+                                rge <- range(panelx, na.rm=TRUE)
+                                diffs <- diff(sort(panelx))
+                                diffr <- range(diffs)
+                                ans$lines <- FALSE
+                                if (min(diffr) == 0) {
+                                    ans$jitter <- TRUE
+                                    posdiff <- min(diffs[diffs > 0])
+                                    ## join averages by lines if few discrete values
+                                    if (posdiff > diff(rge) / 30) {
                                         ans$lines <- TRUE
                                     }
+                                } else {
+                                    if ((max(diffr) - min(diffr) < getOption("ts.eps")) &&
+                                        (min(diffr) > 2 * getOption("ts.eps"))) {
+                                        ## regular differences -- likely time series
+                                        ans$lines <- TRUE
+                                    } else {
+                                        if (min(diffr) > diff(rge) / 100) {
+                                            ans$lines <- TRUE
+                                        }
+                                    }
                                 }
+                                ans
                             }
-                            ans
-                        }
-                        if (is.null(cond) && is.null(groups)) {
-                            panelType <- guessPanelType(xVal[subsetVal])
-                        } else {
-                            ## split into packets by conditioning and/or groups
-                            condList <- list()
-                            if (!is.null(c1)) {
-                                condList$c1 <- c1Val
-                                if (!is.factor(c1Val) && !is.shingle(c1Val))
-                                    condList$c1 <- as.factorOrShingle(c1Val)
+                            if (is.null(conds) && is.null(groups)) {
+                                panelType <- guessPanelType(xVal[subsetVal])
+                            } else {
+                                ## split into packets by conditioning and/or groups
+                                condList <- list()
+                                if (!is.null(cond)) {
+                                    condList$cond <- condVal
+                                    if (!is.factor(condVal) && !is.shingle(condVal))
+                                        condList$cond <- as.factorOrShingle(condVal)
+                                }
+                                if (!is.null(cond2)) {
+                                    condList$cond2 <- cond2Val
+                                    if (!is.factor(cond2Val) && !is.shingle(cond2Val))
+                                        condList$cond2 <- as.factorOrShingle(cond2Val)
+                                }
+                                if (!is.null(groups)) {
+                                    condList$groups <- groupsVal
+                                    if (!is.factor(groupsVal) && !is.shingle(groupsVal))
+                                        condList$groups <- as.factorOrShingle(groupsVal)
+                                }
+                                if (!isTRUE(subset))
+                                    condList <- lapply(condList,
+                                                       function(v) v[subsetVal, drop=TRUE])
+                                nlevsList <- lapply(condList, nlevels)
+                                packetDefs <- do.call(expand.grid, lapply(nlevsList, seq_len))
+                                ## make a list for each packet (combination of cond levels)
+                                packetDefs <- as.data.frame(t(packetDefs))
+                                xSubVal <- if (isTRUE(subset)) xVal else xVal[subsetVal]
+                                panelType <- sapply(packetDefs, function(packLev) {
+                                    id <- lattice:::compute.packet(condList, levels=packLev)
+                                    unlist(guessPanelType(xSubVal[id]))
+                                })
+                                panelType <- as.data.frame(t(panelType))
                             }
-                            if (!is.null(c2)) {
-                                condList$c2 <- c2Val
-                                if (!is.factor(c2Val) && !is.shingle(c2Val))
-                                    condList$c2 <- as.factorOrShingle(c2Val)
-                            }
-                            if (!is.null(groups)) {
-                                condList$groups <- groupsVal
-                                if (!is.factor(groupsVal) && !is.shingle(groupsVal))
-                                    condList$groups <- as.factorOrShingle(groupsVal)
-                            }
-                            if (!isTRUE(subset))
-                                condList <- lapply(condList,
-                                                   function(v) v[subsetVal, drop=TRUE])
-                            nlevsList <- lapply(condList, nlevels)
-                            packetDefs <- do.call(expand.grid, lapply(nlevsList, seq_len))
-                            ## make a list for each packet (combination of cond levels)
-                            packetDefs <- as.data.frame(t(packetDefs))
-                            xSubVal <- if (isTRUE(subset)) xVal else xVal[subsetVal]
-                            panelType <- sapply(packetDefs, function(packLev) {
-                                id <- lattice:::compute.packet(condList, levels=packLev)
-                                unlist(guessPanelType(xSubVal[id]))
-                            })
-                            panelType <- as.data.frame(t(panelType))
-                        }
 
-                        if (any(panelType$jitter)) {
-                            call$jitter.x <- TRUE
-                            if (all(panelType$lines))
-                                call$type <- c("p", "a")
-                        } else {
-                            if (all(panelType$lines))
-                                call$type <- "o"
-                        }
+                            if (any(panelType$jitter)) {
+                                call$jitter.x <- TRUE
+                                if (all(panelType$lines))
+                                    call$type <- c("p", "a")
+                            } else {
+                                if (all(panelType$lines))
+                                    call$type <- "o"
+                            }
 
-                        if (any(panelType$lines == FALSE)) {
-                            ## use loess smoother
-                            call$type <- c("p", "smooth")
-                            call$prepanel <- quote(try.prepanel.loess)
-                            ## do not worry about errors in loess.smooth
-                            call$plot.args <- quote(list(panel.error = "warning"))
+                            if (any(panelType$lines == FALSE)) {
+                                ## use loess smoother
+                                call$type <- c("p", "smooth")
+                                call$prepanel <- quote(try.prepanel.loess)
+                                ## do not worry about errors in loess.smooth
+                                call$plot.args <- quote(list(panel.error = "warning"))
+                            }
                         }
                     }
                 }
@@ -627,7 +607,7 @@ latticistCompose <- function(dat, spec = alist(),
                     ## SEGMENTS
                     ## use segplot
                     call[[1]] <- quote(segplot)
-                    if (is.categorical(xVal) && !is.categorical(yVal)) {
+                    if (xIsCat && !yIsCat) {
                         ## switch x and y, so categorical is on y axis
                         oldx <- xvar
                         xvar <- yvar
@@ -635,6 +615,8 @@ latticistCompose <- function(dat, spec = alist(),
                         oldx <- xVal
                         xVal <- yVal
                         yVal <- oldx
+                        xIsCat <- FALSE
+                        yIsCat <- TRUE
                     }
                     form <- call("~", yvar, call("+", xvar, zvar))
                     if (doAsError) {
@@ -645,11 +627,11 @@ latticistCompose <- function(dat, spec = alist(),
                         call$centers <- xvar
                         call$draw.bands <- FALSE
                     }
-                    if (!is.null(cond))
-                        form[[3]] <- call("|", form[[3]], cond)
+                    if (!is.null(conds))
+                        form[[3]] <- call("|", form[[3]], conds)
                     call[[2]] <- form
                     ## colors coded by "level"
-                    if (do.gdisc) groups <- groups[[2]]
+                    if (doGroupsDisc) groups <- groups[[2]]
                     call$level <- groups
                     call$groups <- NULL
 
@@ -660,8 +642,8 @@ latticistCompose <- function(dat, spec = alist(),
 
                     ## 3D NUMERIC (3D SCATTER)
                     form <- call("~", zvar, call("*", xvar, yvar))
-                    if (!is.null(cond))
-                        form[[3]] <- call("|", form[[3]], cond)
+                    if (!is.null(conds))
+                        form[[3]] <- call("|", form[[3]], conds)
                     call[[2]] <- form
                     if (doLines)
                         call$type <- c("p", "h")
@@ -672,12 +654,15 @@ latticistCompose <- function(dat, spec = alist(),
 
             ## generic stuff...
 
+            isVCD <- (is.call.to(call, "mosaic") ||
+                      is.call.to(call, "cotabplot"))
+
             ## aspect and scales
 
             if (is.call.to(call, "cloud")) {
                 ## for 3D plots, aspect widget applies to "panel.aspect".
                 ## set panel.aspect to "fill" by default if only one panel
-                if (is.null(aspect) && is.null(cond))
+                if (is.null(aspect) && is.null(conds))
                     aspect <- "fill"
                 if (identical(eval(aspect), "fill"))
                     aspect <- round(dev.size()[2] / dev.size()[1], 2)
@@ -693,19 +678,18 @@ latticistCompose <- function(dat, spec = alist(),
                 scales$y$relation <- y.relation
             }
 
-            anyNumerics <- ((!is.null(xvar) && !is.categorical(xVal)) ||
-                            (!is.null(yvar) && !is.categorical(yVal)) ||
-                            (!is.null(zvar)))
-            anyNumerics <- (anyNumerics ||
+            anyNumerics <- ((!is.null(xvar) && !xIsCat) ||
+                            (!is.null(yvar) && !yIsCat) ||
+                            (!is.null(zvar) && !zIsCat) ||
                             is.call.to(call, "splom"))
             ## style settings for points
             if (anyNumerics) {
                 theme <- call("simpleTheme")
-                if (is.categorical(groupsVal))
+                if (!is.null(groups) && groupsIsCat)
                     theme$cex <- 0.6
-                if (ncond > 2)
+                if (nCondLevels > 2)
                     theme$cex <- 0.6
-                if (ncond > 6)
+                if (nCondLevels > 6)
                     theme$cex <- 0.4
                 if (is.call.to(call, "splom"))
                     theme$cex <- 0.5
@@ -727,7 +711,7 @@ latticistCompose <- function(dat, spec = alist(),
                 call$par.settings <- theme
             }
             ## add a grid if there are multiple panels
-            if (anyNumerics && !is.null(cond)) {
+            if (anyNumerics && !is.null(conds)) {
                 type <- call$type
                 if (is.null(type)) type <- "p" ## assumed
                 type <- unique(c("g", type))
@@ -735,7 +719,7 @@ latticistCompose <- function(dat, spec = alist(),
             }
 
             ## set up key
-            if (is.categorical(groupsVal)) {
+            if (!is.null(groups) && groupsIsCat) {
                 auto.key <- list()
                 ## work out key type
                 typeVal <- call$type
@@ -757,7 +741,7 @@ latticistCompose <- function(dat, spec = alist(),
                 ## get group levels that will appear in key
                 levs <- levelsOK(groupsVal)
                 ## if groups are discretised, or hypervar, need a title
-                if (do.gdisc || (is.null(xvar) && is.null(yvar))) {
+                if (doGroupsDisc || (is.null(xvar) && is.null(yvar))) {
                     auto.key$title <- groupsOrigStr
                     auto.key$cex.title <- 1
                 }
@@ -771,12 +755,12 @@ latticistCompose <- function(dat, spec = alist(),
                 if (n.items >= 3)
                     auto.key$cex <- 0.7
                 ## TODO: check lengths of text, abbreviate?
-                call$auto.key <- auto.key
+                if (!isVCD)
+                    call$auto.key <- auto.key
             }
 
             ## fix up long x axis labels
-            if (is.categorical(xVal) &&
-                !is.call.to(call, "histogram"))
+            if (xIsCat && !isVCD && !is.call.to(call, "histogram"))
             {
                 if (nlevels(xVal) >= 4) {
                     if (max(sapply(levelsOK(xVal), nchar)) >= 12) {
@@ -804,27 +788,35 @@ latticistCompose <- function(dat, spec = alist(),
                     subt <- call("paste", subsetStr, subt, sep="\n")
                 else subt <- call("paste", subsetStr, subt, sep=", ")
             }
-            call$sub <- list(subt, x=0.99, just="right",
-                             cex=0.7, font=1)
-
-            ## TODO: if (...)
-            call$subscripts <- TRUE
-
-            ## convert nested list 'scales' to quoted argument
-            if (length(scales) > 0) {
-                tmp <- try( parse(text = deparse(scales,
-                                  control = NULL))[[1]] )
-                if (!inherits(tmp, "try-error"))
-                    call$scales <- tmp
+            if (isVCD) {
+                call$sub <- subt
+            } else {
+                call$sub <- list(subt, x=0.99, just="right",
+                                 cex=0.7, font=1)
             }
 
-            ## layout
-            if (tooManyPanels)
-                call$layout <- c(0, min(MAXPANELS, ceiling(ncond / 2)))
+            if (!isVCD) {
+                ## TODO: if (...)
+                call$subscripts <- TRUE
 
-            ## useOuterStrips with c1 and c2 (does not work with 'layout')
-            if (!is.null(c1) && !is.null(c2) && !tooManyPanels) {
-                call <- call("useOuterStrips", call)
+                ## convert nested list 'scales' to quoted argument
+                if (length(scales) > 0) {
+                    tmp <- try( parse(text = deparse(scales,
+                                      control = NULL))[[1]] )
+                    if (!inherits(tmp, "try-error"))
+                        call$scales <- tmp
+                }
+
+                ## layout
+                if (tooManyPanels)
+                    call$layout <- c(0, min(MAXPANELS,
+                                            ceiling(nCondLevels / 2)))
+
+                ## useOuterStrips with bivar conditioning
+                ## (does not work with 'layout')
+                if (!is.null(cond) && !is.null(cond2) && !tooManyPanels) {
+                    call <- call("useOuterStrips", call)
+                }
             }
 
             call

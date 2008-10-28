@@ -284,6 +284,7 @@ latticistToolConstructor <- function(dat, datArg)
         doChooseVars <- function(...) {
             ## applies to hypervariate plots:
             ## splom, parallel and marginal.plot
+            if (is.table(dat)) return(TRUE)
             vars <- names(dat)
             checked <- playState$latticist$spec$varSubset
             if (!is.null(checked))
@@ -307,10 +308,6 @@ latticistToolConstructor <- function(dat, datArg)
                              if (identical(varsub, vars))
                                  varsub <- NULL
                              playState$latticist$spec$varSubset <- varsub
-                             ## reset x/y/z to force hypervariate
-                             playState$latticist$spec$xvar <- NULL
-                             playState$latticist$spec$yvar <- NULL
-                             playState$latticist$spec$zvar <- NULL
                              dispose(h$obj)
                          })
         }
@@ -484,22 +481,37 @@ latticistToolConstructor <- function(dat, datArg)
                        function(...) {
                            playState$latticist$spec$defaultPlot <-
                                "marginal.plot"
-                           if (isTRUE(doChooseVars()))
+                           if (isTRUE(doChooseVars())) {
+                               ## reset x/y/z to force hypervariate
+                               playState$latticist$spec$xvar <- NULL
+                               playState$latticist$spec$yvar <- NULL
+                               playState$latticist$spec$zvar <- NULL
                                reCompose(playState, newPlot = TRUE)
+                           }
                        })
         gSignalConnect(splomW, "clicked",
                        function(...) {
                            playState$latticist$spec$defaultPlot <-
                                "splom"
-                           if (isTRUE(doChooseVars()))
+                           if (isTRUE(doChooseVars())) {
+                               ## reset x/y/z to force hypervariate
+                               playState$latticist$spec$xvar <- NULL
+                               playState$latticist$spec$yvar <- NULL
+                               playState$latticist$spec$zvar <- NULL
                                reCompose(playState, newPlot = TRUE)
+                           }
                        })
         gSignalConnect(parallelW, "clicked",
                        function(...) {
                            playState$latticist$spec$defaultPlot <-
                                "parallel"
-                           if (isTRUE(doChooseVars()))
+                           if (isTRUE(doChooseVars())) {
+                               ## reset x/y/z to force hypervariate
+                               playState$latticist$spec$xvar <- NULL
+                               playState$latticist$spec$yvar <- NULL
+                               playState$latticist$spec$zvar <- NULL
                                reCompose(playState, newPlot = TRUE)
+                           }
                        })
         hyperBox$packStart(marginalsW, expand = FALSE, padding = 2)
         hyperBox$packStart(splomW, expand = FALSE, padding = 2)
@@ -920,9 +932,14 @@ latticistToolConstructor <- function(dat, datArg)
 
         ## add it directly to the window (not a toolbar!)
         ## use blockRedraws() to maintain current device size
+
+        if (!is.null(playState$widgets$latticist)) {
+            hideWidgetNoRedraw(playState$widgets$latticist,
+                               horiz = TRUE,
+                               playState = playState)
+            playState$widgets$latticist$destroy()
+        }
         blockRedraws({
-            if (!is.null(playState$widgets$latticist))
-                playState$widgets$latticist$destroy()
             playState$widgets$vbox$packEnd(box, expand=FALSE)
         }, playState = playState)
 

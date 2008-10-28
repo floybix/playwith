@@ -180,6 +180,7 @@ latticistCompose <- function(dat, spec = alist(),
             }
 
             ## create template plot call
+            call <- NULL
             call <- quote(xyplot(0 ~ 0))
             call$data <- datArg
             call$groups <- groups ## may be NULL
@@ -207,10 +208,11 @@ latticistCompose <- function(dat, spec = alist(),
 
             ## construct plot title
             if (!is.null(xvar) || !is.null(yvar)) {
-                title <- paste(c(if (!is.null(yvar)) yvarOrigStr,
+                title <- paste(c(if (!is.null(zvar)) zvarOrigStr,
+                                 if (!is.null(yvar)) yvarOrigStr,
                                  if (!is.null(xvar)) xvarOrigStr),
                                collapse=" vs ")
-                if (!is.null(zvar))
+                if (!is.null(zvar) && !is.table(dat))
                     title <- paste(zvarOrigStr, "vs", xvarOrigStr,
                                    "and", yvarOrigStr)
                 if (is.null(xvar) || is.null(yvar))
@@ -247,14 +249,31 @@ latticistCompose <- function(dat, spec = alist(),
                     call$reorder <- FALSE
 
                 } else if (defaultPlot == "splom") {
-                    call[[1]] <- quote(splom)
-                    call[[2]] <- dat.form
-                    call$varname.cex <- 0.7
-                    call$pscales <- 0
-                    if (doLines)
-                        call$lower.panel <-
-                            function(..., type)
-                                try(panel.xyplot(..., type = "smooth"))
+                    if (is.table(dat)) {
+                        call[[1]] <- quote(pairs)
+                        call[[2]] <- dat.expr
+                        call$diag_panel <-
+                            quote(pairs_diagonal_text(distribute = "margin",
+                                                      rot = 45))
+                        #call$highlighting <- 2
+                        #call$diag_panel_args <-
+                        #    list(fill = grey.colors)
+                        call$labeling_args <-
+                            list(abbreviate = TRUE)
+                        #call$labeling <- quote(labeling_values)
+                        call$labeling_args <-
+                            list(rep = FALSE)
+
+                    } else {
+                        call[[1]] <- quote(splom)
+                        call[[2]] <- dat.form
+                        call$varname.cex <- 0.7
+                        call$pscales <- 0
+                        if (doLines)
+                            call$lower.panel <-
+                                function(..., type)
+                                    try(panel.xyplot(..., type = "smooth"))
+                    }
 
                 } else if (defaultPlot == "parallel") {
                     call[[1]] <- quote(parallel)
@@ -271,14 +290,6 @@ latticistCompose <- function(dat, spec = alist(),
                     if (!is.null(yvar)) {
                         ## data on y axis, use dotplot
                         call[[1]] <- quote(dotplot)
-                        if (is.table(dat)) {
-                            form <- paste(deparse1(yvar), "~", "Freq")
-                            if (!is.null(conds))
-                                form <- paste(form, "|", deparse1(conds))
-                            call[[2]] <- as.formula(form)
-                            call$data <- call("as.data.frame", datArg)
-
-                        } else {
                             call$data <- NULL
                             call$subset <- NULL
                             form <- paste(c(deparse1(yvar),
@@ -287,16 +298,14 @@ latticistCompose <- function(dat, spec = alist(),
                                             if (!is.null(groups)) deparse1(groups)),
                                           collapse=" + ")
                             form <- paste("~", form)
+                            if (is.table(dat))
+                                form <- paste("Freq", form)
                             tabcall <-
                                 call("xtabs", as.formula(form), datArg)
                             tabcall$subset <- if (!isTRUE(subset)) subset
-                                        #                            if (yprop) {
-                                        #                                tabcall <- call("prop.table", tabcall, margin = 1)
-                                        #                            }
                             call[[2]] <- tabcall
                             ## and set logical `groups` argument
                             call$groups <- !is.null(groups)
-                        }
 
                         if (doLines) {
                             if (!is.null(groups))
@@ -326,16 +335,15 @@ latticistCompose <- function(dat, spec = alist(),
                                               if (!is.null(cond2)) deparse1(cond2),
                                               if (!is.null(groups)) deparse1(groups)),
                                             collapse=" + ")
-                            ## and set logical `groups` argument
-                            call$groups <- !is.null(groups)
                             xform <- as.formula(paste("~", xterms))
+                            if (is.table(dat))
+                                form <- paste("Freq", form)
                             tabcall <-
                                 call("xtabs", xform, datArg)
                             tabcall$subset <- if (!isTRUE(subset)) subset
-                                        #                            if (xprop) {
-                                        #                                tabcall <- call("prop.table", tabcall, margin = 1)
-                                        #                            }
                             call[[2]] <- tabcall
+                            ## and set logical `groups` argument
+                            call$groups <- !is.null(groups)
                             ## TODO: make stack an option?
                             call$stack <- TRUE
                             call$horizontal <- FALSE
@@ -413,6 +421,8 @@ latticistCompose <- function(dat, spec = alist(),
                 ## MOSAIC PLOT
                 if (doSeparateStrata && !is.null(conds)) {
                     call[[1]] <- quote(cotabplot)
+                    call$main <- NULL
+                    call$sub <- NULL
                 } else {
                     call[[1]] <- quote(mosaic)
                 }
@@ -429,6 +439,12 @@ latticistCompose <- function(dat, spec = alist(),
                     call$groups <- NULL
                     call$highlighting <- deparse1(groups)
                 }
+                if (!is.call.to(call, "cotabplot"))
+                    call$labeling <- quote(labeling_values)
+                labeling_args <- list(rep = FALSE)
+                if (is.call.to(call, "cotabplot"))
+                    labeling_args$abbreviate <- TRUE
+                call$labeling_args <- labeling_args
 
             } else if (is.null(zvar)) {
                 ## BIVARIATE, WITH AT LEAST ONE NUMERIC
@@ -655,7 +671,8 @@ latticistCompose <- function(dat, spec = alist(),
             ## generic stuff...
 
             isVCD <- (is.call.to(call, "mosaic") ||
-                      is.call.to(call, "cotabplot"))
+                      is.call.to(call, "cotabplot") ||
+                      is.call.to(call, "pairs"))
 
             ## aspect and scales
 
@@ -719,7 +736,7 @@ latticistCompose <- function(dat, spec = alist(),
             }
 
             ## set up key
-            if (!is.null(groups) && groupsIsCat) {
+            if (!isVCD && !is.null(groups) && groupsIsCat) {
                 auto.key <- list()
                 ## work out key type
                 typeVal <- call$type
@@ -755,8 +772,7 @@ latticistCompose <- function(dat, spec = alist(),
                 if (n.items >= 3)
                     auto.key$cex <- 0.7
                 ## TODO: check lengths of text, abbreviate?
-                if (!isVCD)
-                    call$auto.key <- auto.key
+                call$auto.key <- auto.key
             }
 
             ## fix up long x axis labels
@@ -789,7 +805,8 @@ latticistCompose <- function(dat, spec = alist(),
                 else subt <- call("paste", subsetStr, subt, sep=", ")
             }
             if (isVCD) {
-                call$sub <- subt
+                if (!is.call.to(call, "cotabplot"))
+                    call$sub <- subt
             } else {
                 call$sub <- list(subt, x=0.99, just="right",
                                  cex=0.7, font=1)

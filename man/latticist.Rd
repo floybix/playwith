@@ -16,9 +16,8 @@ latticist(dat,
           plot.call)
 }
 \arguments{
-  \item{dat}{ a data frame (with numeric and/or categorical variables),
-    or an object that can be coerced with \code{\link{as.data.frame}}
-    (such as a \code{table}). }
+  \item{dat}{ a \code{data frame} (with numeric and/or categorical variables),
+    or a \code{table}. }
   \item{spec}{ a list specifying the initial latticist display.
     See \code{\link{latticistCompose}}. }
   \item{reorder.levels}{ if \code{TRUE}, change the ordering of levels of factor
@@ -93,7 +92,7 @@ stopifnot(gconfirm("Press OK for next example..."))
 
 ## environmental dataset: see ?environmental
 ## Daily measurements related to ozone pollution in NYC 1973.
-## Specify initial display:
+## Specify initial display directly:
 latticist(plot.call = quote(parallel(environmental, col = 1)),
     click.mode = "Brush")
 

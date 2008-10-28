@@ -116,9 +116,6 @@ export(latticistCompose,
        simpleColorKey)
 S3method(levelplot, table)
 
-## latticistParse.R
-export(latticistParse)
-
 ## latticeStyleGUI.R
 export(latticeStyleGUI,
        latticeStyleToBasePar,

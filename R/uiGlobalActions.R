@@ -321,6 +321,11 @@ decr.font_handler <- function(widget, playState)
 }
 
 style.settings_handler <- function(widget, playState) {
+    if (!require("latticist")) {
+        gmessage(paste('This feature requires the latticist package.',
+                       'Install it with install.packages("latticist")'))
+        return()
+    }
     playDevSet(playState)
     isBase <- (!playState$is.lattice && is.null(playState$viewport))
     latticeStyleGUI(pointsize = playState$pointsize,

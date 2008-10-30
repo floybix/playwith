@@ -1,5 +1,4 @@
 
-importFrom(lattice, levelplot)
 import(RGtk2)
 import(gWidgets)
 import(gridBase)
@@ -21,7 +20,7 @@ export(parameterControlTool)
 ## autoplay.R
 export(autoplay)
 
-## settings
+## settings.R
 export(playwith.options,
        playwith.getOption)
 
@@ -104,24 +103,7 @@ export(convertFromDevicePixels,
        grobBBDevicePixels,
        showGrobsBB)
 
-## latticist.R
-export(latticist)
-
-## latticistCompose.R
-export(latticistCompose,
-       reorderByFreq,
-       cutEq,
-       try.prepanel.loess,
-       n.level.colors,
-       simpleColorKey)
-S3method(levelplot, table)
-
-## latticeStyleGUI.R
-export(latticeStyleGUI,
-       latticeStyleToBasePar,
-       panel.usertext,
+## panel.misc.R
+export(panel.usertext,
        panel.brushpoints,
-       panel.brushlines,
-       latticeStyleDemo,
-       custom.theme.2,
-       custom.theme.black)
+       panel.brushlines)

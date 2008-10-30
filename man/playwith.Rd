@@ -326,7 +326,6 @@ playwith(expr,
 \seealso{
   \code{\link{playwith.options}},
   \code{\link{autoplay}},
-  \code{\link{latticist}},
   \link{playwith.API}
 }
 \examples{

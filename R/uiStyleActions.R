@@ -361,7 +361,6 @@ set.arrow.style_handler <- function(widget, playState)
         arrow$angle <- svalue(wid.angle)
         arrow$type <- if (svalue(wid.closed)) "closed"
         playState$arrow <- arrow
-        playState$label.offset <- ok(svalue(wid.offset))
         newset <- list(col = svalue(wid.col),
                        lwd = ok(svalue(wid.lwd)),
                        lty = ok(svalue(wid.lty)))

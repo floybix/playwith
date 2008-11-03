@@ -30,16 +30,15 @@
     \item{\code{callName}}{
       name of the current main plot function.
     }
-    \item{\code{is.lattice}, \code{is.ggplot}, \code{is.base}}{
+    \item{\code{is.lattice}, \code{is.ggplot}, \code{is.vcd}, \code{is.base}}{
       whether the current plot is a Lattice / ggplot / base graphics
       plot. \code{is.base} is defined as TRUE if neither of the others is
       TRUE and \code{viewport} is undefined.
     }
-    \item{\code{result, trellis, ggplot}}{
+    \item{\code{result, trellis}}{
       \code{result} is the result of evaluating the plot call.
       If \code{is.lattice}, the trellis object is also stored in
-      \code{trellis}; if \code{is.ggplot}, the object is also stored in
-      \code{ggplot}.
+      \code{trellis}.
     }
     \item{\code{viewport}}{
       a named list of viewport paths (or names).

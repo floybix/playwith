@@ -441,6 +441,10 @@ blockRedraws <- function(expr, playState = playDevCur())
                                         #	max.height=myH, min.height=myH))
                                         #da$window$freezeUpdates() # hmm
     foo <- try(eval.parent(substitute(expr)))
+    ## try to force redraw
+    gdkWindowProcessAllUpdates()
+    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
+
                                         #da$window$thawUpdates()
                                         #playState$win$setGeometryHints(da, list())
     da$setSizeRequest(-1, -1)

@@ -82,27 +82,37 @@ updatePlotActions <- function(playState)
     aGroup <- playState$actionGroups[["PlotActions"]]
     hasArgs <- playState$accepts.arguments
     isLatt <- playState$is.lattice
-    isSplom <- (playState$callName %in% c("splom"))
-    isLatt3D <- isLatt && !is.null(playState$trellis$panel.args.common$scales.3d)
+    isLatt3D <-
+        (isLatt &&
+         !is.null(playState$trellis$panel.args.common$scales.3d))
+    isVCD <- playState$is.vcd
+    canNav <- (hasArgs && !isVCD &&
+               !(playState$callName %in%
+                 c("splom", "marginal.plot")))
     ## PlotSettings
     aGroup$getAction("PlotSettings")$setSensitive(hasArgs)
     ## Zoom / Pan
-    aGroup$getAction("Zoom")$setSensitive(hasArgs && !isSplom)
-    aGroup$getAction("Pan")$setSensitive(hasArgs && !isSplom)
+    aGroup$getAction("Zoom")$setSensitive(canNav)
+    aGroup$getAction("Pan")$setSensitive(canNav)
     ## Zoomfit
-    nonFit <- hasArgs && (!is.null(callArg(playState, "xlim")) ||
-                          !is.null(callArg(playState, "ylim")))
-    if (isLatt3D) nonFit <- (nonFit ||
-                             !is.null(callArg(playState, "zlim")) ||
-                             !is.null(callArg(playState, "zoom")) ||
-                             !is.null(callArg(playState, "screen")) ||
-                             !is.null(callArg(playState, "R.mat")))
+    nonFit <- FALSE
+    if (canNav) {
+        nonFit <-
+            hasArgs && (!is.null(callArg(playState, "xlim")) ||
+                        !is.null(callArg(playState, "ylim")))
+        if (isLatt3D)
+            nonFit <- (nonFit ||
+                       !is.null(callArg(playState, "zlim")) ||
+                       !is.null(callArg(playState, "zoom")) ||
+                       !is.null(callArg(playState, "screen")) ||
+                       !is.null(callArg(playState, "R.mat")))
+    }
     aGroup$getAction("Zoomfit")$setSensitive(nonFit)
     aGroup$getAction("Zoomfit")$setVisible(nonFit)
     ## ZeroY
     eps <- .Machine$double.eps * 2
     nonZeroY <- FALSE
-    if (hasArgs && !isSplom) {
+    if (canNav) {
         ylim <- rawYLim(playState)
         if (isLatt) {
             ylim <- playState$trellis$y.limits
@@ -117,7 +127,7 @@ updatePlotActions <- function(playState)
     aGroup$getAction("ZeroY")$setVisible(nonZeroY)
     ## ZeroX
     nonZeroX <- FALSE
-    if (hasArgs && !isSplom) {
+    if (canNav) {
         xlim <- rawXLim(playState)
         if (isLatt) {
             xlim <- playState$trellis$x.limits

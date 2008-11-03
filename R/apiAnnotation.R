@@ -68,7 +68,7 @@ playDo <- function(playState, expr, space = "plot",
             ## because that would destroy any previous focus state
             ## -- if focus is required, do that before calling playDo.
         }
-        else {
+        else if (playState$is.base) {
             ## base graphics
             space <- "plot"
             if (clip.off) space <- "plot.clip.off"
@@ -79,6 +79,8 @@ playDo <- function(playState, expr, space = "plot",
         return(c(as.expression(call("seekViewport", vpName)),
                  expr))
     }
+    ## un-supported plot type (grid plot without specified viewport)
+    if (is.null(vpName)) return(NULL)
     ## store current viewport and restore it when finished
     cur.vp <- current.vpPath()
     on.exit({

@@ -367,7 +367,8 @@ contextCore <- function(playState, foo, event)
   #cMenu["visible"] <- FALSE
     ## fill in menu items
     space <- foo$space
-    if (space != "page") {
+    canIdent <- playState$tmp$identify.ok
+    if ((space != "page") && isTRUE(canIdent)) {
         foo$is.click <- TRUE
         foo <- playSelectData(playState, foo = foo)
         id <- foo$subscripts

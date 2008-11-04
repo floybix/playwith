@@ -572,21 +572,10 @@ playPostPlot <- function(playState)
     playState$pages <- 1
     if (inherits(result, "trellis")) {
         playState$trellis <- result
-        ## work out panels and pages
-        nPackets <- prod(dim(result))
-        ## by default, first two dimensions
-        ## (conditioning variables) shown on each page
-        nPanels <- prod(head(dim(result), 2))
-        nPages <- ceiling(nPackets / nPanels)
-        ## if an explicit 'layout' is given...
-        if (!is.null(result$layout)) {
-            myLayout <- result$layout
-            nPanels <- myLayout[1] * myLayout[2]
-            if (myLayout[1] == 0) nPanels <- myLayout[2]
-            nPages <- ceiling(nPackets / nPanels)
-        }
-        if (playState$page > nPages) playState$page <- 1
-        playState$pages <- nPages
+        ## work out number of pages
+        playState$pages <- npages(result)
+        if (playState$page > playState$pages)
+            playState$page <- 1
         ## plot trellis object (specified page only)
         plotOnePage(result, page = playState$page)
         ## need to store this, it refers to last plot only!
@@ -925,8 +914,27 @@ copyLocalArgs <-
     }
 }
 
+npages <- function(x) {
+    stopifnot(inherits(x, "trellis"))
+    ## work out number of pages that would be plotted
+    ## to display trellis object 'x'
+    nPackets <- prod(dim(x))
+    ## by default, first two dimensions
+    ## (conditioning variables) shown on each page
+    nPanels <- prod(head(dim(x), 2))
+    ## but if an explicit 'layout' is given...
+    if (!is.null(x$layout)) {
+        nPanels <- x$layout[1] * x$layout[2]
+        if (x$layout[1] == 0) nPanels <- x$layout[2]
+    }
+    ## TODO: what about 'skip'?
+    nPages <- ceiling(nPackets / nPanels)
+    nPages
+}
+
 plotOnePage <- function(x, page, ...)
 {
+    stopifnot(inherits(x, "trellis"))
     n <- page
     if (is.null(x$layout)) {
         if (length(dim(x)) > 2)

@@ -232,15 +232,27 @@ zero.x_handler <- function(widget, playState)
             return()
         } else {
             xlim <- playState$trellis$x.limits
+            if (is.character(xlim)) return()
             if (is.list(xlim)) {
-                ## TODO
+                if (!all(lapply(xlim, is.numeric)))
+                    return()
+                makeScalesArgAList(playState)
+                xlim <- lapply(xlim, function(lim)
+                           {
+                               lim[which.min(abs(lim))] <- 0
+                               signif(lim, 7)
+                           })
+                callArg(playState, quote(scales$x$limits)) <-
+                    xlim
+                playReplot(playState)
+                return()
             }
         }
     } else {
         xlim <- rawXLim(playState)
     }
     xlim[which.min(abs(xlim))] <- 0
-    rawXLim(playState) <- xlim
+    rawXLim(playState) <- signif(xlim, 7)
     playReplot(playState)
 }
 
@@ -257,15 +269,27 @@ zero.y_handler <- function(widget, playState)
             return()
         } else {
             ylim <- playState$trellis$y.limits
+            if (is.character(ylim)) return()
             if (is.list(ylim)) {
-                ## TODO
+                if (!all(lapply(ylim, is.numeric)))
+                    return()
+                makeScalesArgAList(playState)
+                ylim <- lapply(ylim, function(lim)
+                           {
+                               lim[which.min(abs(lim))] <- 0
+                               signif(lim, 7)
+                           })
+                callArg(playState, quote(scales$y$limits)) <-
+                    ylim
+                playReplot(playState)
+                return()
             }
         }
     } else {
         ylim <- rawYLim(playState)
     }
     ylim[which.min(abs(ylim))] <- 0
-    rawYLim(playState) <- ylim
+    rawYLim(playState) <- signif(ylim, 7)
     playReplot(playState)
 }
 

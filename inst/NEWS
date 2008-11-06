@@ -1,4 +1,8 @@
 
+Changes in Version 0.9-41
+
+  o "Full scale" tools now work with Lattice's "free" scales.
+
 Changes in Version 0.9-40
 
   o split Latticist out into a new package 'latticist'.

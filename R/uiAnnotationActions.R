@@ -414,6 +414,6 @@ annotateCore <- function(playState, foo)
 
 legend_handler <- function(widget, playState)
 {
-    ## TODO
+    ## TODO place legend
 }
 

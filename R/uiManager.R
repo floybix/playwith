@@ -10,21 +10,19 @@ constructUIManager <- function(playState, tools)
              list("FileMenu", NULL, "_File"),
              list("ViewMenu", NULL, "_View"),
              list("StyleMenu", NULL, "_Style"),
+             list("ThemeMenu", NULL, "Th_eme"),
              list("LabelsMenu", NULL, "_Labels"),
              list("ToolsMenu", NULL, "_Tools"),
              list("DataMenu", NULL, "_Data"),
              list("OptionsMenu", NULL, "_Options"),
-             list("HelpMenu", NULL, "_Help"),
-             ## submenus:
-             list("ShortcutsMenu", NULL, "_Style shortcuts"),
-             list("ThemesMenu", NULL, "_Themes")
+             list("HelpMenu", NULL, "_Help")
              )
     menuGroup <- gtkActionGroupNew("Menus")
     menuGroup$addActions(menuEntries)
-    for (nm in c("ShortcutsMenu", "ThemesMenu")) {
-        tmp <- menuGroup$getAction(nm)
-        if (!is.null(tmp)) tmp["hide-if-empty"] <- FALSE
-    }
+#    for (nm in c("ShortcutsMenu", "ThemesMenu")) {
+#        tmp <- menuGroup$getAction(nm)
+#        if (!is.null(tmp)) tmp["hide-if-empty"] <- FALSE
+#    }
     ## ui manager
     manager <- gtkUIManagerNew()
     window <- playState$win

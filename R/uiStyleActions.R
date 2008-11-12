@@ -13,16 +13,17 @@ createStyleActions <- function(playState, manager)
         eval(theme, list(playState = playState), globalenv())
         playReplot(playState)
     }
-    ssMenu <- manager$getWidget("/MenuBar/StyleMenu/ShortcutsMenu")
-    if (!is.null(ssMenu)) {
-        ssMenu <- ssMenu$getSubmenu()
+    styleMenu <- manager$getWidget("/MenuBar/StyleMenu")
+    if (!is.null(styleMenu)) {
+        styleMenu <- styleMenu$getSubmenu()
+        styleMenu$append(gtkSeparatorMenuItem())
+        foo <- gtkMenuItem("Style shortcuts:")
+        foo["sensitive"] <- FALSE
+        styleMenu$append(foo)
         styleShortcuts <- playwith.getOption("styleShortcuts")
-                                        #foo <- gtkMenuItem("Style shortcuts:")
-                                        #foo["sensitive"] <- FALSE
-                                        #styleMenu$append(foo)
         for (nm in names(styleShortcuts)) {
             item <- gtkMenuItem(nm)
-            ssMenu$append(item)
+            styleMenu$append(item)
             gSignalConnect(item, "activate", do.style_handler,
                            data = styleShortcuts[[nm]])
         }
@@ -34,13 +35,10 @@ createStyleActions <- function(playState, manager)
         trellis.par.set(user.text = NULL)
         playReplot(playState)
     }
-    thMenu <- manager$getWidget("/MenuBar/StyleMenu/ThemesMenu")
+    thMenu <- manager$getWidget("/MenuBar/ThemeMenu")
     if (!is.null(thMenu)) {
         thMenu <- thMenu$getSubmenu()
         themes <- playwith.getOption("themes")
-                                        #foo <- gtkMenuItem("Themes:")
-                                        #foo["sensitive"] <- FALSE
-                                        #styleMenu$append(foo)
         for (nm in names(themes)) {
             item <- gtkMenuItem(nm)
             thMenu$append(item)
@@ -48,6 +46,14 @@ createStyleActions <- function(playState, manager)
                            data = themes[[nm]])
         }
     }
+}
+
+set.default.theme_handler <- function(widget, playState)
+{
+    playDevSet(playState)
+    trellis.par.set(standard.theme("pdf"))
+    trellis.par.set(user.text = NULL)
+    playReplot(playState)
 }
 
 style.solid.points_handler <- function(widget, playState)

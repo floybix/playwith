@@ -344,10 +344,21 @@ playSourceCode <- function(playState = playDevCur())
     code$plot <- as.expression(code$plot)
     ## set up viewports
     comm$vps <- "set up viewports"
-    code$vps <- expression(
-        pushViewport(viewport(name = "pageAnnotationVp",
-                              yscale = c(1, 0))),
-        upViewport(0))
+    code$vps <- expression()
+    if (playState$is.lattice)
+        code$vps <-
+            c(code$vps,
+              expression(
+                  downViewport(trellis.vpname("toplevel"))
+                  )
+              )
+    code$vps <-
+        c(code$vps,
+          expression(
+              pushViewport(viewport(name = "pageAnnotationVp",
+                                    yscale = c(1, 0))),
+              upViewport(0))
+          )
     if (playState$is.base) {
         code$vps <- c(code$vps, expression(
         local({

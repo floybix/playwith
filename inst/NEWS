@@ -3,13 +3,17 @@ Changes in Version 0.9-41
 
   o "Full scale" tools now work with Lattice's "free" scales.
 
+  o Page annotations are now inside Lattice's toplevel viewport.
+
+  o Added a Theme menu for Lattice themes (moved out from Style menu).
+
 Changes in Version 0.9-40
 
-  o split Latticist out into a new package 'latticist'.
+  o Split Latticist out into a new package 'latticist'.
 
-  o handles plots from the 'vcd' package without falling over.
+  o Handles plots from the 'vcd' package without falling over.
 
-  o detects pages of a Lattice plot when 'layout' arg is missing.
+  o Detects pages of a Lattice plot when 'layout' arg is missing.
 
 Changes in Version 0.9-32
 

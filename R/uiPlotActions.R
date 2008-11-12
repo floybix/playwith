@@ -28,6 +28,7 @@ plotActionGroup <- function(playState)
              list("SetBrushStyle", NULL, "Set _brush style...", "<Alt>2", NULL, set.brush.style_handler),
              list("SetLabelStyle", NULL, "Set _label style...", "<Alt>3", NULL, set.label.style_handler),
              list("SetArrowStyle", NULL, "Set _arrow style...", "<Alt>4", NULL, set.arrow.style_handler),
+             list("DefaultTheme", NULL, "Default", NULL, NULL, set.default.theme_handler),
              ## grobs (uiGrobActions.R)
              list("GrobInspector", "gtk-properties", "_Grob inspector", NULL, NULL, grob.inspector_handler)
              )

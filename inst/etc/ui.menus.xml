@@ -39,8 +39,9 @@
       <menuitem action='StyleTransPoints'/>
       <menuitem action='StyleThickLines'/>
       <separator/>
-      <menu action='ShortcutsMenu'/>
-      <menu action='ThemesMenu'/>
+    </menu>
+    <menu action='ThemeMenu'>
+      <menu action='DefaultTheme'/>
     </menu>
     <menu action='LabelsMenu'>
       <menuitem action='SetLabelsTo'/>

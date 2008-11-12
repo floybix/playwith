@@ -21,7 +21,7 @@
          arrow = list(length = 0.15, unit = "inches"),
          ## themes:
          themes = alist(
-         "Default" = trellis.par.set(standard.theme("pdf")),
+#         "Default" = trellis.par.set(standard.theme("pdf")),
          "WhiteBG" = trellis.par.set(col.whitebg()),
          "Greyscale (for print)" = trellis.par.set(standard.theme("postscript")),
          "DarkBG" = trellis.par.set(standard.theme("X11")),

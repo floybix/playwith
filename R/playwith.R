@@ -647,6 +647,8 @@ generateSpaces <- function(playState)
     ## enumerate spaces in the current plot
     ## (named list of viewports)
     playState$spaces <- list()
+    upViewport(0)
+    curVps <- grid.ls(grobs = FALSE, viewports = TRUE, print = FALSE)$name
     if (!is.null(playState$viewport)) {
         ## grid graphics plot
         playState$spaces <- names(playState$viewport)
@@ -658,12 +660,11 @@ generateSpaces <- function(playState)
         ## base graphics plot
         playState$spaces <- "plot"
         ## use gridBase to make viewports
-        upViewport(0)
         if (length(playState$tmp$baseVps$plot.clip.off)) {
-            test <- try(seekViewport("plot.clip.off"),
-                        silent=TRUE)
-            if (!inherits(test, "try-error"))
+            if ("plot.clip.off" %in% curVps) {
+                downViewport("plot.clip.off")
                 popViewport(0)
+            }
         }
         ## suppress warnings about log scale
         vps <- suppressWarnings(baseViewports())
@@ -679,14 +680,14 @@ generateSpaces <- function(playState)
     upViewport(0)
     ## create a top-level viewport with normalised coordinates
     ## yscale origin is at top, to be consistent with device coordinates
-    test <- try(downViewport("pageAnnotationVp"), silent = TRUE)
-    if (inherits(test, "try-error")) {
+    if ("pageAnnotationVp" %in% curVps) {
+        downViewport("pageAnnotationVp")
         if (playState$is.lattice)
             downViewport(trellis.vpname("toplevel"))
         pushViewport(viewport(name = "pageAnnotationVp",
                               yscale = c(1, 0)))
+        upViewport(0)
     }
-    upViewport(0)
     ## store coordinate transformations for each space
     playState$tmp$spaceLimDevice <- list()
     for (space in playState$spaces) {

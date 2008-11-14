@@ -17,9 +17,9 @@ createStyleActions <- function(playState, manager)
     if (!is.null(styleMenu)) {
         styleMenu <- styleMenu$getSubmenu()
         styleMenu$append(gtkSeparatorMenuItem())
-        foo <- gtkMenuItem("Style shortcuts:")
-        foo["sensitive"] <- FALSE
-        styleMenu$append(foo)
+#        foo <- gtkMenuItem("Style shortcuts:")
+#        foo["sensitive"] <- FALSE
+#        styleMenu$append(foo)
         styleShortcuts <- playwith.getOption("styleShortcuts")
         for (nm in names(styleShortcuts)) {
             item <- gtkMenuItem(nm)

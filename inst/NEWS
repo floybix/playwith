@@ -1,5 +1,7 @@
 
-Changes in Version 0.9-41
+Changes in Version 0.9-42
+
+  o Fixed "protection stack overflow" triggered by resizing grid plots.
 
   o "Full scale" tools now work with Lattice's "free" scales.
 

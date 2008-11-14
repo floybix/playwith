@@ -41,7 +41,7 @@
       <separator/>
     </menu>
     <menu action='ThemeMenu'>
-      <menu action='DefaultTheme'/>
+      <menuitem action='DefaultTheme'/>
     </menu>
     <menu action='LabelsMenu'>
       <menuitem action='SetLabelsTo'/>

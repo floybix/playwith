@@ -1,4 +1,16 @@
 
+Changes in Version 0.9-44 (in development)
+
+  o Brushing a single data point in a parallel plot now works.
+
+  o Added 'preplot.actions' argument to playwith().
+
+  o Improved demo("clusterApp").
+
+Changes in Version 0.9-43
+
+  o Fixed bug that caused annotations outside the plot area to fail.
+
 Changes in Version 0.9-42
 
   o Fixed "protection stack overflow" triggered by resizing grid plots.

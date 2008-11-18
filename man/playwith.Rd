@@ -14,8 +14,9 @@ playwith(expr,
          viewport = NULL,
          parameters = list(),
          tools = list(),
-         update.actions = list(),
          init.actions = list(),
+         preplot.actions = list(),
+         update.actions = list(),
          ...,
          width = playwith.getOption("width"),
          height = playwith.getOption("height"),
@@ -29,23 +30,27 @@ playwith(expr,
          main.function)
 }
 \arguments{
-  \item{expr}{ an expression to create a plot, like \code{plot(mydata)}.
+  \item{expr}{
+    an expression to create a plot, like \code{plot(mydata)}.
     Note, arguments and nested calls are allowed, just like a normal
     plot call (see examples).
     Could also be a chunk of code in \code{\{}braces\code{\}}.
     For quoted calls, use the \code{plot.call} argument.
   }
-  \item{new}{ if \code{TRUE} open in a new window, otherwise replace the
+  \item{new}{
+    if \code{TRUE} open in a new window, otherwise replace the
     current window (if one exists).
   }
-  \item{title}{ optional window title; otherwise derived from the plot
-    call.
+  \item{title}{
+    optional window title; otherwise derived from the plot call.
   }
-  \item{labels}{ a character vector of labels for data points.
+  \item{labels}{
+    a character vector of labels for data points.
     If missing, it will be guessed from the plot call arguments if
     possible.
   }
-  \item{data.points}{ a data frame (or other suitable plotting
+  \item{data.points}{
+    a data frame (or other suitable plotting
     structure: see \code{\link{xy.coords}}) giving locations of data
     points, in case these can not be guessed from the plot call
     arguments. If a data frame, extra variables may be included; these
@@ -53,7 +58,8 @@ playwith(expr,
     suitable data argument is found in the plot call, that plays the
     same role.
   }
-  \item{viewport}{ name or \code{\link[grid]{vpPath}} of the
+  \item{viewport}{
+    name or \code{\link[grid]{vpPath}} of the
     \code{\link[grid]{viewport}} representing the data space. This
     allows interaction with grid graphics plots (but ignore this for
     Lattice plots). Experimental: can also be a named list.
@@ -77,7 +83,8 @@ playwith(expr,
       the given function with a single argument \code{playState}.
     }
   }
-  \item{tools}{ a list of tool specifications. These are technically
+  \item{tools}{
+    a list of tool specifications. These are technically
     \code{\link[RGtk2]{GtkActionEntry}}s but should be specified as
     lists with the following structure. Elements can be specified in
     this order, or named (as with a function call).
@@ -118,29 +125,39 @@ playwith(expr,
       }
     }
   }
-  \item{update.actions}{ a list of actions to be run \emph{after} the plot is
-    drawn (and each time it is redrawn). These may be functions,
+  \item{preplot.actions, update.actions}{
+    a list of actions to be run, respectively, \emph{before} and
+    \emph{after} the plot is drawn (and each time it is redrawn).
+    Note that \code{preplot.actions} can not assume that
+    \code{playState$is.lattice} (or other state values) are set. They
+    can, however, modify the plot call or its data before the plot is
+    drawn.
+
+    These may be functions,
     or names of functions, or expressions. Functions are passed one
     argument, which is the \code{\link{playState}}. Note, these
     are in addition to any given in
     \code{\link{playwith.options}("update.actions")}.
   }
-  \item{init.actions}{a list of actions to be run \emph{before} the plot is
-    drawn, whenever the plot type changes or its data changes. These are
-    not run when only simple arguments to the call change, but they are
-    run whenever the plot call is edited manually. Same format
-    as \code{update.actions}.
+  \item{init.actions}{
+    \code{init.actions} are run whenever the plot type changes or its
+    data changes. They are not run when only simple arguments to the
+    call change, but they are run whenever the plot call is edited
+    manually. Same format as \code{update.actions}.
   }
-  \item{\dots}{ extra arguments are stored in the \code{\link{playState}} object.
+  \item{\dots}{
+    extra arguments are stored in the \code{\link{playState}} object.
     These can then be accessed by tools. The default tools
     will recognise the following extra arguments:
     \describe{
-      \item{\code{click.mode}}{ sets the initial action when clicking
+      \item{\code{click.mode}}{
+	sets the initial action when clicking
 	and dragging on the plot: one of \code{"Zoom"},
 	\code{"Identify"}, \code{"Brush"}, \code{"Annotation"}, or
 	\code{"Arrow"}.
       }
-      \item{\code{time.mode}}{ whether the plot is to start in "time mode",
+      \item{\code{time.mode}}{
+	whether the plot is to start in "time mode",
 	with navigation along the x-axis. If \code{NA}, it will guess
 	whether to start in time.mode based on whether the current plot
 	looks like a time series plot (but this can chew some extra
@@ -189,38 +206,47 @@ playwith(expr,
       }
     }
   }
-  \item{width, height}{ initial size of the plot device in inches.
+  \item{width, height}{
+    initial size of the plot device in inches.
   }
-  \item{pointsize}{ default point size for text in the
+  \item{pointsize}{
+    default point size for text in the
     \code{\link[cairoDevice]{Cairo}} device.
   }
-  \item{eval.args}{ whether to evaluate the plot call arguments: can be
+  \item{eval.args}{
+    whether to evaluate the plot call arguments: can be
     \code{TRUE}, \code{FALSE}, \code{NA} (don't eval global vars)
     or a \link[=regex]{regular expression} matching symbols to evaluate.
     Or a list. See below.
   }
-  \item{on.close}{ a function to be called when the user closes the plot
+  \item{on.close}{
+    a function to be called when the user closes the plot
     window. The \code{\link{playState}} object
     will passed to the function. If the function returns \code{TRUE},
     the window will not be closed.
   }
-  \item{modal}{ whether the window is modal: if \code{TRUE},
+  \item{modal}{
+    whether the window is modal: if \code{TRUE},
     the session will freeze until the window is closed.
   }
-  \item{link.to}{ an existing \code{playState} (i.e. \code{playwith}
+  \item{link.to}{
+    an existing \code{playState} (i.e. \code{playwith}
     plot) to link to. The set of brushed data points will then be
     synchronised between them. It is assumed that the data subscripts of
     the two plots correspond directly. Links can be broken with
     \code{\link{playUnlink}}.
   }
-  \item{playState}{ the \code{\link{playState}} object for an existing plot window.
+  \item{playState}{
+    the \code{\link{playState}} object for an existing plot window.
     If given, the new plot will appear in that window, replacing the old plot.
     This over-rides the \code{new} argument.
   }
-  \item{plot.call}{ a plot call (\code{\link{call}} object), if given
+  \item{plot.call}{
+    a plot call (\code{\link{call}} object), if given
     this is used instead of \code{expr}.
   }
-  \item{main.function}{ the function (or its name) appearing in the call
+  \item{main.function}{
+    the function (or its name) appearing in the call
     which accepts typical plot arguments like \code{xlim} or
     \code{ylab}. This will only be needed in unusual cases when the
     default guess fails.

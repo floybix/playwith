@@ -21,7 +21,6 @@
          arrow = list(length = 0.15, unit = "inches"),
          ## themes:
          themes = alist(
-#         "Default" = trellis.par.set(standard.theme("pdf")),
          "WhiteBG" = trellis.par.set(col.whitebg()),
          "Greyscale (for print)" = trellis.par.set(standard.theme("postscript")),
          "DarkBG" = trellis.par.set(standard.theme("X11")),
@@ -57,8 +56,9 @@
          ui.toolbars.xml = system.file("etc", "ui.toolbars.xml", package="playwith"),
          ui.custom.xml = NULL,
          custom.tools = NULL,
-         update.actions = NULL,
          init.actions = NULL,
+         preplot.actions = NULL,
+         update.actions = NULL,
          custom.toolbar = "BottomToolbar",
          parameters.toolbar = "BottomToolbar",
          toolbar.style = "both",

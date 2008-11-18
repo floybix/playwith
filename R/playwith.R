@@ -29,8 +29,9 @@ playwith <-
              viewport = NULL,
              parameters = list(),
              tools = list(),
-             update.actions = list(),
              init.actions = list(),
+             preplot.actions = list(),
+             update.actions = list(),
              ...,
              width = playwith.getOption("width"),
              height = playwith.getOption("height"),
@@ -70,6 +71,12 @@ playwith <-
         stop("invalid 'playState'")
     if (!is.null(link.to) && !inherits(link.to, "playState"))
         stop("invalid 'link.to'")
+    if (!is.list(init.actions))
+        init.actions <- list(init.actions)
+    if (!is.list(preplot.actions))
+        preplot.actions <- list(preplot.actions)
+    if (!is.list(update.actions))
+        update.actions <- list(update.actions)
     ## playState is the <environment> encapsulating the plot, window and device
     cleanupStateEnv()
     if (!is.null(playState)) {
@@ -148,15 +155,20 @@ playwith <-
     cTools <- c(tools, optTools)
     ## extract any update / init actions attached to tools
     for (i in seq_along(cTools)) {
-        xUpd <- cTools[[i]]$update.action
         xIni <- cTools[[i]]$init.action
-        if (!is.null(xUpd)) {
-            update.actions <- c(update.actions, xUpd)
-            cTools[[i]]$update.action <- NULL
-        }
+        xPre <- cTools[[i]]$preplot.action
+        xUpd <- cTools[[i]]$update.action
         if (!is.null(xIni)) {
             init.actions <- c(init.actions, xIni)
             cTools[[i]]$init.action <- NULL
+        }
+        if (!is.null(xPre)) {
+            preplot.actions <- c(preplot.actions, xPre)
+            cTools[[i]]$preplot.action <- NULL
+        }
+        if (!is.null(xUpd)) {
+            update.actions <- c(update.actions, xUpd)
+            cTools[[i]]$update.action <- NULL
         }
     }
     ## UI manager
@@ -355,8 +367,9 @@ playwith <-
     playState$viewport <- viewport
     playState$parameters <- parameters
     playState$tools <- tools
-    playState$update.actions <- update.actions
     playState$init.actions <- init.actions
+    playState$preplot.actions <- preplot.actions
+    playState$update.actions <- update.actions
     playState$on.close <- on.close
     playState$main.function <- main.function
     playState$pointsize <- pointsize
@@ -455,10 +468,10 @@ playwith <-
 playNewPlot <- function(playState = playDevCur())
 {
     if (isTRUE(playwith.getOption("catch.errors"))) {
-        tryCatch(doPlayNewPlot(playState),
+        tryCatch(doPlayReplot(playState, isNewPlot = TRUE),
                  error = error_handler)
     } else {
-        doPlayNewPlot(playState)
+        doPlayReplot(playState, isNewPlot = TRUE)
     }
 }
 
@@ -472,10 +485,11 @@ playReplot <- function(playState = playDevCur())
     }
 }
 
-doPlayNewPlot <- function(playState)
+doPlayReplot <- function(playState, isNewPlot = FALSE)
 {
+    if (!isNewPlot && isTRUE(playState$tmp$skip.redraws))
+        return()
     playDevSet(playState)
-    ## clear the current plot if any, to avoid lengthy redraws
     playState$tmp$plot.ready <- FALSE
     on.exit(playState$tmp$plot.ready <- TRUE)
     grid.newpage()
@@ -486,15 +500,18 @@ doPlayNewPlot <- function(playState)
     ## hide scrollbars if they are not needed
     if (!isTRUE(playState$time.mode)) {
         hideWidgetNoRedraw(playState, playState$widgets$timeScrollBox,
-                           horiz=TRUE)
+                           horiz = TRUE)
     }
     if (playState$pages == 1) {
         hideWidgetNoRedraw(playState, playState$widgets$pageScrollBox,
-                           horiz=FALSE)
+                           horiz = FALSE)
     }
     ## find which component of the call takes arguments (xlim etc)
     ## (also put main call into canonical form, with match.call)
-    updateMainCall(playState)
+    if (isNewPlot)
+        updateMainCall(playState)
+    ## pre-plot actions; note, can not assume $is.lattice etc is set
+    preplotActions(playState)
     ## update address bar with current call
     updateAddressBar(playState)
     ## eval plot call
@@ -521,7 +538,7 @@ doPlayNewPlot <- function(playState)
         updateMainCall(playState)
     }
     ## lattice needs subscripts to correctly identify points.
-    if (playState$is.lattice &&
+    if (isNewPlot && playState$is.lattice &&
         prod(dim(playState$trellis)) > 1)
     {
         if (is.null(playState$trellis$panel.args[[1]]$subscripts)) {
@@ -530,48 +547,12 @@ doPlayNewPlot <- function(playState)
         }
     }
     ## initialisation actions for a new plot (see uiManager.R)
-    initActions(playState)
-    ## continue
-    playPostPlot(playState)
-}
-
-doPlayReplot <- function(playState)
-{
-    if (isTRUE(playState$tmp$skip.redraws)) return()
-    playState$tmp$plot.ready <- FALSE
-    on.exit(playState$tmp$plot.ready <- TRUE)
-    playDevSet(playState)
-    grid.newpage()
-    playPrompt(playState, NULL)
-    ## disable toolbars until this is over
-    playFreezeGUI(playState)
-    on.exit(playThawGUI(playState))
-    ## hide scrollbars if they are not needed
-    if (playState$time.mode == FALSE) {
-        hideWidgetNoRedraw(playState, playState$widgets$timeScrollBox,
-                           horiz=TRUE)
-    }
-    if (playState$pages == 1) {
-        hideWidgetNoRedraw(playState, playState$widgets$pageScrollBox,
-                           horiz=FALSE)
-    }
-    ## update address bar with current call
-    updateAddressBar(playState)
-    ## eval plot call
-    ## (NOTE this will draw the plot UNLESS it is lattice or ggplot)
-    playState$result <- eval(playState$call, playState$env)
-     ## continue
-    playPostPlot(playState)
-}
-
-playPostPlot <- function(playState)
-{
+    if (isNewPlot)
+        initActions(playState)
     ## set back to this device, since may have switched during plot
     playDevSet(playState)
-    result <- playState$result
     playState$pages <- 1
-    if (inherits(result, "trellis")) {
-        playState$trellis <- result
+    if (playState$is.lattice) {
         ## work out number of pages
         playState$pages <- npages(result)
         if (playState$page > playState$pages)
@@ -586,10 +567,10 @@ playPostPlot <- function(playState)
         if (!is.null(result$par.settings)) {
             opar <- trellis.par.get()
             trellis.par.set(result$par.settings)
-            on.exit(trellis.par.set(opar, strict = TRUE))
+            on.exit(trellis.par.set(opar, strict = TRUE), add = TRUE)
         }
     }
-    if (inherits(result, "ggplot")) {
+    if (playState$is.ggplot) {
         ## plot ggplot object
         print(result)
         ## typically want: playState$viewport <- list(plot = "panel_1_1")
@@ -680,8 +661,7 @@ generateSpaces <- function(playState)
     upViewport(0)
     ## create a top-level viewport with normalised coordinates
     ## yscale origin is at top, to be consistent with device coordinates
-    if ("pageAnnotationVp" %in% curVps) {
-        downViewport("pageAnnotationVp")
+    if (("pageAnnotationVp" %in% curVps) == FALSE) {
         if (playState$is.lattice)
             downViewport(trellis.vpname("toplevel"))
         pushViewport(viewport(name = "pageAnnotationVp",

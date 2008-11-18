@@ -2,6 +2,8 @@
 library(playwith)
 
 ## A tool to draw a line and label it with its equation.
+## The annotations are persistent and may be redrawn in other contexts.
+## The actions can be reversed with "Undo" menu item or <Ctrl>Z.
 
 ## This "callback" is run when the action is activated
 ## (from toolbar, menu, or keyboard shortcut).
@@ -37,4 +39,3 @@ lineEqTool <- list("LineEq", "gtk-indent", "Line + Eqn",
 
 playwith(plot(1:10), tools = list(lineEqTool))
 ## Click on tool, drag a line, then click to place equation.
-## Note that you can undo these actions with <Ctrl>Z.

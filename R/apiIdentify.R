@@ -66,8 +66,8 @@ playSelectData <-
     n <- min(NROW(data$x), NROW(data$y))
     which <- unique(which %% n)
     which[which == 0] <- n
-    x <- if (is.matrix(data$x)) data$x[which,] else data$x[which]
-    y <- if (is.matrix(data$y)) data$y[which,] else data$y[which]
+    x <- if (is.matrix(data$x)) data$x[which,,drop=FALSE] else data$x[which]
+    y <- if (is.matrix(data$y)) data$y[which,,drop=FALSE] else data$y[which]
     subscripts <- data$subscripts[which]
     if (is.null(subscripts)) subscripts <- which
     c(list(subscripts = subscripts, which = which,
@@ -306,8 +306,8 @@ drawLinkedLocal <- function(playState, return.code = FALSE)
             ## 'data' (x and y) is the whole dataset
             which <- subscripts
         }
-        x <- if (is.matrix(data$x)) data$x[which,] else data$x[which]
-        y <- if (is.matrix(data$y)) data$y[which,] else data$y[which]
+        x <- if (is.matrix(data$x)) data$x[which,,drop=FALSE] else data$x[which]
+        y <- if (is.matrix(data$y)) data$y[which,,drop=FALSE] else data$y[which]
         if (length(x) == 0) next
         annot <- call("panel.brushpoints", x, y)
         ## special case: parallel -- draw lines not points

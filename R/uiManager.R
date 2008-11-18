@@ -101,6 +101,18 @@ initActions <- function(playState)
     }
 }
 
+preplotActions <- function(playState)
+{
+    customAct <- c(playwith.getOption("preplot.actions"),
+                   playState$preplot.actions)
+    for (x in customAct) {
+        playDevSet(playState)
+        if (is.character(x)) x <- get(x)
+        if (is.function(x)) x(playState)
+        if (is.language(x)) eval(x, playState$env)
+    }
+}
+
 updateActions <- function(playState)
 {
     playDevSet(playState)

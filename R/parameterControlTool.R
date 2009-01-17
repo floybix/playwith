@@ -5,15 +5,19 @@
 
 parameterControlTool <-
     function(playState, name, value,
-             label = name,
+             label = name, handler = NULL,
              horizontal = TRUE)
 {
     stopifnot(length(value) > 0)
     if (is.list(value)) {
         if (!is.null(value$label))
             label <- value$label
+        if (!is.null(value$handler))
+            handler <- value$handler
         value <- value[[1]]
     }
+    if (is.character(handler))
+        handler <- get(handler)
     if (!is.logical(value) && !is.function(value))
         label <- paste(label, ": ", sep="")
     ## signal handlers
@@ -23,6 +27,11 @@ parameterControlTool <-
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
+        ## run custom 'handler', abort if returns FALSE
+        if (!is.null(handler)) {
+            result <- handler(playState, newval)
+            if (identical(result, FALSE)) return()
+        }
         if (!isTRUE(playState$tmp$plot.ready)) return()
         playReplot(playState)
     }
@@ -31,6 +40,11 @@ parameterControlTool <-
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
+        ## run custom 'handler', abort if returns FALSE
+        if (!is.null(handler)) {
+            result <- handler(playState, newval)
+            if (identical(result, FALSE)) return()
+        }
         if (!isTRUE(playState$tmp$plot.ready)) return()
         playReplot(playState)
     }
@@ -41,6 +55,11 @@ parameterControlTool <-
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
+        ## run custom 'handler', abort if returns FALSE
+        if (!is.null(handler)) {
+            result <- handler(playState, newval)
+            if (identical(result, FALSE)) return()
+        }
         if (!isTRUE(playState$tmp$plot.ready)) return()
         playReplot(playState)
     }
@@ -51,6 +70,11 @@ parameterControlTool <-
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
+        ## run custom 'handler', abort if returns FALSE
+        if (!is.null(handler)) {
+            result <- handler(playState, newval)
+            if (identical(result, FALSE)) return()
+        }
         if (!isTRUE(playState$tmp$plot.ready)) return()
         playReplot(playState)
     }
@@ -59,6 +83,11 @@ parameterControlTool <-
         oldval <- get(name, envir=playState$env)
         if (identical(oldval, newval)) return()
         assign(name, newval, envir=playState$env)
+        ## run custom 'handler', abort if returns FALSE
+        if (!is.null(handler)) {
+            result <- handler(playState, newval)
+            if (identical(result, FALSE)) return()
+        }
         if (!isTRUE(playState$tmp$plot.ready)) return()
         playReplot(playState)
     }

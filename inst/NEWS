@@ -1,11 +1,15 @@
 
 Changes in Version 0.9-44 (in development)
 
-  o Brushing a single data point in a parallel plot now works.
+  o Added a "Stop" action to interrupt plotting.
 
   o Added 'preplot.actions' argument to playwith().
 
+  o A custom 'handler' function can be specified for 'parameters' widgets.
+
   o Improved demo("clusterApp").
+
+  o Brushing a single data point (line) in a parallel plot now works.
 
 Changes in Version 0.9-43
 

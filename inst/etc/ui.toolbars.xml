@@ -3,6 +3,7 @@
     <toolitem action='Back'/>
     <toolitem action='Forward'/>
     <toolitem action='Redraw'/>
+    <toolitem action='Interrupt'/>
     <toolitem action='HelpPlot'/>
     <placeholder name='AddressBar'/>
   </toolbar>

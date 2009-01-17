@@ -58,6 +58,12 @@ playwith <-
         plot.call <- if (length(plot.call) > 1)
             as.call(c(as.symbol("{"), plot.call)) else plot.call[[1]]
     }
+    ## lattice calls can fall back to an update() wrapper
+    if (is.symbol(plot.call) &&
+        inherits(eval.parent(plot.call), "trellis"))
+    {
+        plot.call <- call("update", plot.call)
+    }
     if (missing(main.function)) main.function <- NULL
     if (is.character(main.function))
         main.function <- get(main.function)
@@ -466,22 +472,15 @@ playwith <-
 }
 
 playNewPlot <- function(playState = playDevCur())
-{
-    if (isTRUE(playwith.getOption("catch.errors"))) {
-        tryCatch(doPlayReplot(playState, isNewPlot = TRUE),
-                 error = error_handler)
-    } else {
-        doPlayReplot(playState, isNewPlot = TRUE)
-    }
-}
+    playReplot(playState, isNewPlot = TRUE)
 
-playReplot <- function(playState = playDevCur())
+playReplot <- function(playState = playDevCur(), isNewPlot = FALSE)
 {
     if (isTRUE(playwith.getOption("catch.errors"))) {
-        tryCatch(doPlayReplot(playState),
+        tryCatch(doPlayReplot(playState, isNewPlot = isNewPlot),
                  error = error_handler)
     } else {
-        doPlayReplot(playState)
+        doPlayReplot(playState, isNewPlot = isNewPlot)
     }
 }
 
@@ -531,12 +530,6 @@ doPlayReplot <- function(playState, isNewPlot = FALSE)
                           !playState$is.ggplot &&
                           !playState$is.vcd &&
                           is.null(playState$viewport))
-    ## lattice calls can fall back to an update() wrapper
-    if (playState$is.lattice &&
-        !playState$accepts.arguments) {
-        playState$call <- call("update", playState$call)
-        updateMainCall(playState)
-    }
     ## lattice needs subscripts to correctly identify points.
     if (isNewPlot && playState$is.lattice &&
         prod(dim(playState$trellis)) > 1)

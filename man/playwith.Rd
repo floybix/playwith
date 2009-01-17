@@ -82,6 +82,14 @@ playwith(expr,
       \item \code{function}: creates a button, which calls
       the given function with a single argument \code{playState}.
     }
+
+    These can also be lists, where the first item is the value as
+    above. In this case an item named \code{label} can specify a label
+    for the widget, and an item named \code{handler} can specify a
+    function to run when the widget is changed. This function should be
+    a \code{function(playState, value)}; the parameter values are then
+    accessed from \code{playState$env}. If the function returns
+    \code{FALSE} the plot is not redrawn.
   }
   \item{tools}{
     a list of tool specifications. These are technically

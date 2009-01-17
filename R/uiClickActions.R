@@ -29,7 +29,7 @@ clickmode.change_handler <- function(action, current, playState)
 {
     if (current["active"]) {
         playState$tmp$click.mode <- gtkActionGetName(current)
-        updateClickActions(playState)
+        try(updateClickActions(playState))
     }
     return()
 }

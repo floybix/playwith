@@ -22,6 +22,7 @@ globalActionGroup <- function(playState)
              list("Forward", "gtk-go-forward", "Forward", "<Alt>Right", "Go to next plot call", forward_handler),
              list("Redraw", "gtk-refresh", "Re_draw", "<Ctrl>R", NULL, redraw_handler),
              list("Reload", "gtk-refresh", "_Reload and redraw", "<Ctrl><Shift>R", NULL, reload_handler),
+             list("Interrupt", "gtk-stop", "_Stop", "<Ctrl>period", "Stop (interrupt) a plot", interrupt_handler),
              list("SaveCode", "gtk-save", "Save c_ode", "<Ctrl><Shift>S", "Save R code for this plot", save.code_handler),
              list("ViewSource", NULL, "Plot s_ource", "<Ctrl>U", NULL, view.source_handler),
              list("HelpPlot", "gtk-help", "_Help for this plot", "F1", "Open help page for this plot", help_handler),
@@ -347,6 +348,10 @@ redraw_handler <- function(widget, playState)
 
 reload_handler <- function(widget, playState)
     playNewPlot(playState)
+
+interrupt_handler <- function(widget, playState) {
+    .C(do_interrupt)
+}
 
 save.code_handler <- function(widget, playState)
 {

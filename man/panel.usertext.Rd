@@ -23,8 +23,7 @@ panel.brushlines(x, y = NULL, type, col, alpha,
   \item{x, y}{ text or point locations. }
   \item{labels, col, alpha, cex, srt, lineheight,
     font, fontfamily, fontface, adj, pos, offset,
-    pch, fill, type, lty, lwd, ...}
-  {
+    pch, fill, type, lty, lwd, ...}{
     see the usual lattice functions in \code{\link[lattice]{llines}}.
   }
 }

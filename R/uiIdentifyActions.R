@@ -118,7 +118,7 @@ id.table_handler <- function(widget, playState)
 {
     dat <- getDataArg(playState)
     if (is.null(dat))
-        dat <- xyData(playState, space = "page")[c("x","y")]
+        dat <- as.data.frame(xyData(playState, space = "page")[c("x","y")])
     ## add row numbers and names
     dat <- cbind(row = 1:NROW(dat), names = rownames(dat),
                  dat)

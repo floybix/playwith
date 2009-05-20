@@ -11,6 +11,8 @@ Changes in Version 0.9-44 (in development)
 
   o Brushing a single data point (line) in a parallel plot now works.
 
+  o "Select from table" to identify points now works in more cases.
+
 Changes in Version 0.9-43
 
   o Fixed bug that caused annotations outside the plot area to fail.

@@ -14,8 +14,8 @@ updateGrobActions <- function(playState)
 grob.inspector_handler <- function(widget, playState)
 {
     ## show and return bounding boxes for all grobs
-    bblist <- showGrobsBB(draw = FALSE)
-    if (length(bblist) == 0) stop("No grobs found.")
+    #bblist <- showGrobsBB(draw = FALSE)
+    #if (length(bblist) == 0) stop("No grobs found.")
 
     foo <- playPointInput(playState,
                           paste("Click on an object to see details,",
@@ -27,7 +27,7 @@ grob.inspector_handler <- function(widget, playState)
     x.px <- foo$dc$x
     y.px <- foo$dc$y
     ## get a list of all grobs in the scene
-    upViewport(0)
+    #upViewport(0)
 #    objs <- as.data.frame(unclass(grid.ls(view=TRUE, print=FALSE)),
 #                          stringsAsFactors=FALSE)
 #    objs <- objs[objs$type == "grobListing",]
@@ -37,7 +37,35 @@ grob.inspector_handler <- function(widget, playState)
     if (isShift) headItem <- gtkMenuItem("Choose object to destroy:")
     headItem["sensitive"] <- FALSE
     menu$append(headItem)
-    nhits <- 0
+    #nhits <- 0
+
+    grobNames <- identifyGrob(list(x = x.px, y = y.px))
+    if (length(grobNames) == 0) return()
+    for (name in grobNames) {
+        item <- gtkMenuItem(name)
+        gSignalConnect(item, "activate",
+                       function(widget, user.data) {
+                           if (isShift)
+                               grid.remove(user.data)
+                           else
+                               str(grid.get(user.data))
+                       },
+                       data = name)
+        menu$append(item)
+    }
+    ## show the menu
+    menu$popup(button=0, activate.time=gtkGetCurrentEventTime())
+    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
+}
+
+
+
+NOTHING <- function() {
+
+
+
+
+
     for (i in length(bblist):1) {
         obj <- bblist[[i]]
 #        vpPath <- objs$vpPath[i]

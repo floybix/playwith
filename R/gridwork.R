@@ -87,8 +87,8 @@ grobBBDevicePixels <- function(grob, viewport)
                      grobY(grob, "north"))
         xy <- convertToDevicePixels(x = gx, y = gy)
     }
-    xy$x <- range(xy$x)
-    xy$y <- range(xy$y)
+    xy$x <- range(xy$x, na.rm = TRUE)
+    xy$y <- range(xy$y, na.rm = TRUE)
     xy
 }
 
@@ -124,6 +124,7 @@ showGrobsBB <-
         grob <- grid.get(gName)
         bb <- grobBBDevicePixels(grob, vpPath)
         bb$name <- gName
+        bb$class <- class(grob)
         bb$vpPath <- vpPath
         ## construct a display name
         displayName <- as.character(grob)
@@ -151,4 +152,31 @@ showGrobsBB <-
     if (draw)
         grid.remove("TMP_BOUNDBOX", global=TRUE, redraw=FALSE)
     invisible(bblist)
+}
+
+identifyGrob <- function(xy.pixels = grid.locator(), classes = NULL)
+{
+    ## bounding boxes for all grobs in the scene
+    bblist <- showGrobsBB(draw = FALSE)
+    if (length(bblist) == 0) stop("No grobs found.")
+    force(xy.pixels)
+    if (is.null(xy.pixels)) return(NULL)
+    xy.pixels <- lapply(xy.pixels, as.numeric)
+    x.px <- xy.pixels$x
+    y.px <- xy.pixels$y
+    grobNames <- NULL
+    for (i in length(bblist):1) {
+        obj <- bblist[[i]]
+        x <- obj$x
+        y <- obj$y
+        if (!is.null(classes)) {
+            if (!any(classes %in% obj$class))
+                next
+        }
+        if ((min(x) <= x.px) && (x.px <= max(x)) &&
+            (min(y) <= y.px) && (y.px <= max(y))) {
+            grobNames <- c(grobNames, obj$name)
+        }
+    }
+    grobNames
 }

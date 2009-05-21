@@ -6,8 +6,8 @@
 }
 \usage{
 ## Note: this is only to be called inside a tool constructor function.
-parameterControlTool(playState, name, value,
-                     label = name, horizontal = TRUE)
+parameterControlTool(playState, name, value, label = name,
+                     handler = NULL, horizontal = TRUE)
 }
 \arguments{
   \item{playState}{ a \code{playState} object, as passed in to the constructor function. }
@@ -17,6 +17,7 @@ parameterControlTool(playState, name, value,
     \code{integer}, \code{numeric}, \code{character} or \code{logical}.
     See \code{\link{playwith}} for details. }
   \item{label}{ label for the widget. }
+  \item{handler}{ a function. }
   \item{horizontal}{ FALSE to make a tool for a vertical toolbar. }
 }
 \details{

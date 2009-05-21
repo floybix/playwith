@@ -1,5 +1,5 @@
 
-Changes in Version 0.9-44 (in development)
+Changes in Version 0.9-44
 
   o Added a "Stop" action to interrupt plotting.
 
@@ -12,6 +12,8 @@ Changes in Version 0.9-44 (in development)
   o Brushing a single data point (line) in a parallel plot now works.
 
   o "Select from table" to identify points now works in more cases.
+
+  o New function identifyGrob(), returns names of clicked grid-objects.
 
 Changes in Version 0.9-43
 

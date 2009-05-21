@@ -21,11 +21,10 @@ panel.brushlines(x, y = NULL, type, col, alpha,
 }
 \arguments{
   \item{x, y}{ text or point locations. }
-  \item{labels, col, alpha, cex, srt, lineheight,
-    font, fontfamily, fontface, adj, pos, offset,
-    pch, fill, type, lty, lwd, ...}{
-    see the usual lattice functions in \code{\link[lattice]{llines}}.
-  }
+  \item{labels, col, alpha, cex, srt, lineheight}{ see the usual lattice
+    functions in \code{\link[lattice]{llines}}. }
+  \item{font, fontfamily, fontface, adj, pos, offset}{ as above. }
+  \item{pch, fill, type, lty, lwd, ...}{ as above. }
 }
 \details{
   The settings for \code{panel.usertext} are taken from

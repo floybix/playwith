@@ -40,9 +40,13 @@ None yet.
   \code{\link{showGrobsBB}}
 }
 \examples{
+if (interactive()) {
+
 xyplot(1:10 ~ 1:10)
 identifyGrob()
 str(grid.get(identifyGrob()[1]))
 grid.remove(identifyGrob(class = "points")[1])
+
+}
 }
 \keyword{ iplot }

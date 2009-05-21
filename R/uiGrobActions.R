@@ -37,7 +37,6 @@ grob.inspector_handler <- function(widget, playState)
     if (isShift) headItem <- gtkMenuItem("Choose object to destroy:")
     headItem["sensitive"] <- FALSE
     menu$append(headItem)
-    #nhits <- 0
 
     grobNames <- identifyGrob(list(x = x.px, y = y.px))
     if (length(grobNames) == 0) return()
@@ -53,50 +52,6 @@ grob.inspector_handler <- function(widget, playState)
                        data = name)
         menu$append(item)
     }
-    ## show the menu
-    menu$popup(button=0, activate.time=gtkGetCurrentEventTime())
-    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
-}
-
-
-
-NOTHING <- function() {
-
-
-
-
-
-    for (i in length(bblist):1) {
-        obj <- bblist[[i]]
-#        vpPath <- objs$vpPath[i]
-#        if (vpPath == "") vpPath <- NULL
-#        gName <- objs$name[i]
-#        ## TODO: objs$gPath[i] // strict=TRUE
-#        grob <- grid.get(gName)
-
-        name <- obj$name
-        x <- obj$x
-        y <- obj$y
-        if ((min(x) <= x.px) && (x.px <= max(x)) &&
-            (min(y) <= y.px) && (y.px <= max(y))) {
-#        if (inGrobBB(x.px, y.px, grob=grob, vpPath)) {
-#            itemName <- as.character(grob)
-            itemName <- obj$displayName
-            item <- gtkMenuItem(itemName)
-            gSignalConnect(item, "activate",
-                           function(widget, user.data) {
-                               if (isShift)
-                                   grid.remove(user.data)
-                               else
-                                   str(grid.get(user.data))
-                           },
-                           data = name)
-            menu$append(item)
-            nhits <- nhits + 1
-        }
-    }
-    if (nhits == 0) return()
-
     ## show the menu
     menu$popup(button=0, activate.time=gtkGetCurrentEventTime())
     while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)

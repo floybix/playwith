@@ -61,22 +61,22 @@ inViewport <- function(x.px, y.px, viewport)
      (min(y) <= y.px) & (y.px <= max(y)))
 }
 
-grobBBDevicePixels <- function(grob, viewport)
+grobBBDevicePixels <- function(grob, viewport, pad = 2)
 {
-    ## current viewport, restore when finished
-    vp <- current.vpPath()
-    on.exit({
-        upViewport(0)
-        if (length(vp) > 0) downViewport(vp)
-    })
-    upViewport(0)
-    if (!is.null(viewport))
-        downViewport(viewport)
     ## calculate bounding box
     if (inherits(grob, "points") ||
         inherits(grob, "lines") ||
         inherits(grob, "polyline"))
     {
+        ## current viewport, restore when finished
+        vp <- current.vpPath()
+        on.exit({
+            upViewport(0)
+            if (length(vp) > 0) downViewport(vp)
+        })
+        upViewport(0)
+        if (!is.null(viewport))
+            downViewport(viewport)
         ## grobX for these refers to the convex hull,
         ## which can be bad if they are colinear
         xy <- convertToDevicePixels(x = grob$x, y = grob$y)
@@ -87,8 +87,8 @@ grobBBDevicePixels <- function(grob, viewport)
                      grobY(grob, "north"))
         xy <- convertToDevicePixels(x = gx, y = gy)
     }
-    xy$x <- range(xy$x, na.rm = TRUE)
-    xy$y <- range(xy$y, na.rm = TRUE)
+    xy$x <- range(xy$x, na.rm = TRUE) + c(-pad, pad)
+    xy$y <- range(xy$y, na.rm = TRUE) + c(-pad, pad)
     xy
 }
 

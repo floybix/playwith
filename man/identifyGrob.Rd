@@ -5,10 +5,10 @@
   return names of clicked grid-objects.
 }
 \description{
-  This identifies which \code{\link{grob}}s (grid objects) were clicked
-  on (or otherwise identified by pixel coordinates), and returns their
-  names. The names can be used by other grid functions, like
-  \code{\link{grid.edit}} or \code{\link{grid.remove}}.
+  This identifies which \code{\link{grob}}s (grid objects) bounding
+  boxes were clicked on (or otherwise identified by pixel coordinates),
+  and returns their names. The names can be used by other grid
+  functions, like \code{\link{grid.edit}} or \code{\link{grid.remove}}.
 }
 \usage{
 identifyGrob(xy.pixels = grid.locator(), classes = NULL)

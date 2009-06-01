@@ -30,7 +30,7 @@ plotActionGroup <- function(playState)
              list("SetArrowStyle", NULL, "Set _arrow style...", "<Alt>4", NULL, set.arrow.style_handler),
              list("DefaultTheme", NULL, "Default", NULL, NULL, set.default.theme_handler),
              ## grobs (uiGrobActions.R)
-             list("GrobInspector", "gtk-properties", "_Grob inspector", NULL, NULL, grob.inspector_handler)
+             list("GrobInspector", "gtk-properties", "_Grob inspector", "<Ctrl>question", NULL, grob.inspector_handler)
              )
 
     toggleEntries <-

@@ -13,7 +13,7 @@ convertFromDevicePixels(x.px, y.px, unitTo = "native", valueOnly = FALSE)
 convertToDevicePixels(x, y)
 
 inViewport(x.px, y.px, viewport)
-grobBBDevicePixels(grob, viewport)
+grobBBDevicePixels(grob, viewport, pad = 2)
 
 showGrobsBB(draw = TRUE,
     gp.box = gpar(col = "yellow", lwd = 5, alpha = 0.2),
@@ -30,6 +30,7 @@ showGrobsBB(draw = TRUE,
     \code{unit}s). May be vectors. }
   \item{viewport}{ a viewport name or \code{\link[grid]{vpPath}}. }
   \item{grob}{ a \code{\link[grid]{grob}}. }
+  \item{pad}{ number of pixels to expand bounding boxes. }
   \item{draw}{ whether to draw bounding boxes and grob names. }
   \item{gp.box}{ graphical parameters for bounding boxes. }
   \item{gp.text}{ graphical parameters for grob name text. }

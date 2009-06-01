@@ -1,4 +1,9 @@
 
+Changes in Version 0.9-45 (in development)
+
+  o "grob inspector" etc now pads bounding boxes, so it is possible to
+    click on straight lines.
+
 Changes in Version 0.9-44
 
   o Added a "Stop" action to interrupt plotting.

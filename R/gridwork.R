@@ -116,16 +116,20 @@ showGrobsBB <-
     ## draw boxes around grobs
     bblist <- list()
     length(bblist) <- nrow(objs)
+    n <- 0
     for (i in seq_len(nrow(objs))) {
         vpPath <- objs$vpPath[i]
         if (vpPath == "") vpPath <- NULL
         gName <- objs$name[i]
         ## TODO: objs$gPath[i] // strict=TRUE
         grob <- grid.get(gName)
+        if (inherits(grob, "nullGrob"))
+            next
+        ## bounding box
         bb <- grobBBDevicePixels(grob, vpPath)
         bb$name <- gName
-        bb$class <- class(grob)
         bb$vpPath <- vpPath
+        bb$class <- class(grob)
         ## construct a display name
         displayName <- as.character(grob)
         depth <- objs$vpDepth[i] - 1
@@ -144,8 +148,10 @@ showGrobsBB <-
                       default.units="native", gp=gp.text,
                       name="TMP_BOUNDBOX")
         }
-        bblist[[i]] <- bb
+        n <- n + 1
+        bblist[[n]] <- bb
     }
+    length(bblist) <- n
     ## remove annotations from display list
     ## but do not redraw it yet (so still visible)
     ## NOTE: after this grid.ls() fails, "evaluation nested too deeply"

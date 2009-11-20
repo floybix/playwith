@@ -11,7 +11,7 @@
          height = 6,
          pointsize = 12,
          click.mode = "Zoom",
-         time.mode = FALSE,
+         time.mode = NA,
          eval.args = NA,
          on.close = NULL,
          ## implicit arguments to playwith():

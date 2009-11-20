@@ -154,7 +154,6 @@ showGrobsBB <-
     length(bblist) <- n
     ## remove annotations from display list
     ## but do not redraw it yet (so still visible)
-    ## NOTE: after this grid.ls() fails, "evaluation nested too deeply"
     if (draw)
         grid.remove("TMP_BOUNDBOX", global=TRUE, redraw=FALSE)
     invisible(bblist)

@@ -65,8 +65,9 @@ playwith <-
         plot.call <- call("update", plot.call)
     }
     if (missing(main.function)) main.function <- NULL
-    if (is.character(main.function))
-        main.function <- get(main.function)
+    main.function <- substitute(main.function)
+    if (is.language(main.function))
+        main.function <- as.character(main.function)[1]
     ## check types
     if (!is.call(plot.call))
         stop("'expr' / 'plot.call' should be a call")

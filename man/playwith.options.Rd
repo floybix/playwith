@@ -29,14 +29,15 @@ playwith.getOption(name)
 }
 \seealso{ \code{\link{playwith}} }
 \examples{
-str(playwith.options())
+oopt <- playwith.options()
+str(oopt)
+
+playwith.options(time.mode = FALSE)
 
 ## list options are merged, not replaced
 playwith.getOption("arrow")
 playwith.options(arrow = list(type = "closed", length = 0.1))
 playwith.getOption("arrow")
-
-oopt <- playwith.options()
 
 playwith.options(save.as.format = "png")
 playwith.options(toolbar.style = "icons")

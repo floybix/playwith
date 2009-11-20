@@ -82,10 +82,10 @@ playwith.plot.new <- function(...)
         if (any(StateEnv$.autoplay.ask)) {
             items <- make.unique(sapply(sys.calls(), function(x)
                                         toString(deparseOneLine(x), width=34)))
-            myItem <- select.list(items, preselect=items[frameNum],
-                                  title="Choose plot call for playwith:")
-            frameNum <- match(myItem, items)
-            if (is.na(frameNum)) return()
+            frameNum <- menu(items, title="Choose plot call for playwith:",
+                             graphics = TRUE)
+            if (frameNum == 0)
+                return()
         }
         dev.off() ## close screen device (from `plot.new`)
         parentFrame <- sys.frame(sys.parents()[frameNum])
@@ -112,10 +112,10 @@ playwith.grid.newpage <- function(...)
         if (any(StateEnv$.autoplay.ask)) {
             items <- make.unique(sapply(sys.calls(), function(x)
                                         toString(deparseOneLine(x), width=34)))
-            myItem <- select.list(items, preselect=items[frameNum],
-                                  title="Choose plot call for playwith:")
-            frameNum <- match(myItem, items)
-            if (is.na(frameNum)) return()
+            frameNum <- menu(items, title="Choose plot call for playwith:",
+                             graphics = TRUE)
+            if (frameNum == 0)
+                return()
         }
         dev.off() ## close screen device (from `grid.newpage`)
         parentFrame <- sys.frame(sys.parents()[frameNum])

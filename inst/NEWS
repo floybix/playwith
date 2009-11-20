@@ -1,8 +1,15 @@
 
 Changes in Version 0.9-45 (in development)
 
+  o playwith.options("time.mode") now defaults to NA, i.e. automatic.
+    Its previous default was FALSE.
+
   o "grob inspector" etc now pads bounding boxes, so it is possible to
     click on straight lines.
+
+  o eliminated "ignoring non-pairlist attributes" warnings.
+
+  o changed select.list() to the cross-platform menu() in autoplay.
 
 Changes in Version 0.9-44
 

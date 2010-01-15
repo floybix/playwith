@@ -74,23 +74,31 @@ playwith.plot.new <- function(...)
     playing <- any(c("playReplot", "playNewPlot")
                    %in% sysCallNames)
                                         #multifig <- !isTRUE(all.equal(par("mfrow"), c(1,1)))
+    rcmdr <- (any(grepl("Rcmdr", search())) &&
+              any(c("doItAndPrint", "justDoIt") %in% sysCallNames))
     first <- isTRUE(all.equal(par("mfg")[1:2], c(1,1)))
     opar <- par(no.readonly=TRUE)
     if (dev.interactive() && !playing && first && !par("new")) {
         ## starting a new plot on an interactive device
         frameNum <- which(sysCallNames != "")[1]
+        ## find plot command sent from Rcmdr
+        if (rcmdr && any(sysCallNames == "eval")) {
+            frameNum <- tail(which(sysCallNames == "eval"), 1) + 1
+        }
         if (any(StateEnv$.autoplay.ask)) {
             items <- make.unique(sapply(sys.calls(), function(x)
                                         toString(deparseOneLine(x), width=34)))
             frameNum <- menu(items, title="Choose plot call for playwith:",
                              graphics = TRUE)
-            if (frameNum == 0)
+            if (frameNum == 0) {
+                #.C(do_interrupt)
                 return()
+            }
         }
         dev.off() ## close screen device (from `plot.new`)
         parentFrame <- sys.frame(sys.parents()[frameNum])
         newCall <- call("playwith", sys.call(frameNum),
-			envir=parentFrame)
+                        envir = parentFrame)
                                         # eval.args=FALSE ?
         eval(newCall)
         par(opar) ## on the new device (redrawing now)

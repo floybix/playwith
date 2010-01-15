@@ -11,15 +11,19 @@ initOptionsActions <- function(playState)
     ## DISABLED -- do not want to evaluate data by default
     ## and anyway, it is easier now to zoom along x axis
     #if (hasArgs && playState$.args$missing_time.mode) {
-    if (hasArgs && is.na(playState$time.mode)) {
-        ## detect default for time.mode based on data
-        dat <- xyData(playState, space="packet 1")
-        playState$time.mode <-
-            (inherits(dat$x, "ts") ||
-             inherits(dat$x, "zoo") ||
-             is.somesortoftime(dat$x))
-        ## once only ## TODO: better to wait for manual switch
-        playState$.args$missing_time.mode <- FALSE
+    if (is.na(playState$time.mode)) {
+        if (hasArgs) {
+            ## detect default for time.mode based on data
+            dat <- xyData(playState, space="packet 1")
+            playState$time.mode <-
+                (inherits(dat$x, "ts") ||
+                 inherits(dat$x, "zoo") ||
+                 is.somesortoftime(dat$x))
+            ## once only ## TODO: better to wait for manual switch
+            playState$.args$missing_time.mode <- FALSE
+        } else {
+            playState$time.mode <- FALSE
+        }
     }
     with (playState$widgets, {
         timeScrollbar["sensitive"] <- playState$time.mode

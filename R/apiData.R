@@ -12,7 +12,7 @@ getDataArg <- function(playState = playDevCur(), eval = TRUE)
     } else {
         ## data.points missing; guess from call
         mainCall <- mainCall(playState)
-        if (length(mainCall > 1)) {
+        if (length(mainCall) > 1) {
             ## check for named "data" argument
             tmp.data <- callArg(playState, "data", eval = eval)
             if (is.null(tmp.data)) {

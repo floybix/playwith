@@ -49,8 +49,8 @@ playSelectData <-
             which <- integer(0)
         else {
             which <- which.min(pdists)
-            pos <- with(ppxy, lattice:::getTextPosition(x = lx - px[which],
-                                                        y = ly - py[which]))
+            pos <- with(ppxy, getTextPosition(x = lx - px[which],
+                                              y = ly - py[which]))
         }
     }
     else {
@@ -369,4 +369,14 @@ playUnlink <- function(playState = playDevCur())
 
 
 
-
+## COPIED FROM LATTICE
+getTextPosition <- function(x, y)
+    ## returns position 1: below, 2: left, 3: above, 4: right (w.r.t
+    ## origin).  Used as a tool in panel.identify.
+{
+    a <- abs(c(x, y))
+    if (y <= 0 && a[1] <= -y) 1
+    else if (x <= 0 && a[2] <= -x) 2
+    else if (y >= 0 && a[1] <= y) 3
+    else if (x >= 0 && a[2] <= x) 4
+}

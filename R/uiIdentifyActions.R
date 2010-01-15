@@ -74,8 +74,8 @@ identifyCore <- function(playState, foo)
         for (w in which) {
             datx <- data$x[[w]]
             daty <- data$y[[w]]
-            pos <- with(ppxy, lattice:::getTextPosition(x = lx - px[w],
-                                                        y = ly - py[w]))
+            pos <- with(ppxy, getTextPosition(x = lx - px[w],
+                                              y = ly - py[w]))
             ss <- data$subscripts[[w]]
             if (is.null(ss)) ss <- w
             label <- toString(playState$labels[[ss]])

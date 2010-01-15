@@ -1,6 +1,11 @@
 
 Changes in Version 0.9-45 (in development)
 
+  o fixed mouse click events under Linux - was interpreted as Alt click
+    when NumLock was active (thanks to Liviu Andronic and Trey Greer).
+
+  o 'autoplay' detects plots from Rcmdr (thanks to Liviu Andronic).
+
   o playwith.options("time.mode") now defaults to NA, i.e. automatic.
     Its previous default was FALSE.
 

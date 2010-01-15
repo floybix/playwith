@@ -140,7 +140,7 @@ updateMainCall <- function(playState = playDevCur()) {
     main.function <- playState$main.function
     tmpCall <- playState$call
     okCallPath <- function(tmpCall, main.function) {
-        name <- as.character(tmpCall[[1]])
+        name <- toString(tmpCall[[1]])
         ## ignore expression() constructs (typically plotmath)
         #if (identical(name, quote(expression)))
         if (name %in% c("expression", "quote", "bquote", "substitute", "alist"))
@@ -148,7 +148,11 @@ updateMainCall <- function(playState = playDevCur()) {
         if (!is.null(main.function)) {
             ok <- identical(name, main.function)
         } else {
-            tmpFun <- eval(tmpCall[[1]])
+            if (is.symbol(tmpCall[[1]])) {
+                tmpFun <- get(as.character(tmpCall[[1]]), mode = "function")
+            } else {
+                tmpFun <- eval(tmpCall[[1]])
+            }
             ok <- any(c("xlim", "...") %in% names(formals(tmpFun)))
             ok <- ok && !(name == "with") ## skip `with` function
         }

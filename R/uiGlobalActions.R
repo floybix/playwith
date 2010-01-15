@@ -25,7 +25,7 @@ globalActionGroup <- function(playState)
              list("Interrupt", "gtk-stop", "_Stop", "<Ctrl>period", "Stop (interrupt) a plot", interrupt_handler),
              list("SaveCode", "gtk-save", "Save c_ode", "<Ctrl><Shift>S", "Save R code for this plot", save.code_handler),
              list("ViewSource", NULL, "Plot s_ource", "<Ctrl>U", NULL, view.source_handler),
-             list("HelpPlot", "gtk-help", "_Help for this plot", "F1", "Open help page for this plot", help_handler),
+             list("HelpPlot", "gtk-help", "_Help for this plot", "F1", "Open help page for this plot command", help_handler),
              list("HelpPlaywith", NULL, "help(playwith)", NULL, NULL, help.playwith_handler),
              list("About", NULL, "_About playwith", NULL, NULL, about_handler),
              list("Website", NULL, "_Website", NULL, "The playwith website (for contact, bugs, etc)", website_handler),
@@ -106,7 +106,7 @@ save_handler <- function(widget, playState)
     ## get filename
     myExt <- playwith.getOption("save.as.format")
     myDefault <- if (!is.null(playState$title))
-        playState$title else playState$callName
+        playState$title else paste(playState$callName, "%02d", sep="")
     myDefault <- paste(myDefault, myExt, sep=".")
     ## construct save file dialog
     okExt <- c("pdf","png","jpg","jpeg","tif","tiff","ps","eps","svg","wmf","emf","fig")

@@ -118,8 +118,12 @@ device.click_handler <- function(widget, event, playState)
         modeOK <- "Coords"
     pageOK <- (modeOK %in% c("Annotation", "Arrow", "Line", "Rect"))
     isCtrlClick <- (as.flag(event$state) & GdkModifierType["control-mask"])
-    isAltClick <- ((as.flag(event$state) & GdkModifierType["mod1-mask"]) ||
-                   (as.flag(event$state) & GdkModifierType["mod2-mask"]))
+    if (.Platform$OS.type == "unix") {
+        isAltClick <- (as.flag(event$state) & GdkModifierType["mod1-mask"])
+    } else {
+        isAltClick <- ((as.flag(event$state) & GdkModifierType["mod1-mask"]) ||
+                       (as.flag(event$state) & GdkModifierType["mod2-mask"]))
+    }
     isShiftClick <- (as.flag(event$state) & GdkModifierType["shift-mask"])
     isPlainClick <- !isCtrlClick && !isAltClick && !isShiftClick
     ## take actions
@@ -396,20 +400,19 @@ contextCore <- function(playState, foo, event)
                                })
                 cMenu$append(item)
             }
-            ## "set labels to..."
+            ## covariate values
             cMenu$append(gtkSeparatorMenuItem())
-            aGroup <- playState$actionGroups[["PlotActions"]]
-            cMenu$append(aGroup$getAction("SetLabelsTo")$createMenuItem())
+            item <- gtkMenuItem("This data point:")
+            item["sensitive"] <- FALSE
+            cMenu$append(item)
             ## show values of x / y / other variables
             x <- foo$x
             y <- foo$y
             if (is.numeric(x)) x <- round(x, 7)
             if (is.numeric(y)) y <- round(y, 7)
             item <- gtkMenuItem(paste("x:", toString(x, width = 30)))
-            item["sensitive"] <- FALSE
             cMenu$append(item)
             item <- gtkMenuItem(paste("y:", toString(y, width = 30)))
-            item["sensitive"] <- FALSE
             cMenu$append(item)
             dat <- getDataArg(playState)
             if (!is.null(dat)) {
@@ -419,18 +422,20 @@ contextCore <- function(playState, foo, event)
                 if (!is.null(rn)) {
                     txt <- toString(rn[id], width = 30)
                     item <- gtkMenuItem(paste("row:", txt))
-                    item["sensitive"] <- FALSE
                     cMenu$append(item)
                 }
                 cn <- colnames(dat)
                 for (i in seq_along(cn)) {
-                    txt <- toString(paste(cn[i], dat[id, i]),
+                    txt <- toString(paste(cn[i], ": ", dat[id, i], sep = ""),
                                     width = 30)
                     item <- gtkMenuItem(txt)
-                    item["sensitive"] <- FALSE
                     cMenu$append(item)
                 }
             }
+            ## "set labels to..."
+            cMenu$append(gtkSeparatorMenuItem())
+            aGroup <- playState$actionGroups[["PlotActions"]]
+            cMenu$append(aGroup$getAction("SetLabelsTo")$createMenuItem())
             cMenu$append(gtkSeparatorMenuItem())
             cMenu$append(aGroup$getAction("SetLabelStyle")$createMenuItem())
             while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)

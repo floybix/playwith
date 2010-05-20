@@ -10,6 +10,9 @@ convertToDevicePixels <-
     ## x and y can be unit objects or numeric
     if (!is.unit(x)) x <- unit(x, "native")
     if (!is.unit(y)) y <- unit(y, "native")
+    ok <- is.finite(x) & is.finite(y)
+    x <- x[ok]
+    y <- y[ok]
     xy <- cbind(convertX(x, "inches", valueOnly=TRUE),
                 convertY(y, "inches", valueOnly=TRUE),
                 1)
@@ -63,20 +66,20 @@ inViewport <- function(x.px, y.px, viewport)
 
 grobBBDevicePixels <- function(grob, viewport, pad = 2)
 {
+    ## current viewport, restore when finished
+    vp <- current.vpPath()
+    on.exit({
+        upViewport(0)
+        if (length(vp) > 0) downViewport(vp)
+    })
+    upViewport(0)
+    if (!is.null(viewport))
+        downViewport(viewport)
     ## calculate bounding box
     if (inherits(grob, "points") ||
         inherits(grob, "lines") ||
         inherits(grob, "polyline"))
     {
-        ## current viewport, restore when finished
-        vp <- current.vpPath()
-        on.exit({
-            upViewport(0)
-            if (length(vp) > 0) downViewport(vp)
-        })
-        upViewport(0)
-        if (!is.null(viewport))
-            downViewport(viewport)
         ## grobX for these refers to the convex hull,
         ## which can be bad if they are colinear
         xy <- convertToDevicePixels(x = grob$x, y = grob$y)

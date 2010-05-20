@@ -1,5 +1,10 @@
 
-Changes in Version 0.9-45 (in development)
+Changes in Version 0.9-46 (in development)
+
+  o fixed showGrobsBB() and identifyGrob(), was not working for several
+    types of grobs.
+
+Changes in Version 0.9-45
 
   o fixed mouse click events under Linux - was interpreted as Alt click
     when NumLock was active (thanks to Liviu Andronic and Trey Greer).

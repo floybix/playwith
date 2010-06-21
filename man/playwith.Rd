@@ -446,6 +446,23 @@ playwith(stripplot(yield ~ site, data = barley,
                     groups = c("none", "year", "variety"),
                     linecol = "red"))
 
+## Looking through 100 time series and comparing to a reference;
+## Use buttons to save the current series number or its mean value.
+dat <- ts(matrix(cumsum(rnorm(100*100)), ncol = 100), start = 1900)
+colnames(dat) <- paste("Series", 1:100)
+ref <- (dat[,3] + dat[,4]) / 2
+playwith(xyplot(cbind(dat[,i], ref = ref)),
+  parameters = list(i = 1:100,
+     print_i = function(playState) print(playState$env$i),
+     print_mean = function(p) print(mean(dat[,p$env$i])),
+     save_to_ii = function(playState)
+       .GlobalEnv$ii <- playState$env$i,
+     append_to_ii = function(playState) {
+       if (!exists("ii")) ii <- c()
+       .GlobalEnv$ii <- c(ii, playState$env$i)
+     })
+)
+
 ## Composite plot (base graphics).
 ## Adapted from an example in help("legend").
 ## In this case, the initial plot() call is detected correctly;
@@ -506,6 +523,19 @@ playwith(xyplot(y ~ x, xy, main = "Select points, then close"),
         width = 4, height = 3.5, show.toolbars = FALSE,
         on.close = confirmClose, modal = TRUE,
         click.mode = "Brush")
+
+## Ask user to save plot to PNG when window is closed:
+saveOnClose <- function(playState) {
+    playDevSet(playState)
+    if (!gconfirm("Save plot to PNG file? (Cancel = no)")) return(FALSE)
+    fname <- gfile("Save PNG file as:", type = "save")
+    if (is.na(fname)) return(TRUE) ## cancel
+    dev.off(dev.copy(Cairo_png, file = fname,
+        width = dev.size()[1], height = dev.size()[2]))
+    FALSE 
+}
+#playwith.options(on.close = saveOnClose)
+
 
 ## Demonstrate cacheing of objects in local environment.
 ## By default, only local variables in the plot call are stored.

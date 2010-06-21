@@ -26,6 +26,7 @@ export(playwith.options,
        playwith.getOption)
 
 ## apiMain.R
+export(playwith.history)
 export(playDevCur,
        playDevSet,
        playDevList,

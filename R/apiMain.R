@@ -25,6 +25,10 @@ playDevSet <- function(playState = playDevCur())
 
 playDevOff <- function(playState = playDevCur())
 {
+    ## save local history to session history
+    .PlaywithEnv$history <-
+        c(.PlaywithEnv$history, playState$history)
+    playState$history <- NULL
     ## TODO: should this run the close action?
     if (inherits(playState$win, "GtkWindow"))
         try(playState$win$destroy())#, silent=TRUE)
@@ -56,6 +60,21 @@ cleanupStateEnv <- function()
         StateEnv$.current <- if (length(ls(StateEnv)))
             StateEnv[[ ls(StateEnv)[1] ]] else NULL
     }
+}
+
+playwith.history <- function(max.show = 100, ...)
+{
+    txt <- 
+        c(.PlaywithEnv$history,
+          unlist(lapply(playDevList(), function(x) x$history)))
+    if (length(txt) == 0) {
+        message("No history to display.")
+        return(invisible())
+    }
+    file2 <- tempfile("Rplaywithhist")
+    inds <- tail(seq_along(txt), max.show)
+    writeLines(txt[inds], file2)
+    file.show(file2, title = "playwith history", delete.file = TRUE)
 }
 
 callArg <- function(playState, arg, eval = TRUE, data = NULL)

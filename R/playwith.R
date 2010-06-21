@@ -197,6 +197,9 @@ playwith <-
     callToolbar["show-arrow"] <- FALSE
     ## merge in the address bar
     callEntry <- gtkComboBoxEntryNewText()
+    ## load session history
+    for (ihist in c(.PlaywithEnv$history, playState$history))
+        callEntry$prependText(ihist)
     callEntry$show()
     ## "changed" emitted on typing and selection
     gSignalConnect(callEntry, "changed",
@@ -606,11 +609,14 @@ updateAddressBar <- function(playState)
             ## a new call: edited inline OR playState$call modified
             widg$callEntry$prependText(callTxt)
             widg$callEntry["active"] <- 0
-            ## remove any later history
+            ## record in history
+            playState$history <- c(playState$history, callTxt)
+            ## remove any later history (branching from a previous state)
             histLev <- playState$tmp$call.history.level
             if (any(histLev > 0)) {
                 for (i in seq(histLev-1, 0)+1)
                   widg$callEntry$removeText(i)
+                #playState$history <- head(playState$history, -histLev)
             }
         }
         playState$tmp$call.history.level <- widg$callEntry["active"]

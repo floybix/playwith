@@ -27,6 +27,19 @@ getDataArg <- function(playState = playDevCur(), eval = TRUE)
                     {
                         tmp.data <- callArg(playState, 2, eval = eval)
                     }
+                } else if (!is.vector(tmp.x)) {
+                    ## take first argument as data object, but need to be careful:
+                    ## can we coerce to data.frame? (e.g. not for "density")
+                    ## need to coerce e.g. sp::SpatialPoints to data.frame
+                    tmp.x.df <- try(as.data.frame(tmp.x), silent = TRUE)
+                    if (!inherits(tmp.x.df, "try-error")) {
+                        if (eval) {
+                            tmp.data <- tmp.x.df
+                        } else {
+                            tmp.data <- callArg(playState, 1, eval = FALSE)
+                            tmp.data <- call("as.data.frame", tmp.data)
+                        }
+                    }
                 }
             }
         }

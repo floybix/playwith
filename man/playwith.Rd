@@ -485,8 +485,9 @@ playwith( {
 ## A ggplot example.
 ## NOTE: only qplot()-based calls will work.
 ## Labels are taken from rownames of the data.
-library(ggplot2)
-playwith(qplot(qsec, wt, data = mtcars) + stat_smooth())
+if (require(ggplot2)) {
+    playwith(qplot(qsec, wt, data = mtcars) + stat_smooth())
+}
 
 ## A minimalist grid plot.
 ## This shows how to get playwith to work with custom plots:
@@ -565,22 +566,21 @@ playDevOff()
 playDevCur()
 
 \dontrun{
-## Memory usage test.
-## Big data object, do not try to guess labels or time.mode.
+## Big data example, do not try to guess labels or time.mode.
 gc()
 bigobj <- rpois(5000000, 1)
-object.size(bigobj) / 1048576 ## in MB
+print(object.size(bigobj), units = "Mb")
 gc()
 playwith(qqmath(~ bigobj, f.value = ppoints(500)),
-   data.points = NA, labels = NA)
+   data.points = NA, labels = NA, time.mode = FALSE)
 playDevOff()
 gc()
 ## or generate the trellis object first:
 trel <- qqmath(~ bigobj, f.value = ppoints(500))
 playwith(trel)
 rm(trel)
-## in this case, better to compute the sample first:
-subobj <- quantile(foo, ppoints(500), na.rm = TRUE)
+## in this case, it is much better to compute the sample first:
+subobj <- quantile(bigobj, ppoints(500), na.rm = TRUE)
 playwith(qqmath(~ subobj))
 rm(subobj)
 rm(bigobj)

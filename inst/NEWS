@@ -1,11 +1,21 @@
 
-Changes in Version 0.9-46 (in development)
-
-  o fixed showGrobsBB() and identifyGrob(), was not working for several
-    types of grobs.
+Changes in Version 0.9-50
 
   o implemented session history: playwith windows load and save history.
     (based on a suggestion from Liviu Andronic). See ?playwith.history
+
+  o row names and covariate values can now be added as labels (right-click).
+
+  o added support for sp package: SpatialPoints and SpatialPointsDataFrame.
+
+  o try as.data.frame() on the first call argument to get covariates.
+
+  o always turn off devAskNewPage, e.g. from demo(), because of redraws.
+
+  o fixed demo("clusterApp"), the parallel() function had stopped working.
+
+  o fixed showGrobsBB() and identifyGrob(), was not working for several
+    types of grobs. Note: these will be moved to gridExtra package soon.
 
 Changes in Version 0.9-45
 

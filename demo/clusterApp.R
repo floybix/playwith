@@ -46,7 +46,7 @@ clusterApp <- function(data, ...)
     param$parallel <-
         list(function(playState) {
             refObj <- playState
-            playwith(parallel(refObj$env$data,
+            playwith(parallel(~ refObj$env$data,
                          groups = refObj$env$clusters,
                          main = "Parallel Coordinates plot"),
                      title = "Parallel plot",
@@ -57,7 +57,7 @@ clusterApp <- function(data, ...)
     param$marginals <-
         list(function(playState) {
             refObj <- playState
-            playwith(marginal.plot(refObj$env$data,
+            playwith(marginal.plot(~ refObj$env$data,
                          groups = refObj$env$clusters,
                          main = "Marginal distributions"),
                      main = "Marginal distributions",
@@ -91,7 +91,7 @@ clusterApp <- function(data, ...)
         } else {
             ## store cluster vector
             playState$env$clusters <-
-                cutree(callArg(playState, 1),
+                cutree(as.hclust(callArg(playState, 1)),
                        h = height)
         }
         ## and update any linked plots

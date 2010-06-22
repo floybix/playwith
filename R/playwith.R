@@ -493,6 +493,7 @@ doPlayReplot <- function(playState, isNewPlot = FALSE)
     if (!isNewPlot && isTRUE(playState$tmp$skip.redraws))
         return()
     playDevSet(playState)
+    devAskNewPage(FALSE) ## 'ask' is always bad because of redraws
     playState$tmp$plot.ready <- FALSE
     on.exit(playState$tmp$plot.ready <- TRUE)
     grid.newpage()
@@ -730,15 +731,16 @@ window.close_handler <- function(widget, event, playState)
         ## if on.close() returns TRUE, do not close the window
         if (isTRUE(foo)) return(TRUE)
     }
-    if (length(playState$linked$subscribers) > 1) {
-        ans <- gconfirm("Also close linked plots?",
-                        parent = playState$win)
-        if (isTRUE(ans)) {
-            lapply(playState$linked$subscribers,
-                   playDevOff)
-            return(FALSE)
-        }
-    }
+## More annoying than useful I think:
+#    if (length(playState$linked$subscribers) > 1) {
+#        ans <- gconfirm("Also close linked plots?",
+#                        parent = playState$win)
+#        if (isTRUE(ans)) {
+#            lapply(playState$linked$subscribers,
+#                   playDevOff)
+#            return(FALSE)
+#        }
+#    }
     ## close the window and clean up
     playDevOff(playState)
     return(FALSE)

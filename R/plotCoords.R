@@ -81,6 +81,20 @@ plotCoords.plot.default <- function(name, object, call, envir, data, ...)
     xy.coords_with_class(tmp.x, tmp.y, data = data, envir = envir)
 }
 
+plotCoords.plot.SpatialPoints <- 
+plotCoords.plot.SpatialPointsDataFrame <-
+    function(name, object, call, envir, data, ...)
+{
+    xy <- coordinates(object)
+    list(x = xy[,1], y = xy[,2])
+}
+case.names.SpatialPoints <-
+case.names.SpatialPointsDataFrame <-
+    function(object, ...)
+{
+    case.names(as.data.frame(object), ...)
+}
+
 plotCoords.plot.dendrogram <- function(name, object, call, envir, ...)
 {
     ## indices into original data for each node

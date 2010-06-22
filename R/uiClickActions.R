@@ -55,7 +55,7 @@ updateClickActions <- function(playState)
     hasPanels <- isLatt && (length(playState$tmp$currentLayout) > 1)
     isBase <- !isLatt && is.null(playState$viewport)
     isBaseMulti <- isBase && any(par("mfrow") > 1)
-    canIdent <- playState$tmp$identify.ok
+    canIdent <- isTRUE(playState$tmp$identify.ok)
     actions <- list()
     actions$nav2D <- (hasArgs && !isLatt3D && !isSplom)
     actions$nav3D <- (isLatt3D)
@@ -406,31 +406,47 @@ contextCore <- function(playState, foo, event)
             item["sensitive"] <- FALSE
             cMenu$append(item)
             ## show values of x / y / other variables
+            isLatt3D <-
+                (playState$is.lattice &&
+                 !is.null(playState$trellis$panel.args.common$scales.3d))
             x <- foo$x
             y <- foo$y
             if (is.numeric(x)) x <- round(x, 7)
             if (is.numeric(y)) y <- round(y, 7)
-            item <- gtkMenuItem(paste("x:", toString(x, width = 30)))
-            cMenu$append(item)
-            item <- gtkMenuItem(paste("y:", toString(y, width = 30)))
-            cMenu$append(item)
             dat <- getDataArg(playState)
             if (!is.null(dat)) {
-#                rn <- if (.row_names_info(dat) <= 0)
-#                    NULL else row.names(dat)
                 rn <- row.names(dat)
+                itemtxt <- character()
                 if (!is.null(rn)) {
-                    txt <- toString(rn[id], width = 30)
-                    item <- gtkMenuItem(paste("row:", txt))
-                    cMenu$append(item)
+                    itemtxt <- rn[id]
                 }
                 cn <- colnames(dat)
-                for (i in seq_along(cn)) {
-                    txt <- toString(paste(cn[i], ": ", dat[id, i], sep = ""),
-                                    width = 30)
+                if (length(cn) > 0) {
+                    itemtxt <- c(itemtxt, paste(cn, ": ", dat[id,], sep = ""))
+                }
+                itemtxt <- sapply(itemtxt, toString, width = 33)
+                for (txt in itemtxt) {
                     item <- gtkMenuItem(txt)
+                    gSignalConnect(item, "activate",
+                               function(widget, ...) {
+                                   if (isLatt3D) {
+                                       if (!gconfirm(paste("Label will be positioned in 2D only,",
+                                                          "so will not match if you rotate the plot",
+                                                          "(use 'Add label to plot', with 'Set labels to...' if you want that).",
+                                                          "Continue?")))
+                                           return()
+                                   }
+                                   ## add corresponding label
+                                   annot <- call("panel.usertext", x, y, txt, pos = pos)
+                                   playAnnotate(playState, annot, space = space)
+                               })
                     cMenu$append(item)
                 }
+            } else {
+                item <- gtkMenuItem(paste("x:", toString(x, width = 30)))
+                cMenu$append(item)
+                item <- gtkMenuItem(paste("y:", toString(y, width = 30)))
+                cMenu$append(item)
             }
             ## "set labels to..."
             cMenu$append(gtkSeparatorMenuItem())

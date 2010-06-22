@@ -122,17 +122,19 @@ id.table_handler <- function(widget, playState)
     ## add row numbers and names
     dat <- cbind(row = 1:NROW(dat), names = rownames(dat),
                  dat)
-    tabW <- gtable(dat, multiple = TRUE)
-    cur.ids <- playGetIDs(playState)
-    if (length(cur.ids) > 0)
-        svalue(tabW, index = TRUE) <- cur.ids
-    gbasicdialog("Select cases to be brushed",
-                 widget = tabW,
+    w <- gbasicdialog("Select cases to be brushed",
+                 #widget = tabW,
                  handler = function(h, ...) {
                      ids <- svalue(tabW)#, index = TRUE)
                      dispose(h$obj)
                      playSetIDs(playState, ids)
                  })
+    size(w) <- c(600, 400)
+    tabW <- gtable(dat, multiple = TRUE, container = w)
+    cur.ids <- playGetIDs(playState)
+    if (length(cur.ids) > 0)
+        svalue(tabW, index = TRUE) <- cur.ids
+    visible(w, set = TRUE)
 }
 
 id.find_handler <- function(widget, playState) {

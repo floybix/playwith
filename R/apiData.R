@@ -5,6 +5,7 @@
 
 getDataArg <- function(playState = playDevCur(), eval = TRUE)
 {
+    tmp.data <- NULL
     if (!is.null(playState$data.points)) {
         ## data.points were supplied
         tmp.data <- if (eval) playState$data.points

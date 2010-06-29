@@ -1,4 +1,11 @@
 
+Changes in Version 0.9-51
+
+  o there were errors on startup with some types of plots (e.g. splom()),
+    caused by trying to detect data types for time.mode = NA. Now uses try().
+
+  o playwith() failed when given a call with no arguments.
+
 Changes in Version 0.9-50
 
   o implemented session history: playwith windows load and save history.

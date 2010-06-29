@@ -14,7 +14,7 @@ initOptionsActions <- function(playState)
     if (is.na(playState$time.mode)) {
         if (hasArgs) {
             ## detect default for time.mode based on data
-            dat <- xyData(playState, space="packet 1")
+            dat <- try(xyData(playState, space="packet 1"), silent = TRUE)
             playState$time.mode <-
                 (inherits(dat$x, "ts") ||
                  inherits(dat$x, "zoo") ||

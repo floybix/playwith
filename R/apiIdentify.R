@@ -9,6 +9,7 @@ playSelectData <-
              "Click or drag to select data points;",
              "Right-click or Esc to cancel."),
              scales = "dynamic",
+             multiview = TRUE,
              foo = playRectInput(playState, prompt = prompt,
                                             scales = scales))
 {
@@ -62,12 +63,17 @@ playSelectData <-
             ok <- ok & (min(coords$y) <= numdata$y) & (numdata$y <= max(coords$y))
         which <- which(ok)
     }
+    ## locations of actual points clicked
+    x <- data$x[which]
+    y <- data$y[which]
     ## account for multiple points (matrix values of data$x, data$y)
     n <- min(NROW(data$x), NROW(data$y))
     which <- unique(which %% n)
     which[which == 0] <- n
-    x <- if (is.matrix(data$x)) data$x[which,,drop=FALSE] else data$x[which]
-    y <- if (is.matrix(data$y)) data$y[which,,drop=FALSE] else data$y[which]
+    if (multiview) {
+        x <- if (is.matrix(data$x)) data$x[which,,drop=FALSE] else data$x[which]
+        y <- if (is.matrix(data$y)) data$y[which,,drop=FALSE] else data$y[which]
+    }
     subscripts <- data$subscripts[which]
     if (is.null(subscripts)) subscripts <- which
     c(list(subscripts = subscripts, which = which,

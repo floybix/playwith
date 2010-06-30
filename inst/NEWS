@@ -6,6 +6,10 @@ Changes in Version 0.9-51
 
   o playwith() failed when given a call with no arguments.
 
+  o adding row names and covariate values as labels was using the wrong one.
+
+  o adding labels to splom() now only adds one, rather than one for each panel.
+
 Changes in Version 0.9-50
 
   o implemented session history: playwith windows load and save history.

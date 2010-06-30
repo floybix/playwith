@@ -374,7 +374,7 @@ contextCore <- function(playState, foo, event)
     canIdent <- playState$tmp$identify.ok
     if ((space != "page") && isTRUE(canIdent)) {
         foo$is.click <- TRUE
-        foo <- playSelectData(playState, foo = foo)
+        foo <- playSelectData(playState, foo = foo, multiview = FALSE)
         id <- foo$subscripts
         pos <- foo$pos
         if (length(id) > 0) {
@@ -402,7 +402,7 @@ contextCore <- function(playState, foo, event)
             }
             ## covariate values
             cMenu$append(gtkSeparatorMenuItem())
-            item <- gtkMenuItem("This data point:")
+            item <- gtkMenuItem("Annotate this data point:")
             item["sensitive"] <- FALSE
             cMenu$append(item)
             ## show values of x / y / other variables
@@ -428,9 +428,9 @@ contextCore <- function(playState, foo, event)
                 for (txt in itemtxt) {
                     item <- gtkMenuItem(txt)
                     gSignalConnect(item, "activate",
-                               function(widget, ...) {
+                               function(widget, txt) {
                                    if (isLatt3D) {
-                                       if (!gconfirm(paste("Label will be positioned in 2D only,",
+                                       if (!gconfirm(paste("Annotation will be positioned in 2D only,",
                                                           "so will not match if you rotate the plot",
                                                           "(use 'Add label to plot', with 'Set labels to...' if you want that).",
                                                           "Continue?")))
@@ -439,7 +439,7 @@ contextCore <- function(playState, foo, event)
                                    ## add corresponding label
                                    annot <- call("panel.usertext", x, y, txt, pos = pos)
                                    playAnnotate(playState, annot, space = space)
-                               })
+                               }, data = txt)
                     cMenu$append(item)
                 }
             } else {

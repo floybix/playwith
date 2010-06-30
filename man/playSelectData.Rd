@@ -9,6 +9,7 @@ playSelectData(playState = playDevCur(),
     prompt = paste("Click or drag to select data points;",
                    "Right-click or Esc to cancel."),
     scales = "dynamic",
+    multiview = TRUE,
     foo = playRectInput(playState, prompt = prompt, scales = scales))
 }
 \arguments{
@@ -18,6 +19,8 @@ playSelectData(playState = playDevCur(),
     dragging, to constrain the selection to x or y scales. Otherwise
     this should be one or more of "x" and "y", specifying which axes to
     select along. }
+  \item{multiview}{ to return a matrix of x and y when the plot contains
+    multiple positions for the same points (e.g. \code{splom}). }
   \item{foo}{ rectangular plot region structure, usually generated
     interactively. }
 }

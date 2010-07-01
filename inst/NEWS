@@ -1,4 +1,9 @@
 
+Changes in Version 0.9-52
+  
+  o modifier keys when clicking were not working under Linux, it seems.
+    Reported with a suggested fix by Raghav Puranmalka.
+
 Changes in Version 0.9-51
 
   o there were errors on startup with some types of plots (e.g. splom()),

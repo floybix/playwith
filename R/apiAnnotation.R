@@ -128,7 +128,7 @@ playPointInput <-
     ## check for modifier keys
     ptrInfo <- playState$widgets$drawingArea$window$getPointer()
     modifiers <- as.flag(0)
-    if (!is.null(ptrInfo$retval))
+    if (!is.null(ptrInfo$mask))
         modifiers <- as.flag(ptrInfo$mask)
     ## convert coordinates
     ndc <- list(x=convertX(dc$x, "npc"), y=convertY(dc$y, "npc"))
@@ -303,8 +303,7 @@ handleClickOrDrag <-
         ## xyEnd is the final drag location, set by event handler
         if (exists("xyEnd", inherits=FALSE)) break
         xyDrag <- da$window$getPointer()
-        ## check that pointer is inside the window
-        ## -- fails on linux? TODO
+        ## check that pointer is inside the window? -- fails on linux
         #if (is.null(xyDrag$retval)) break
         if ((as.flag(xyDrag$mask) & GdkModifierType["button1-mask"]) == 0) {
             ## mouse button was released
@@ -349,7 +348,7 @@ handleClickOrDrag <-
     ## check for modifier keys
     ptrInfo <- da$window$getPointer()
     modifiers <- as.flag(0)
-    if (!is.null(ptrInfo$retval))
+    if (!is.null(ptrInfo$mask))
         modifiers <- as.flag(ptrInfo$mask)
     ## clean up
     da$window$invalidateRect(invalidate.children=FALSE)

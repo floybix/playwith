@@ -233,8 +233,9 @@ handleClickOrDrag <-
     if (dynScales) scales <- c("x", "y")
     ## xyInit is the original click location
     xyInit <- list(x=x0, y=y0)
-    da.w <- da$getAllocation()$width
-    da.h <- da$getAllocation()$height
+    daAlloc <- da$getAllocation()$allocation
+    da.w <- daAlloc$width
+    da.h <- daAlloc$height
     buf <- gdkPixbufGetFromDrawable(src=da$window, src.x=0, src.y=0,
                                     dest.x=0, dest.y=0, width=da.w, height=da.h)
     if (is.null(buf)) stop("Could not make pixbuf")

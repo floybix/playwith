@@ -120,9 +120,9 @@ playwith <-
     ## check whether the window already exists
     myWin <- playState$win
     if (!is.null(myWin) && inherits(myWin, "GtkWindow")) {
-        daSize <- playState$widgets$drawingArea$getAllocation()
-        if (missing(width)) width <- daSize$width / 96
-        if (missing(height)) height <- daSize$height / 96
+        daAlloc <- playState$widgets$drawingArea$getAllocation()$allocation
+        if (missing(width)) width <- daAlloc$width / 96
+        if (missing(height)) height <- daAlloc$height / 96
         ## remove everything
         playState$tmp$devoff <- TRUE ## to avoid trigger close
         myWin$getChild()$destroy()
@@ -192,7 +192,7 @@ playwith <-
     callToolbar <- uiManager$getWidget("/CallToolbar")
     callToolbar["visible"] <-
         isTRUE(playwith.getOption("show.calltoolbar"))
-    callToolbar$setTooltips(TRUE) #playwith.getOption("show.tooltips"))
+    #callToolbar$setTooltips(TRUE) #playwith.getOption("show.tooltips"))
     callToolbar["toolbar-style"] <- GtkToolbarStyle["icons"]
     callToolbar["show-arrow"] <- FALSE
     ## merge in the address bar
@@ -223,20 +223,20 @@ playwith <-
     tbStyle <- GtkToolbarStyle[playwith.getOption("toolbar.style")]
     ## create the top toolbar
     topToolbar <- uiManager$getWidget("/TopToolbar")
-    topToolbar$setTooltips(TRUE)
+#    topToolbar$setTooltips(TRUE)
     topToolbar["toolbar-style"] <- tbStyle
     ## create the bottom toolbar
     bottomToolbar <- uiManager$getWidget("/BottomToolbar")
-    bottomToolbar$setTooltips(TRUE)
+#    bottomToolbar$setTooltips(TRUE)
     bottomToolbar["toolbar-style"] <- tbStyle
     ## create the left toolbar
     leftToolbar <- uiManager$getWidget("/LeftToolbar")
-    leftToolbar$setTooltips(TRUE)
+#    leftToolbar$setTooltips(TRUE)
     leftToolbar["toolbar-style"] <- tbStyle
     leftToolbar["orientation"] <- GtkOrientation["vertical"]
     ## create the right toolbar
     rightToolbar <- uiManager$getWidget("/RightToolbar")
-    rightToolbar$setTooltips(TRUE)
+#    rightToolbar$setTooltips(TRUE)
     rightToolbar["toolbar-style"] <- tbStyle
     rightToolbar["orientation"] <- GtkOrientation["vertical"]
     ## create the statusbar and coords readout
@@ -456,7 +456,7 @@ playwith <-
                 length(tbar$getChildren()))
             {
                 ## fix toolbar size
-                sz <- tbar$getAllocation()
+                sz <- tbar$getAllocation()$allocation
                 if (side %in% c("Left", "Right")) {
                     tbar$setSizeRequest(sz$width, -1)
                 } else {

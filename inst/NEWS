@@ -1,4 +1,9 @@
 
+Changes in Version 0.9-53
+
+  o updated to work with the new RGtk2 >= 2.20
+    (the return value of gtkWidgetGetAllocation() changed).
+
 Changes in Version 0.9-52
   
   o modifier keys when clicking were not working under Linux, it seems.

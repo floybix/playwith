@@ -471,7 +471,8 @@ blockRedraws <- function(expr, playState = playDevCur())
     oval <- playState$tmp$skip.redraws
     playState$tmp$skip.redraws <- TRUE
     da <- playState$widgets$drawingArea
-    da$setSizeRequest(da$getAllocation()$width, da$getAllocation()$height)
+    daAlloc <- da$getAllocation()$allocation
+    da$setSizeRequest(daAlloc$width, daAlloc$height)
                                         #playState$win$setGeometryHints(da, list(max.width=myW, min.width=myW,
                                         #	max.height=myH, min.height=myH))
                                         #da$window$freezeUpdates() # hmm
@@ -491,7 +492,7 @@ hideWidgetNoRedraw <- function(playState, widget, horiz)
 {
     whichDim <- if (horiz) "height" else "width"
     if (widget["visible"]) blockRedraws({
-        widgSize <- widget$getAllocation()
+        widgSize <- widget$getAllocation()$allocation
         winSize <- playState$win$getSize()
         widget["visible"] <- FALSE
         winSize[[whichDim]] <- winSize[[whichDim]] - widgSize[[whichDim]]

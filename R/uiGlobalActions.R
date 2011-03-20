@@ -256,8 +256,9 @@ edit.call.inline_handler <- function(widget, playState)
 
 set.size_handler <- function(widget, playState) {
     da <- playState$widgets$drawingArea
-    owidth <- da$getAllocation()$width
-    oheight <- da$getAllocation()$height
+    daAlloc <- da$getAllocation()$allocation
+    owidth <- daAlloc$width
+    oheight <- daAlloc$height
     ## prompt user for new size
     widthW <- gedit(toString(owidth), width=7, coerce.with=as.numeric)
     heightW <- gedit(toString(oheight), width=7, coerce.with=as.numeric)

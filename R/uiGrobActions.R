@@ -14,7 +14,7 @@ updateGrobActions <- function(playState)
 grob.inspector_handler <- function(widget, playState)
 {
     ## show and return bounding boxes for all grobs
-    #bblist <- showGrobsBB(draw = FALSE)
+    #bblist <- grobBoundingBoxes(draw = FALSE)
     #if (length(bblist) == 0) stop("No grobs found.")
 
     foo <- playPointInput(playState,

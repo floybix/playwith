@@ -1,4 +1,9 @@
 
+Changes in Version 0.9-54
+
+  o renamed showGrobsBB to grobBoundingBoxes;
+    change autoplay to use hook "before.plot.new".
+
 Changes in Version 0.9-53
 
   o updated to work with the new RGtk2 >= 2.20

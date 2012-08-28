@@ -210,7 +210,7 @@ close_handler <- function(widget, playState)
 edit.call_handler <- function(widget, playState)
 {
     callTxt <-
-        paste(deparse(playState$call, width = 42, control=
+        paste(deparse(playState$call, width.cutoff = 42, control=
                       playwith.getOption("deparse.options")),
               collapse="\n")
     repeat {

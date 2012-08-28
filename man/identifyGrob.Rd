@@ -37,7 +37,7 @@ None yet.
   This will give an error if the current plot has no grobs, as returned by \code{\link{grid.ls}}.
 }
 \seealso{
-  \code{\link{showGrobsBB}}
+  \code{\link{grobBoundingBoxes}}
 }
 \examples{
 if (interactive()) {

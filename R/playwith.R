@@ -573,7 +573,7 @@ doPlayReplot <- function(playState, isNewPlot = FALSE)
         print(result)
         ## typically want: playState$viewport <- list(plot = "panel_1_1")
         vpNames <- grid.ls(viewports=TRUE, grobs=FALSE, print=FALSE)$name
-        panelNames <- vpNames[grep("panel", vpNames)]
+        panelNames <- vpNames[grep("panel-", vpNames)]
         panelNames <- unique(panelNames)
         tmp.vp <- as.list(panelNames)
         names(tmp.vp) <- panelNames

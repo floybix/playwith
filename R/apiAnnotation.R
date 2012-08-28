@@ -164,7 +164,7 @@ playLineInput <-
     xy0 <- grid.locator()
     if (is.null(xy0)) return(NULL)
     xy0 <- lapply(xy0, as.numeric)
-    playClickOrDrag(playState, x0=xy0$x, y=xy0$y,
+    playClickOrDrag(playState, x0 = xy0$x, y0 = xy0$y,
                     shape="line", scales = scales)
 }
 
@@ -187,7 +187,7 @@ playRectInput <-
     xy0 <- grid.locator()
     if (is.null(xy0)) return(NULL)
     xy0 <- lapply(xy0, as.numeric)
-    playClickOrDrag(playState, x0=xy0$x, y=xy0$y,
+    playClickOrDrag(playState, x0 = xy0$x, y0 = xy0$y,
                     shape="rect", scales = scales)
 }
 

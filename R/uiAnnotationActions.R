@@ -57,7 +57,7 @@ undo.annotation_handler <- function(widget, playState)
 
 edit.annotations_handler <- function(widget, playState)
 {
-    annotTxt <- deparse(playState$annotations, width = 42,
+    annotTxt <- deparse(playState$annotations, width.cutoff = 42,
                         control = playwith.getOption("deparse.options"))
     annotTxt <- paste(annotTxt, collapse = "\n")
     ## TODO: deparse / parse in a more readable form

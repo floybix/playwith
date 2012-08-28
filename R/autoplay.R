@@ -21,7 +21,7 @@ autoplay <-
     }
     if (!is.na(base.on)) {
         newFoo <- if (base.on) list(playwith.plot.new) else NULL
-        setHook("plot.new", newFoo, "replace")
+        setHook("before.plot.new", newFoo, "replace")
         message("Automatic `playwith` for base graphics is now ",
                 if (base.on) "ON." else "OFF.")
         if (base.on) {
@@ -95,14 +95,12 @@ playwith.plot.new <- function(...)
                 return()
             }
         }
-        dev.off() ## close screen device (from `plot.new`)
         parentFrame <- sys.frame(sys.parents()[frameNum])
         newCall <- call("playwith", sys.call(frameNum),
                         envir = parentFrame)
                                         # eval.args=FALSE ?
         eval(newCall)
         par(opar) ## on the new device (redrawing now)
-        .Internal(plot.new())
     }
     return()
 }

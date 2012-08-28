@@ -75,7 +75,7 @@ style.trans.points_handler <- function(widget, playState)
     setAlpha <- function(col, alpha) {
         crgb <- col2rgb(col, alpha = TRUE)
         crgb[4] <- alpha * 255
-        rgb(crgb[1], crgb[2], crgb[3], crgb[4], max = 255)
+        rgb(crgb[1], crgb[2], crgb[3], crgb[4], maxColorValue = 255)
     }
     if (widget["active"]) {
 #        alpha <- ginput("Translucency of points:",

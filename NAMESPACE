@@ -107,6 +107,7 @@ export(convertFromDevicePixels,
        convertToDevicePixels,
        inViewport,
        grobBBDevicePixels,
+       grobBoundingBoxes,
        showGrobsBB,
        identifyGrob)
 

@@ -3,6 +3,7 @@
 \alias{convertToDevicePixels}
 \alias{inViewport}
 \alias{grobBBDevicePixels}
+\alias{grobBoundingBoxes}
 \alias{showGrobsBB}
 \title{ Utilities for working with grobs and viewports in device coordinates. }
 \description{
@@ -15,7 +16,7 @@ convertToDevicePixels(x, y)
 inViewport(x.px, y.px, viewport)
 grobBBDevicePixels(grob, viewport, pad = 2)
 
-showGrobsBB(draw = TRUE,
+grobBoundingBoxes(draw = TRUE,
     gp.box = gpar(col = "yellow", lwd = 5, alpha = 0.2),
     gp.text = gpar(cex = 0.75, alpha = 0.5))
 }
@@ -52,8 +53,8 @@ inside the given viewport.
 locations in pixels giving the bounding box of the given grob. The grob
 must exist in the given viewport.
 
-\code{showGrobsBB} returns a \code{data.frame} giving information about all
-grobs in the current scene.
+\code{grobBoundingBoxes} returns a \code{data.frame} giving information
+about all grobs in the current scene.
 }
 \author{ Felix Andrews \email{felix@nfrac.org} }
 \seealso{
@@ -77,7 +78,7 @@ inViewport(x = c(0, 100), y = c(0, 100), vpname)
 myGrob <- grid.circle(r = 0.3, name = "myCircle")
 grobBBDevicePixels(myGrob, vpname)
 
-str(showGrobsBB(draw = TRUE))
+str(grobBoundingBoxes(draw = TRUE))
 }
 \keyword{ dplot }
 \keyword{ iplot }

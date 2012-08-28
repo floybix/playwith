@@ -95,11 +95,17 @@ grobBBDevicePixels <- function(grob, viewport, pad = 2)
     xy
 }
 
-showGrobsBB <-
+showGrobsBB <- function(...)
+{
+    .Deprecated("grobBoundingBoxes")
+    grobBoundingBoxes(...)
+}
+
+grobBoundingBoxes <-
     function(draw = TRUE,
              gp.box = gpar(col = "yellow",
                            lwd = 5, alpha = 0.2),
-             gp.text = gpar(cex=0.75, alpha=0.5))
+             gp.text = gpar(cex = 0.75, alpha = 0.5))
 {
     ## current viewport, restore when finished
     vp <- current.vpPath()
@@ -109,14 +115,15 @@ showGrobsBB <-
     })
     ## get a list of all grobs in the scene
     upViewport(0)
-    objs <- as.data.frame(unclass(grid.ls(viewports=TRUE,
-                                          print=FALSE)),
-                          stringsAsFactors=FALSE)
-    objs <- objs[objs$type == "grobListing",]
+    ## need viewports = TRUE, otherwise vpPath is empty
+    objs <- as.data.frame(unclass(grid.ls(viewports = TRUE,
+                                          print = FALSE)),
+                          stringsAsFactors = FALSE)
+    objs <- subset(objs, type == "grobListing")
     if (nrow(objs) == 0) return()
     objs$vpPath <- sub("^ROOT::", "", objs$vpPath)
     objs$vpPath[objs$vpPath == "ROOT"] <- ""
-    ## draw boxes around grobs
+    ## calculate bounding boxes around grobs
     bblist <- list()
     length(bblist) <- nrow(objs)
     n <- 0
@@ -165,7 +172,7 @@ showGrobsBB <-
 identifyGrob <- function(xy.pixels = grid.locator(), classes = NULL)
 {
     ## bounding boxes for all grobs in the scene
-    bblist <- showGrobsBB(draw = FALSE)
+    bblist <- grobBoundingBoxes(draw = FALSE)
     if (length(bblist) == 0) stop("No grobs found.")
     force(xy.pixels)
     if (is.null(xy.pixels)) return(NULL)
